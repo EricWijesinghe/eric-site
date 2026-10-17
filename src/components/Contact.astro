@@ -1,0 +1,28 @@
+---
+import { CONTACT_TEXT, SOCIALS } from '../data/content';
+import SocialIcon from './SocialIcon.astro';
+---
+
+<section id="contact" aria-labelledby="contact-title">
+  <div class="wrap contact-inner">
+    <p class="section-label" data-reveal>04 / contact</p>
+    <h2 class="section-title" id="contact-title" data-reveal>Work together</h2>
+    <p data-reveal>{CONTACT_TEXT}</p>
+    <div class="contact-actions" data-reveal>
+      <a class="btn btn-primary" href="https://github.com/EricWijesinghe" rel="me noopener noreferrer" target="_blank">GitHub <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+      <a class="btn btn-ghost" href="https://maya2c.dev" rel="noopener noreferrer" target="_blank">maya2c.dev <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+    </div>
+    <ul class="social-row" aria-label="Social profiles">
+      {
+        SOCIALS.map((s) => (
+          <li>
+            <a href={s.href} rel="me noopener noreferrer" target="_blank" aria-label={`${s.label} (opens in a new tab)`}>
+              <SocialIcon name={s.icon} />
+              <span>{s.label}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>

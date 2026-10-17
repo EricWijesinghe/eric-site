@@ -1,0 +1,68 @@
+---
+import { FEATURED_PROJECT, PROJECTS } from '../data/content';
+const f = FEATURED_PROJECT;
+---
+
+<section id="projects" aria-labelledby="projects-title">
+  <div class="wrap">
+    <p class="section-label" data-reveal>02 / projects</p>
+    <h2 class="section-title" id="projects-title" data-reveal>What I'm building</h2>
+    <div class="project-grid" data-reveal>
+      <article class="card featured" data-tilt>
+        <div>
+          <p class="card-badge">{f.badge}</p>
+          <h3 class="card-name">{f.name}</h3>
+          <p class="card-desc">{f.description}</p>
+          <ul class="tags">
+            {f.tags.map((t) => <li>{t}</li>)}
+          </ul>
+          <dl class="spec">
+            {f.spec.map(([k, v]) => (
+              <div class="spec-row">
+                <dt>{k}</dt>
+                <dd>{v}</dd>
+              </div>
+            ))}
+          </dl>
+          <div class="card-links">
+            {f.links.map((l) => (
+              <a href={l.href} rel="noopener noreferrer" target="_blank">{l.label} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+            ))}
+          </div>
+        </div>
+        <div class="cube-stage" aria-hidden="true">
+          <div class="cube">
+            <div class="cube-face">ML-DSA</div>
+            <div class="cube-face">DAG</div>
+            <div class="cube-face">SLH-DSA</div>
+            <div class="cube-face">BFT</div>
+            <div class="cube-face">Rust</div>
+            <div class="cube-face">PQ</div>
+          </div>
+        </div>
+      </article>
+
+      {
+        PROJECTS.map((p) => (
+          <article class="card" data-tilt>
+            <p class="card-badge">{p.badge}</p>
+            <h3 class="card-name">{p.name}</h3>
+            <p class="card-desc">{p.description}</p>
+            <ul class="tags">
+              {p.tags.map((t) => <li>{t}</li>)}
+            </ul>
+            {p.href ? (
+              <div class="card-links">
+                <a href={p.href} rel="noopener noreferrer" target="_blank">
+                  view on GitHub <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span>
+                </a>
+              </div>
+            ) : (
+              <p class="card-desc">Private repository.</p>
+            )}
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>

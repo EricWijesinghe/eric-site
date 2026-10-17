@@ -1,0 +1,31 @@
+---
+import { SKILL_GROUPS } from '../data/content';
+const CORE = { x: 500, y: 320 };
+---
+
+<section id="skills" aria-labelledby="skills-title">
+  <div class="wrap">
+    <p class="section-label" data-reveal>03 / skills</p>
+    <h2 class="section-title" id="skills-title" data-reveal>Stack &amp; expertise</h2>
+    <div class="constellation" data-reveal>
+      <svg class="constellation-lines" viewBox="0 0 1000 640" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+        {
+          SKILL_GROUPS.map((g) => (
+            <line x1={CORE.x} y1={CORE.y} x2={g.x} y2={g.y} />
+          ))
+        }
+      </svg>
+      <div class="constellation-core" aria-hidden="true">Rust</div>
+      <ul class="skill-nodes">
+        {
+          SKILL_GROUPS.map((g) => (
+            <li class="node">
+              <h3 class="node-name">{g.name}</h3>
+              <p class="node-items">{g.items.join(' · ')}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+</section>
