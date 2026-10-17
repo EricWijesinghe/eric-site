@@ -1,12 +1,26 @@
 ---
-import { FEATURED_PROJECT, PROJECTS } from '../data/content';
+import { FEATURED_PROJECT, MAYA2C_REPO, MAYA2C_SITE, PROJECTS } from '../data/content';
 const f = FEATURED_PROJECT;
+// DAG layout: node positions on a 400x260 canvas. Edges connect parents to children.
+const NODES = [
+  { id: 'a', x: 60, y: 60, cls: 'node-teal' },
+  { id: 'b', x: 200, y: 36, cls: 'node-violet' },
+  { id: 'c', x: 340, y: 70, cls: 'node-coral' },
+  { id: 'd', x: 120, y: 150, cls: 'node-gold' },
+  { id: 'e', x: 270, y: 160, cls: 'node-teal' },
+  { id: 'f', x: 200, y: 224, cls: 'node-violet' },
+];
+const EDGES = [
+  ['a', 'b'], ['b', 'c'], ['a', 'd'], ['b', 'e'], ['c', 'e'], ['d', 'e'], ['d', 'f'], ['e', 'f'],
+] as const;
+const byId = Object.fromEntries(NODES.map((n) => [n.id, n]));
 ---
 
 <section id="projects" aria-labelledby="projects-title">
   <div class="wrap">
-    <p class="section-label" data-reveal>02 / projects</p>
+    <p class="section-label" data-reveal>02 / portfolio</p>
     <h2 class="section-title" id="projects-title" data-reveal>What I'm building</h2>
+
     <div class="project-grid" data-reveal>
       <article class="card featured" data-tilt>
         <div>
@@ -30,18 +44,27 @@ const f = FEATURED_PROJECT;
             ))}
           </div>
         </div>
-        <div class="cube-stage" aria-hidden="true">
-          <div class="cube">
-            <div class="cube-face">ML-DSA</div>
-            <div class="cube-face">DAG</div>
-            <div class="cube-face">SLH-DSA</div>
-            <div class="cube-face">BFT</div>
-            <div class="cube-face">Rust</div>
-            <div class="cube-face">PQ</div>
-          </div>
-        </div>
+        <figure class="dag" aria-label="Maya2C consensus graph: transactions form a DAG that finalises through DAG-BFT">
+          <svg viewBox="0 0 400 260" role="img" aria-hidden="true" focusable="false">
+            {EDGES.map(([from, to]) => (
+              <line class="edge" x1={byId[from].x} y1={byId[from].y} x2={byId[to].x} y2={byId[to].y} />
+            ))}
+            {EDGES.map(([from, to]) => (
+              <line class="edge-flow" x1={byId[from].x} y1={byId[from].y} x2={byId[to].x} y2={byId[to].y} />
+            ))}
+            {NODES.map((n) => (
+              <circle class={`dag-node ${n.cls}`} cx={n.x} cy={n.y} r="16" />
+            ))}
+            {NODES.map((n) => (
+              <circle cx={n.x} cy={n.y} r="4" fill="#7eeaf0" />
+            ))}
+          </svg>
+          <figcaption class="visually-hidden">Transactions form a DAG; DAG-BFT finalises them.</figcaption>
+        </figure>
       </article>
+    </div>
 
+    <div class="project-grid other-projects" data-reveal>
       {
         PROJECTS.map((p) => (
           <article class="card" data-tilt>
@@ -54,7 +77,7 @@ const f = FEATURED_PROJECT;
             {p.href ? (
               <div class="card-links">
                 <a href={p.href} rel="noopener noreferrer" target="_blank">
-                  view on GitHub <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span>
+                  View on GitHub <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span>
                 </a>
               </div>
             ) : (
@@ -64,5 +87,10 @@ const f = FEATURED_PROJECT;
         ))
       }
     </div>
+
+    <p class="card-desc" data-reveal>
+      Maya2C source: <a class="tap-link" href={MAYA2C_REPO} rel="noopener noreferrer" target="_blank">github.com/EricWijesinghe/Maya2C <span class="visually-hidden">(opens in a new tab)</span></a>
+      · Live site: <a class="tap-link" href={MAYA2C_SITE} rel="noopener noreferrer" target="_blank">maya2c.dev <span class="visually-hidden">(opens in a new tab)</span></a>
+    </p>
   </div>
 </section>

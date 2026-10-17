@@ -52,8 +52,16 @@ const personLd = JSON.stringify({
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
+    <div class="bg-css" aria-hidden="true">
+      <span class="blob blob-a"></span>
+      <span class="blob blob-b"></span>
+      <span class="blob blob-c"></span>
+      <span class="mesh"></span>
+    </div>
+    <canvas class="bg-canvas" data-bg aria-hidden="true"></canvas>
     <slot />
     <script>
+      import '../scripts/bg';
       import '../scripts/reveal';
       import '../scripts/tilt';
     </script>

@@ -5,10 +5,16 @@ const CORE = { x: 500, y: 320 };
 
 <section id="skills" aria-labelledby="skills-title">
   <div class="wrap">
-    <p class="section-label" data-reveal>03 / skills</p>
+    <p class="section-label" data-reveal>04 / skills</p>
     <h2 class="section-title" id="skills-title" data-reveal>Stack &amp; expertise</h2>
     <div class="constellation" data-reveal>
       <svg class="constellation-lines" viewBox="0 0 1000 640" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+        <defs>
+          <linearGradient id="skill-line" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#7eeaf0" stop-opacity="0.7" />
+            <stop offset="1" stop-color="#ff8a65" stop-opacity="0.5" />
+          </linearGradient>
+        </defs>
         {
           SKILL_GROUPS.map((g) => (
             <line x1={CORE.x} y1={CORE.y} x2={g.x} y2={g.y} />

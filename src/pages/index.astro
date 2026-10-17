@@ -5,6 +5,7 @@ import Hero from '../components/Hero.astro';
 import About from '../components/About.astro';
 import Projects from '../components/Projects.astro';
 import Skills from '../components/Skills.astro';
+import Support from '../components/Support.astro';
 import Contact from '../components/Contact.astro';
 import Footer from '../components/Footer.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../data/content';
@@ -16,7 +17,11 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../data/content';
     <Hero />
     <About />
     <Projects />
+    <div class="section-rule" aria-hidden="true"></div>
     <Skills />
+    <div class="section-rule" aria-hidden="true"></div>
+    <Support />
+    <div class="section-rule" aria-hidden="true"></div>
     <Contact />
   </main>
   <Footer />
