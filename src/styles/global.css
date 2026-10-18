@@ -282,7 +282,8 @@ body::before {
 .nav-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 0.25rem;
+  /* 8px between pills keeps adjacent tap targets apart, even at 360px. */
+  gap: 0 0.5rem;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -803,6 +804,16 @@ figure {
   align-items: center;
   min-height: var(--tap);
   overflow-wrap: anywhere;
+}
+
+/* Wrapped source/live links: row gap of 8px keeps their tap targets apart. */
+.source-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
 }
 
 /* ---------- support ---------- */
