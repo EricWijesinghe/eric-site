@@ -1,9 +1,12 @@
 import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
 
 export default defineConfig({
   site: 'https://eric.maya2c.dev',
   output: 'static',
   trailingSlash: 'ignore',
+  // Feeds public/robots.txt, which points at sitemap-index.xml.
+  integrations: [sitemap()],
   // Styles stay external so the CSP can use script/style 'self' with no hashes.
   build: {
     inlineStylesheets: 'never',
