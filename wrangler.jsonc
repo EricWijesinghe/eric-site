@@ -1,0 +1,12 @@
+{
+  // Static site on Cloudflare Workers assets (moved from Netlify 2026-10-18).
+  // dist/_headers carries the CSP and security headers, as it did on Netlify.
+  "name": "eric-site",
+  // Kept on until eric.maya2c.dev points here; then it can go.
+  "workers_dev": true,
+  // No per-version public URLs: one public site, one URL.
+  "preview_urls": false,
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./dist", "not_found_handling": "404-page" },
+  "routes": [{ "pattern": "eric.maya2c.dev", "custom_domain": true }]
+}
