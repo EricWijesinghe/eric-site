@@ -5,6 +5,8 @@ export const SITE_TITLE = 'Eric Wijesinghe — Rust Dev & Security Researcher';
 export const SITE_DESCRIPTION =
   'Eric Wijesinghe — Rust developer, security researcher, and creator of Maya2C, a post-quantum Layer-1 blockchain.';
 
+export const OG_IMAGE_ALT = 'Eric Wijesinghe, Rust developer and security researcher, creator of Maya2C';
+
 export const GITHUB_PROFILE = 'https://github.com/EricWijesinghe';
 export const MAYA2C_SITE = 'https://maya2c.dev';
 export const MAYA2C_REPO = 'https://github.com/EricWijesinghe/Maya2C';

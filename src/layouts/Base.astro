@@ -5,23 +5,39 @@ import '@fontsource/inter/latin-400.css';
 import '@fontsource/inter/latin-500.css';
 import '@fontsource/jetbrains-mono/latin-400.css';
 import '../styles/global.css';
-import { SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from '../data/content';
+import { OG_IMAGE_ALT, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from '../data/content';
 
 const canonical = new URL(Astro.url.pathname, SITE_URL).href;
-const personLd = JSON.stringify({
+const PERSON_ID = `${SITE_URL}/#person`;
+// One @graph: the WebSite points at the Person through @id. "<" is escaped so no value can close the script tag.
+const jsonLd = JSON.stringify({
   '@context': 'https://schema.org',
-  '@type': 'Person',
-  name: 'Eric Wijesinghe',
-  url: SITE_URL,
-  sameAs: [
-    'https://github.com/EricWijesinghe',
-    'https://www.linkedin.com/in/ericwijesinghe',
-    'https://www.facebook.com/EricWijesinghe2002/',
-    'https://www.instagram.com/ericwijesinghe2022/',
+  '@graph': [
+    {
+      '@type': 'Person',
+      '@id': PERSON_ID,
+      name: 'Eric Wijesinghe',
+      url: SITE_URL,
+      sameAs: [
+        'https://github.com/EricWijesinghe',
+        'https://www.linkedin.com/in/ericwijesinghe',
+        'https://www.facebook.com/EricWijesinghe2002/',
+        'https://www.instagram.com/ericwijesinghe2022/',
+        'https://maya2c.dev',
+      ],
+      jobTitle: 'Rust-First Engineer',
+      knowsAbout: ['Rust', 'Post-quantum cryptography', 'Security research', 'Blockchain'],
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: 'Eric Wijesinghe',
+      inLanguage: 'en',
+      publisher: { '@id': PERSON_ID },
+    },
   ],
-  jobTitle: 'Rust-First Engineer',
-  knowsAbout: ['Rust', 'Post-quantum cryptography', 'Security research', 'Blockchain'],
-});
+}).replace(/</g, '\\u003c');
 ---
 
 <!doctype html>
@@ -44,11 +60,13 @@ const personLd = JSON.stringify({
     <meta property="og:image" content={`${SITE_URL}/og.png`} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={OG_IMAGE_ALT} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={SITE_TITLE} />
     <meta name="twitter:description" content={SITE_DESCRIPTION} />
     <meta name="twitter:image" content={`${SITE_URL}/og.png`} />
-    <script type="application/ld+json" set:html={personLd} />
+    <meta name="twitter:image:alt" content={OG_IMAGE_ALT} />
+    <script type="application/ld+json" set:html={jsonLd} />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
