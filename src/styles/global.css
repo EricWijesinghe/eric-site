@@ -748,48 +748,34 @@ figure {
   margin: 0;
 }
 
-.dag {
-  width: 100%;
-  max-width: 460px;
-  margin-inline: auto;
-}
+/* Live network view (Projects.astro): validators, links and a pulse per block. */
+.netview { width: 100%; max-width: 460px; margin-inline: auto; align-self: center; }
+.netview svg { width: 100%; height: auto; overflow: visible; }
+.netview .nv-orbit { fill: none; stroke: rgba(126, 234, 240, 0.16); stroke-width: 1; }
+.netview .nv-orbit.faint { stroke: rgba(126, 234, 240, 0.07); stroke-dasharray: 2 6; }
+.netview .nv-link { stroke: #3fd2e0; stroke-opacity: 0.3; stroke-width: 1; }
+.netview .nv-spoke { stroke: rgba(126, 234, 240, 0.22); stroke-width: 1; stroke-dasharray: 3 5; }
+.netview .halo { fill: rgba(63, 210, 224, 0.12); stroke: rgba(63, 210, 224, 0.5); stroke-width: 1; }
+.netview .dot { fill: #e9fdff; }
+.netview .pulse { fill: none; stroke: #7eeaf0; stroke-width: 1.5; transform-origin: 200px 130px; animation: nv-pulse 2.6s cubic-bezier(.2, .7, .3, 1) forwards; }
+.nv-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem 1.25rem; margin-top: 0.75rem; font: 0.8rem/1.4 var(--font-mono, ui-monospace, monospace); color: var(--steel-dim); }
+.nv-stats b { color: #e9fdff; font-weight: 500; }
+.nv-live::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; background: #7d95a0; vertical-align: middle; }
+.nv-live.on::before { background: #4ade9a; box-shadow: 0 0 8px #4ade9a; }
 
-.dag svg {
-  width: 100%;
-  height: auto;
+@keyframes nv-pulse {
+  from { opacity: 0.9; transform: scale(1); }
+  to { opacity: 0; transform: scale(4.2); }
 }
-
-.dag .edge {
-  stroke: rgba(126, 234, 240, 0.45);
-  stroke-width: 1.5;
-  fill: none;
-}
-
-.dag .edge-flow {
-  stroke: #7eeaf0;
-  stroke-width: 2;
-  fill: none;
-  stroke-dasharray: 6 14;
-}
-
-.dag .dag-node {
-  fill: #0b1820;
-  stroke-width: 2;
-}
-
-.dag .node-teal { stroke: #1fb5c2; }
-.dag .node-violet { stroke: #a78bfa; }
-.dag .node-coral { stroke: #ff8a65; }
-.dag .node-gold { stroke: #c9a86a; }
 
 @media (prefers-reduced-motion: no-preference) {
-  .dag .edge-flow {
-    animation: flow 2.4s linear infinite;
-  }
+  .netview .core { animation: nv-breathe 4s ease-in-out infinite; transform-origin: 200px 130px; }
+  .netview .validator .halo { animation: nv-breathe 3.2s ease-in-out var(--d) infinite; transform-box: fill-box; transform-origin: center; }
 }
 
-@keyframes flow {
-  to { stroke-dashoffset: -40; }
+@keyframes nv-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.12); opacity: 1; }
 }
 
 /* ---------- other projects ---------- */
@@ -797,6 +783,9 @@ figure {
 .other-projects .project-grid {
   gap: 1.1rem;
 }
+
+/* The flagship card and the row below must not touch. */
+.project-grid.other-projects { margin-top: 1.25rem; }
 
 /* Inline links that must still meet the 44px tap target. */
 .tap-link {
@@ -1066,7 +1055,7 @@ footer {
     align-items: center;
   }
 
-  .featured .dag {
+  .featured .netview {
     margin: 0;
   }
 

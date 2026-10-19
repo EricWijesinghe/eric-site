@@ -1,19 +1,13 @@
 ---
 import { FEATURED_PROJECT, MAYA2C_REPO, MAYA2C_SITE, PROJECTS } from '../data/content';
 const f = FEATURED_PROJECT;
-// DAG layout: node positions on a 400x260 canvas. Edges connect parents to children.
-const NODES = [
-  { id: 'a', x: 60, y: 60, cls: 'node-teal' },
-  { id: 'b', x: 200, y: 36, cls: 'node-violet' },
-  { id: 'c', x: 340, y: 70, cls: 'node-coral' },
-  { id: 'd', x: 120, y: 150, cls: 'node-gold' },
-  { id: 'e', x: 270, y: 160, cls: 'node-teal' },
-  { id: 'f', x: 200, y: 224, cls: 'node-violet' },
-];
-const EDGES = [
-  ['a', 'b'], ['b', 'c'], ['a', 'd'], ['b', 'e'], ['c', 'e'], ['d', 'e'], ['d', 'f'], ['e', 'f'],
-] as const;
-const byId = Object.fromEntries(NODES.map((n) => [n.id, n]));
+// Live network view: the four validators on a ring around the core. Every
+// real block (polled from rpc.maya2c.dev) sends a pulse ring outward; the
+// numbers under it are the chain's own. Without data it says "offline".
+const VALIDATORS = [0, 1, 2, 3].map((i) => {
+  const a = (i / 4) * Math.PI * 2 - Math.PI / 4;
+  return { x: +(200 + Math.cos(a) * 92).toFixed(1), y: +(130 + Math.sin(a) * 92).toFixed(1) };
+});
 ---
 
 <section id="projects" aria-labelledby="projects-title">
@@ -22,7 +16,7 @@ const byId = Object.fromEntries(NODES.map((n) => [n.id, n]));
     <h2 class="section-title" id="projects-title" data-reveal>What I'm building</h2>
 
     <div class="project-grid" data-reveal>
-      <article class="card featured" data-tilt>
+      <article class="card featured">
         <div>
           <p class="card-badge">{f.badge}</p>
           <h3 class="card-name">{f.name}</h3>
@@ -44,22 +38,30 @@ const byId = Object.fromEntries(NODES.map((n) => [n.id, n]));
             ))}
           </div>
         </div>
-        <figure class="dag" aria-label="Maya2C consensus graph: transactions form a DAG that finalises through DAG-BFT">
+        <figure class="netview" aria-label="Maya2C testnet, live: validators, blocks and finality">
           <svg viewBox="0 0 400 260" role="img" aria-hidden="true" focusable="false">
-            {EDGES.map(([from, to]) => (
-              <line class="edge" x1={byId[from].x} y1={byId[from].y} x2={byId[to].x} y2={byId[to].y} />
-            ))}
-            {EDGES.map(([from, to]) => (
-              <line class="edge-flow" x1={byId[from].x} y1={byId[from].y} x2={byId[to].x} y2={byId[to].y} />
-            ))}
-            {NODES.map((n) => (
-              <circle class={`dag-node ${n.cls}`} cx={n.x} cy={n.y} r="16" />
-            ))}
-            {NODES.map((n) => (
-              <circle cx={n.x} cy={n.y} r="4" fill="#7eeaf0" />
+            <defs>
+              <radialGradient id="nv-core"><stop offset="0" stop-color="#e9fdff" /><stop offset=".35" stop-color="#3fd2e0" stop-opacity=".8" /><stop offset="1" stop-color="#1fb5c2" stop-opacity="0" /></radialGradient>
+            </defs>
+            <circle class="nv-orbit" cx="200" cy="130" r="92" />
+            <circle class="nv-orbit faint" cx="200" cy="130" r="122" />
+            {VALIDATORS.map((v, i) => VALIDATORS.slice(i + 1).map((w) => <line class="nv-link" x1={v.x} y1={v.y} x2={w.x} y2={w.y} />))}
+            {VALIDATORS.map((v) => <line class="nv-spoke" x1="200" y1="130" x2={v.x} y2={v.y} />)}
+            <g id="nv-pulses"></g>
+            <circle cx="200" cy="130" r="34" fill="url(#nv-core)" class="core" />
+            {VALIDATORS.map((v, i) => (
+              <g class="validator" style={`--d:${i * 0.4}s`}>
+                <circle cx={v.x} cy={v.y} r="11" class="halo" />
+                <circle cx={v.x} cy={v.y} r="4.5" class="dot" />
+              </g>
             ))}
           </svg>
-          <figcaption class="visually-hidden">Transactions form a DAG; DAG-BFT finalises them.</figcaption>
+          <figcaption class="nv-stats">
+            <span><b id="nv-height">—</b> height</span>
+            <span><b id="nv-bt">—</b> block time</span>
+            <span><b>3 of 4</b> to finalize</span>
+            <span class="nv-live" id="nv-state">connecting…</span>
+          </figcaption>
         </figure>
       </article>
     </div>
@@ -67,7 +69,7 @@ const byId = Object.fromEntries(NODES.map((n) => [n.id, n]));
     <div class="project-grid other-projects" data-reveal>
       {
         PROJECTS.map((p) => (
-          <article class="card" data-tilt>
+          <article class="card">
             <p class="card-badge">{p.badge}</p>
             <h3 class="card-name">{p.name}</h3>
             <p class="card-desc">{p.description}</p>
@@ -94,3 +96,42 @@ const byId = Object.fromEntries(NODES.map((n) => [n.id, n]));
     </ul>
   </div>
 </section>
+
+<script>
+  // Polls the public gateway; each new height pulses the core once.
+  const RPC = "https://rpc.maya2c.dev/rpc";
+  const pulses = document.getElementById("nv-pulses");
+  const heightEl = document.getElementById("nv-height");
+  const btEl = document.getElementById("nv-bt");
+  const stateEl = document.getElementById("nv-state");
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let last = 0, lastAt = 0;
+  const gaps: number[] = [];
+  function pulse() {
+    if (reduce || !pulses) return;
+    const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    c.setAttribute("cx", "200"); c.setAttribute("cy", "130"); c.setAttribute("r", "34");
+    c.setAttribute("class", "pulse");
+    pulses.appendChild(c);
+    setTimeout(() => c.remove(), 2600);
+  }
+  async function tick() {
+    try {
+      const r = await fetch(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "get_chain_info", params: [] }) });
+      const h = ((await r.json()).result ?? {}).height as number;
+      if (typeof h !== "number") throw new Error("no height");
+      const now = performance.now();
+      if (last && h > last) {
+        gaps.push((now - lastAt) / (h - last)); if (gaps.length > 12) gaps.shift();
+        btEl!.textContent = (gaps.reduce((a, b) => a + b, 0) / gaps.length / 1000).toFixed(1) + " s";
+        pulse();
+      }
+      if (h !== last) { last = h; lastAt = now; }
+      heightEl!.textContent = h.toLocaleString("en-US");
+      stateEl!.textContent = "live"; stateEl!.classList.add("on");
+    } catch {
+      stateEl!.textContent = "offline"; stateEl!.classList.remove("on");
+    }
+  }
+  tick(); setInterval(tick, 2000);
+</script>
