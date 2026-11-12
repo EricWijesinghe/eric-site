@@ -23,7 +23,7 @@ const NY = 7;
 const NZ = 30;
 const STEP = 0.95;
 const BOND_CHANCE = 0.16;
-const POINT_SIZE = 64;
+const POINT_SIZE = 78;
 
 // Shared by points and bonds so a bond always meets its two points.
 const DISPLACE = /* glsl */ `
@@ -83,7 +83,7 @@ const POINT_FS = /* glsl */ `
   ${FS_HEAD}
   void main() {
     float r = length(gl_PointCoord - 0.5);
-    float a = pow(smoothstep(0.5, 0.0, r), 1.7) * vFog * (0.5 + vGlow * 0.7) * uAlpha;
+    float a = pow(smoothstep(0.5, 0.0, r), 1.7) * vFog * (0.68 + vGlow * 0.7) * uAlpha;
     if (a < 0.01) discard;
     gl_FragColor = vec4(tint(), a);
   }
@@ -91,7 +91,7 @@ const POINT_FS = /* glsl */ `
 
 const LINE_FS = /* glsl */ `
   ${FS_HEAD}
-  void main() { gl_FragColor = vec4(tint(), vFog * (0.2 + vGlow * 0.55) * uAlpha); }
+  void main() { gl_FragColor = vec4(tint(), vFog * (0.3 + vGlow * 0.55) * uAlpha); }
 `;
 
 function buildLattice(): { geometry: BufferGeometry; bonds: BufferGeometry } {
@@ -163,11 +163,19 @@ export function mountHero(canvas: HTMLCanvasElement, host: HTMLElement): void {
   lattice.position.y = -1.6;
   scene.add(lattice);
 
-  const ringMat = new LineBasicMaterial({ transparent: true, opacity: 0.7, depthWrite: false });
-  const ringMat2 = new LineBasicMaterial({ transparent: true, opacity: 0.55, depthWrite: false });
+  const ringMat = new LineBasicMaterial({ transparent: true, opacity: 1, depthWrite: false });
+  const ringMat2 = new LineBasicMaterial({ transparent: true, opacity: 0.8, depthWrite: false });
   const frame = new Group();
   const rings = [hexRing(2.1, ringMat), hexRing(1.6, ringMat2), hexRing(1.05, ringMat)];
-  rings.forEach((r) => frame.add(r));
+  rings.forEach((r) => {
+    // WebGL lines are 1px; two offset copies give the frame a visible stroke weight.
+    for (const k of [1.012, 0.988]) {
+      const copy = r.clone();
+      copy.scale.setScalar(k);
+      r.add(copy);
+    }
+    frame.add(r);
+  });
   scene.add(frame);
 
   const applyTheme = (): void => {
@@ -175,7 +183,7 @@ export function mountHero(canvas: HTMLCanvasElement, host: HTMLElement): void {
     uniforms.uA.value.set(cssColor('--gl-a'));
     uniforms.uB.value.set(cssColor('--gl-b'));
     uniforms.uC.value.set(cssColor('--gl-c'));
-    uniforms.uAlpha.value = light ? 0.55 : 1;
+    uniforms.uAlpha.value = light ? 0.8 : 1;
     const blending = light ? NormalBlending : AdditiveBlending;
     for (const m of [pointMat, lineMat, ringMat, ringMat2]) {
       m.blending = blending;
@@ -213,7 +221,7 @@ export function mountHero(canvas: HTMLCanvasElement, host: HTMLElement): void {
       uniforms.uAspect.value = w / h;
       uniforms.uSize.value = POINT_SIZE * dpr * Math.min(h / 800, 1.2);
       const narrow = w / h < 1;
-      frame.position.set(narrow ? 0 : 5.2, narrow ? 3.2 : 0.6, 0);
+      frame.position.set(narrow ? 0 : 5.2, narrow ? -2.8 : 0.6, 0);
       frame.scale.setScalar(narrow ? 0.7 : 1);
     },
     onFrame: ({ t, dt }) => {

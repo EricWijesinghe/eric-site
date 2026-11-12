@@ -181,7 +181,7 @@ export function mountOrbit(canvas: HTMLCanvasElement, host: HTMLElement): void {
       project = w >= PROJECT_MIN_WIDTH;
       host.classList.toggle('is-projected', project);
       uniforms.uScale.value = 30 * dpr * Math.min(h / 600, 1.3);
-      camera.position.z = project ? 11 : 13;
+      camera.position.z = project ? 11 : 9.5;
       if (!project) buttons.forEach((b) => b.style.removeProperty('transform'));
     },
     onFrame: ({ t, dt }) => {
