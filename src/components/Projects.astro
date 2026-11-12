@@ -12,64 +12,70 @@ const VALIDATORS = [0, 1, 2, 3].map((i) => {
 
 <section id="projects" aria-labelledby="projects-title">
   <div class="wrap">
-    <p class="section-label" data-reveal>02 / portfolio</p>
+    <p class="section-label" data-reveal><span>02</span> portfolio</p>
     <h2 class="section-title" id="projects-title" data-reveal>What I'm building</h2>
 
-    <div class="project-grid" data-reveal>
-      <article class="card featured">
-        <div>
-          <p class="card-badge">{f.badge}</p>
-          <h3 class="card-name">{f.name}</h3>
-          <p class="card-desc">{f.description}</p>
-          <ul class="tags">
-            {f.tags.map((t) => <li>{t}</li>)}
-          </ul>
-          <dl class="spec">
-            {f.spec.map(([k, v]) => (
-              <div class="spec-row">
-                <dt>{k}</dt>
-                <dd>{v}</dd>
-              </div>
-            ))}
-          </dl>
-          <div class="card-links">
-            {f.links.map((l) => (
-              <a href={l.href} rel="noopener noreferrer" target="_blank">{l.label} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
-            ))}
-          </div>
+    <article class="card panel featured" data-tilt="3" data-reveal>
+      <div class="panel-body">
+        <p class="card-badge"><span class="pulse-dot" aria-hidden="true"></span>{f.badge}</p>
+        <h3 class="card-name featured-name">{f.name}</h3>
+        <p class="card-desc">{f.description}</p>
+        <ul class="tags">
+          {f.tags.map((t) => <li>{t}</li>)}
+        </ul>
+        <dl class="spec">
+          {f.spec.map(([k, v]) => (
+            <div class="spec-row">
+              <dt>{k}</dt>
+              <dd>{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <div class="card-links">
+          {f.links.map((l) => (
+            <a href={l.href} rel="noopener noreferrer" target="_blank">{l.label} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+          ))}
         </div>
-        <figure class="netview" aria-label="Maya2C testnet, live: validators, blocks and finality">
-          <svg viewBox="0 0 400 260" role="img" aria-hidden="true" focusable="false">
-            <defs>
-              <radialGradient id="nv-core"><stop offset="0" stop-color="#e9fdff" /><stop offset=".35" stop-color="#3fd2e0" stop-opacity=".8" /><stop offset="1" stop-color="#1fb5c2" stop-opacity="0" /></radialGradient>
-            </defs>
-            <circle class="nv-orbit" cx="200" cy="130" r="92" />
-            <circle class="nv-orbit faint" cx="200" cy="130" r="122" />
-            {VALIDATORS.map((v, i) => VALIDATORS.slice(i + 1).map((w) => <line class="nv-link" x1={v.x} y1={v.y} x2={w.x} y2={w.y} />))}
-            {VALIDATORS.map((v) => <line class="nv-spoke" x1="200" y1="130" x2={v.x} y2={v.y} />)}
-            <g id="nv-pulses"></g>
-            <circle cx="200" cy="130" r="34" fill="url(#nv-core)" class="core" />
-            {VALIDATORS.map((v, i) => (
-              <g class="validator" style={`--d:${i * 0.4}s`}>
-                <circle cx={v.x} cy={v.y} r="11" class="halo" />
-                <circle cx={v.x} cy={v.y} r="4.5" class="dot" />
-              </g>
-            ))}
-          </svg>
-          <figcaption class="nv-stats">
-            <span><b id="nv-height">—</b> height</span>
-            <span><b id="nv-bt">—</b> block time</span>
-            <span><b>3 of 4</b> to finalize</span>
-            <span class="nv-live" id="nv-state">connecting…</span>
-          </figcaption>
-        </figure>
-      </article>
-    </div>
+      </div>
+      <figure class="netview" aria-label="Maya2C testnet, live: validators, blocks and finality">
+        <div class="holo" data-gl="emblem">
+          <div class="holo-plate">
+            <svg viewBox="0 0 400 260" aria-hidden="true" focusable="false">
+              <defs>
+                <radialGradient id="nv-core"><stop offset="0" stop-color="#e9fdff" /><stop offset=".35" stop-color="#3fd2e0" stop-opacity=".8" /><stop offset="1" stop-color="#1fb5c2" stop-opacity="0" /></radialGradient>
+              </defs>
+              <circle class="nv-orbit" cx="200" cy="130" r="92" />
+              <circle class="nv-orbit faint" cx="200" cy="130" r="122" />
+              {VALIDATORS.map((v, i) => VALIDATORS.slice(i + 1).map((w) => <line class="nv-link" x1={v.x} y1={v.y} x2={w.x} y2={w.y} />))}
+              {VALIDATORS.map((v) => <line class="nv-spoke" x1="200" y1="130" x2={v.x} y2={v.y} />)}
+              <g id="nv-pulses"></g>
+              <circle cx="200" cy="130" r="34" fill="url(#nv-core)" class="core" />
+              {VALIDATORS.map((v) => (
+                <g class="validator">
+                  <circle cx={v.x} cy={v.y} r="11" class="halo" />
+                  <circle cx={v.x} cy={v.y} r="4.5" class="dot" />
+                </g>
+              ))}
+            </svg>
+          </div>
+          <span class="holo-beam" aria-hidden="true"></span>
+          <span class="holo-mark" aria-hidden="true"></span>
+          <canvas class="gl-canvas" aria-hidden="true"></canvas>
+        </div>
+        <figcaption class="nv-stats">
+          <span><b id="nv-height">—</b> height</span>
+          <span><b id="nv-bt">—</b> block time</span>
+          <span><b>3 of 4</b> to finalize</span>
+          <span class="nv-live" id="nv-state">connecting…</span>
+        </figcaption>
+      </figure>
+    </article>
 
-    <div class="project-grid other-projects" data-reveal>
+    <div class="project-grid">
       {
-        PROJECTS.map((p) => (
-          <article class="card">
+        PROJECTS.map((p, i) => (
+          <article class="card panel" data-tilt data-reveal>
+            <span class="panel-index" aria-hidden="true">0{i + 1}</span>
             <p class="card-badge">{p.badge}</p>
             <h3 class="card-name">{p.name}</h3>
             <p class="card-desc">{p.description}</p>
@@ -83,7 +89,7 @@ const VALIDATORS = [0, 1, 2, 3].map((i) => {
                 </a>
               </div>
             ) : (
-              <p class="card-desc">Private repository.</p>
+              <p class="card-desc card-note">Private repository.</p>
             )}
           </article>
         ))

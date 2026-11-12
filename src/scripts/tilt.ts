@@ -8,6 +8,7 @@ const canTilt =
 if (canTilt) {
   const MAX_TILT_DEG = 9;
   document.querySelectorAll<HTMLElement>('[data-tilt]').forEach((card) => {
+    const max = Number(card.dataset.tilt) || MAX_TILT_DEG;
     const setVars = (vars: Record<string, string>): void => {
       for (const [key, value] of Object.entries(vars)) card.style.setProperty(key, value);
     };
@@ -16,8 +17,8 @@ if (canTilt) {
       const px = (e.clientX - rect.left) / rect.width;
       const py = (e.clientY - rect.top) / rect.height;
       setVars({
-        '--rx': `${((0.5 - py) * MAX_TILT_DEG).toFixed(2)}deg`,
-        '--ry': `${((px - 0.5) * MAX_TILT_DEG).toFixed(2)}deg`,
+        '--rx': `${((0.5 - py) * max).toFixed(2)}deg`,
+        '--ry': `${((px - 0.5) * max).toFixed(2)}deg`,
         '--gx': `${(px * 100).toFixed(1)}%`,
         '--gy': `${(py * 100).toFixed(1)}%`,
       });
@@ -27,3 +28,5 @@ if (canTilt) {
     });
   });
 }
+
+export {};

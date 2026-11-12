@@ -77,43 +77,37 @@ export const PROJECTS = [
   },
 ] as const;
 
-// x/y are positions on a 1000x640 constellation canvas; the core sits at 500,320.
+// `line` is the one-line summary shown on the orbit; `items` open on click.
 export const SKILL_GROUPS = [
   {
     name: 'Systems',
     items: ['Rust', 'Memory safety', 'Ownership', 'Concurrency', 'FFI', 'Cargo ecosystem'],
-    x: 500,
-    y: 90,
+    line: 'Memory-safe, concurrent Rust',
   },
   {
     name: 'Security',
     items: ['Threat detection', 'Network analysis', 'Binary exploitation', 'CVE research', 'Malware analysis'],
-    x: 140,
-    y: 210,
+    line: 'Find it before attackers do',
   },
   {
     name: 'AI Engineering',
     items: ['LLM integration', 'Claude API', 'Agentic systems', 'RAG', 'Security-focused AI'],
-    x: 860,
-    y: 210,
+    line: 'Models wired into real tools',
   },
   {
     name: 'Networking',
     items: ['TCP/IP', 'Protocol analysis', 'Packet inspection', 'Network security', 'async Rust'],
-    x: 150,
-    y: 520,
+    line: 'Protocols down to the packet',
   },
   {
     name: 'Tooling',
     items: ['Linux', 'Git', 'Docker', 'GDB/LLDB', 'Wireshark', 'Ghidra', 'VS Code'],
-    x: 850,
-    y: 520,
+    line: 'Debuggers, disassemblers, sniffers',
   },
   {
     name: 'Architecture',
     items: ['Modular monolith', 'API design', 'Systems design', 'Performance engineering'],
-    x: 500,
-    y: 560,
+    line: 'Systems shaped to last',
   },
 ] as const;
 

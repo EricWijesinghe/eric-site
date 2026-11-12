@@ -4,7 +4,7 @@ import { ABOUT_PARAGRAPHS, STATS } from '../data/content';
 
 <section id="about" aria-labelledby="about-title">
   <div class="wrap">
-    <p class="section-label" data-reveal>01 / about</p>
+    <p class="section-label" data-reveal><span>01</span> about</p>
     <h2 class="section-title" id="about-title" data-reveal>Who I am</h2>
     <div class="about-grid">
       <div class="about-text" data-reveal>
@@ -13,7 +13,7 @@ import { ABOUT_PARAGRAPHS, STATS } from '../data/content';
       <ul class="stat-grid" data-reveal>
         {
           STATS.map((s) => (
-            <li class="stat-card">
+            <li class="stat-card" data-tilt>
               <div class="stat-number">{s.value}</div>
               <div class="stat-label">{s.label}</div>
             </li>

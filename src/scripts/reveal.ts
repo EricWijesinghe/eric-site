@@ -38,3 +38,5 @@ if (!reduceMotion && 'IntersectionObserver' in window) {
   );
   document.querySelectorAll<HTMLElement>('[data-reveal]').forEach((el) => io.observe(el));
 }
+
+export {};
