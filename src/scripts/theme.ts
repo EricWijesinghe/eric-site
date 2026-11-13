@@ -6,7 +6,7 @@ const root = document.documentElement;
 function label(): void {
   const light = root.dataset.theme === 'light';
   toggle?.setAttribute('aria-pressed', String(light));
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', light ? '#f3efe7' : '#05090c');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', light ? '#faf8f4' : '#081c28');
 }
 
 toggle?.addEventListener('click', () => {

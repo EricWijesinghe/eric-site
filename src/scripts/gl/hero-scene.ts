@@ -1,5 +1,5 @@
 // Hero: a breathing point lattice (the post-quantum metaphor, literally) with sparse bonds,
-// a hexagonal emblem frame, pointer repulsion, scroll dolly and a slow camera drift.
+// pointer repulsion, scroll dolly and a slow camera drift.
 // Positions are static; every bit of motion happens in the vertex shader.
 import {
   AdditiveBlending,
@@ -7,8 +7,6 @@ import {
   Color,
   Float32BufferAttribute,
   Group,
-  LineBasicMaterial,
-  LineLoop,
   LineSegments,
   NormalBlending,
   PerspectiveCamera,
@@ -131,17 +129,6 @@ function buildLattice(): { geometry: BufferGeometry; bonds: BufferGeometry } {
   return { geometry, bonds };
 }
 
-function hexRing(radius: number, material: LineBasicMaterial): LineLoop {
-  const pts: number[] = [];
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
-    pts.push(Math.cos(a) * radius, Math.sin(a) * radius, 0);
-  }
-  const g = new BufferGeometry();
-  g.setAttribute('position', new Float32BufferAttribute(pts, 3));
-  return new LineLoop(g, material);
-}
-
 export function mountHero(canvas: HTMLCanvasElement, host: HTMLElement): void {
   const scene = new Scene();
   const camera = new PerspectiveCamera(52, 1, 0.1, 80);
@@ -163,20 +150,7 @@ export function mountHero(canvas: HTMLCanvasElement, host: HTMLElement): void {
   lattice.position.y = -1.6;
   scene.add(lattice);
 
-  const ringMat = new LineBasicMaterial({ transparent: true, opacity: 1, depthWrite: false });
-  const ringMat2 = new LineBasicMaterial({ transparent: true, opacity: 0.8, depthWrite: false });
-  const frame = new Group();
-  const rings = [hexRing(2.1, ringMat), hexRing(1.6, ringMat2), hexRing(1.05, ringMat)];
-  rings.forEach((r) => {
-    // WebGL lines are 1px; two offset copies give the frame a visible stroke weight.
-    for (const k of [1.012, 0.988]) {
-      const copy = r.clone();
-      copy.scale.setScalar(k);
-      r.add(copy);
-    }
-    frame.add(r);
-  });
-  scene.add(frame);
+  // The emblem itself is the inline SVG in Hero.astro; the scene is only the lattice behind it.
 
   const applyTheme = (): void => {
     const light = document.documentElement.dataset.theme === 'light';
@@ -185,12 +159,10 @@ export function mountHero(canvas: HTMLCanvasElement, host: HTMLElement): void {
     uniforms.uC.value.set(cssColor('--gl-c'));
     uniforms.uAlpha.value = light ? 0.8 : 1;
     const blending = light ? NormalBlending : AdditiveBlending;
-    for (const m of [pointMat, lineMat, ringMat, ringMat2]) {
+    for (const m of [pointMat, lineMat]) {
       m.blending = blending;
       m.needsUpdate = true;
     }
-    ringMat.color.set(cssColor('--gl-c'));
-    ringMat2.color.set(cssColor('--gl-a'));
   };
   applyTheme();
   onThemeChange(applyTheme);
@@ -220,9 +192,6 @@ export function mountHero(canvas: HTMLCanvasElement, host: HTMLElement): void {
     onResize: (w, h, dpr) => {
       uniforms.uAspect.value = w / h;
       uniforms.uSize.value = POINT_SIZE * dpr * Math.min(h / 800, 1.2);
-      const narrow = w / h < 1;
-      frame.position.set(narrow ? 0 : 5.2, narrow ? -2.8 : 0.6, 0);
-      frame.scale.setScalar(narrow ? 0.7 : 1);
     },
     onFrame: ({ t, dt }) => {
       uniforms.uTime.value = t;
@@ -239,9 +208,6 @@ export function mountHero(canvas: HTMLCanvasElement, host: HTMLElement): void {
       camera.lookAt(0, -progress * 1.5, -4);
       lattice.rotation.y = Math.sin(t * 0.03) * 0.12 + progress * 0.35;
 
-      frame.rotation.set(sy * 0.3 + Math.sin(t * 0.2) * 0.15, sx * 0.4 + t * 0.15, 0);
-      rings[1].rotation.set(t * 0.3, t * 0.2, 0);
-      rings[2].rotation.set(-t * 0.25, 0, t * 0.4);
     },
   });
 }

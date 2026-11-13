@@ -1,27 +1,34 @@
-/* Forged Light, personal cut: the Maya2C teal/bronze/steel, pushed darker and warmer, with
-   an ember accent of its own. Dark is the default; [data-theme='light'] is "forged paper".
+/* Forged Light 2 (Maya2C design/tokens.css, PR #521): the lifted, tinted dark theme with
+   luminous teal and warm bronze, so the page reads as lit metal rather than near-black.
+   Dark is the default; [data-theme='light'] takes the Forged Light 2 paper set.
    --gl-* feed the WebGL scenes, which re-read them when the theme changes. */
 :root {
-  --bg: #05090c;
-  --bg-2: #0a1217;
-  --surface: rgba(13, 25, 32, 0.74);
-  --surface-solid: #0c171d;
-  --line: rgba(126, 234, 240, 0.15);
-  --line-strong: rgba(126, 234, 240, 0.34);
-  --text: #eef4f3;
-  --text-dim: #a8b8bd;
-  --accent: #7eeaf0;
-  --teal: #1fb5c2;
-  --glow: #7eeaf0;
-  --bronze: #d6ae6e;
-  --ember: #ff8a5c;
-  --on-accent: #03151a;
-  --shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.8);
-  --grad-accent: linear-gradient(100deg, #7eeaf0 0%, #3fd2e0 35%, #d6ae6e 75%, #ff8a5c 100%);
-  --grad-btn: linear-gradient(120deg, #3fd2e0, #7eeaf0 55%, #d6ae6e);
-  --gl-a: #1fb5c2;
-  --gl-b: #7eeaf0;
-  --gl-c: #d6ae6e;
+  --bg: #081c28;
+  --bg-2: #0d2734;
+  --surface: rgb(19 51 66 / 0.72);
+  --surface-solid: #133342;
+  --line: rgb(150 210 225 / 0.16);
+  --line-strong: #6f9aa9;
+  --text: #f2f9fa;
+  --text-dim: #bcd0d7;
+  --accent: #52e5dd;
+  --teal: #1fd3cc;
+  --glow: #52e5dd;
+  --bronze: #ffbb6b;
+  --bronze-text: #ffd39b;
+  --steel: #96b8da;
+  --ember: #f5a04a;
+  --on-accent: #04222a;
+  --shadow: 0 30px 80px -30px rgb(2 10 16 / 0.65);
+  --grad-accent: linear-gradient(100deg, #52e5dd 0%, #1fd3cc 40%, #ffd39b 78%, #f5a04a 100%);
+  --grad-btn: linear-gradient(180deg, #52e5dd 0%, #0bb5b3 100%);
+  --grad-hero:
+    radial-gradient(120% 80% at 50% 0%, rgb(31 211 204 / 0.16) 0%, transparent 60%),
+    radial-gradient(70% 60% at 100% 100%, rgb(255 187 107 / 0.1) 0%, transparent 70%),
+    linear-gradient(180deg, #0d2734 0%, #081c28 100%);
+  --gl-a: #1fd3cc;
+  --gl-b: #52e5dd;
+  --gl-c: #ffbb6b;
 
   --font-display: 'Manrope', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
@@ -36,26 +43,32 @@
 }
 
 :root[data-theme='light'] {
-  --bg: #f3efe7;
-  --bg-2: #e8e1d4;
-  --surface: rgba(255, 252, 246, 0.8);
-  --surface-solid: #fbf8f2;
-  --line: rgba(12, 70, 80, 0.16);
-  --line-strong: rgba(12, 70, 80, 0.34);
-  --text: #0c1a20;
-  --text-dim: #3c4d54;
-  --accent: #0a6670;
-  --teal: #0a7c87;
-  --glow: #0a6670;
-  --bronze: #85561a;
-  --ember: #a8401a;
+  --bg: #faf8f4;
+  --bg-2: #f4f1eb;
+  --surface: rgb(255 255 255 / 0.82);
+  --surface-solid: #ffffff;
+  --line: rgb(60 45 20 / 0.14);
+  --line-strong: #8d877c;
+  --text: #14201f;
+  --text-dim: #3d4a49;
+  --accent: #075c52;
+  --teal: #0a7568;
+  --glow: #0a7568;
+  --bronze: #8a5a1f;
+  --bronze-text: #6f4612;
+  --steel: #4a5a70;
+  --ember: #b5671f;
   --on-accent: #ffffff;
-  --shadow: 0 30px 70px -35px rgba(40, 30, 10, 0.35);
-  --grad-accent: linear-gradient(100deg, #0a6670 0%, #0b7d88 40%, #85561a 80%, #a8401a 100%);
-  --grad-btn: linear-gradient(120deg, #0a6670, #0b6f7a);
-  --gl-a: #0a7c87;
-  --gl-b: #0a5c66;
-  --gl-c: #a8742c;
+  --shadow: 0 24px 48px -12px rgb(60 45 20 / 0.18);
+  --grad-accent: linear-gradient(100deg, #0a7568 0%, #086356 45%, #8a5a1f 85%, #6f4612 100%);
+  --grad-btn: linear-gradient(180deg, #0a7568 0%, #086356 100%);
+  --grad-hero:
+    radial-gradient(120% 80% at 50% 0%, rgb(10 117 104 / 0.08) 0%, transparent 60%),
+    radial-gradient(70% 60% at 100% 100%, rgb(181 103 34 / 0.08) 0%, transparent 70%),
+    linear-gradient(180deg, #ffffff 0%, #faf8f4 100%);
+  --gl-a: #0a7568;
+  --gl-b: #075c52;
+  --gl-c: #8a5a1f;
   color-scheme: light;
 }
 
@@ -218,6 +231,8 @@ a:hover {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  justify-content: center;
+  min-width: var(--tap);
   min-height: var(--tap);
   color: var(--text);
   font: 800 1.05rem/1 var(--font-display);
@@ -299,8 +314,14 @@ a:hover {
     gap: 8px;
   }
   .nav-links a {
-    padding: 0 6px;
-    font-size: 0.76rem;
+    padding: 0 10px;
+    font-size: 0.85rem;
+  }
+  /* Too narrow for four links at a readable size: they scroll inside the bar, and the fade
+     at the right edge says there is more. Nothing reaches past the viewport. */
+  .nav-links {
+    mask-image: linear-gradient(to right, #000 82%, transparent);
+    padding-right: 24px;
   }
 }
 
@@ -359,6 +380,67 @@ a:hover {
   margin-top: -61px;
   overflow: hidden;
   isolation: isolate;
+  background: var(--grad-hero);
+}
+
+.hero-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
+  align-items: center;
+  gap: clamp(20px, 4vw, 56px);
+}
+
+/* ---------- hero emblem: the one focal image, lit teal to bronze ---------- */
+
+.hero-emblem {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  width: min(100%, 420px);
+  margin: 0;
+  aspect-ratio: 1;
+  position: relative;
+}
+
+.hero-emblem::before {
+  content: '';
+  position: absolute;
+  inset: -12%;
+  border-radius: 50%;
+  background:
+    radial-gradient(closest-side, color-mix(in srgb, var(--teal) 38%, transparent), transparent 70%),
+    radial-gradient(closest-side at 70% 75%, color-mix(in srgb, var(--bronze) 30%, transparent), transparent 75%);
+}
+
+.hero-emblem svg {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.he-a { stop-color: var(--glow); }
+.he-b { stop-color: var(--teal); }
+.he-c { stop-color: var(--bronze); }
+.he-core-a { stop-color: var(--bronze-text); }
+.he-core-b { stop-color: var(--bronze); stop-opacity: 0; }
+.he-ring { fill: none; stroke: color-mix(in srgb, var(--glow) 40%, transparent); stroke-width: 1; }
+.he-ring.faint { stroke: color-mix(in srgb, var(--bronze) 35%, transparent); stroke-dasharray: 2 6; }
+.he-hex { fill: color-mix(in srgb, var(--teal) 10%, transparent); stroke: url(#he-edge); stroke-width: 5; stroke-linejoin: round; }
+.he-bond { fill: none; stroke: url(#he-edge); stroke-width: 1.6; opacity: 0.6; }
+.he-inner { fill: none; stroke: color-mix(in srgb, var(--glow) 55%, transparent); stroke-width: 1.2; }
+.he-glow { fill: url(#he-core); }
+.he-dot { fill: var(--bronze); }
+.he-node { fill: var(--bg); stroke: var(--glow); stroke-width: 2; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* translate only: it stays on the compositor, so it costs no main-thread time. */
+  .hero-emblem svg { animation: float 7s ease-in-out infinite; }
+}
+
+@keyframes float {
+  50% { translate: 0 -8px; }
 }
 
 .gl-canvas {
@@ -406,16 +488,6 @@ a:hover {
   opacity: 0.55;
 }
 
-.hero-hex {
-  position: absolute;
-  right: 8%;
-  top: 22%;
-  width: min(36vw, 420px);
-  aspect-ratio: 1;
-  background: url('/emblem.svg') center / contain no-repeat;
-  opacity: 0.22;
-  filter: drop-shadow(0 0 40px var(--teal));
-}
 
 .hero-vignette {
   position: absolute;
@@ -429,6 +501,9 @@ a:hover {
 
 .hero-copy {
   position: relative;
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
 }
 
 .eyebrow {
@@ -561,8 +636,32 @@ a:hover {
   100% { transform: scaleY(1); opacity: 0; }
 }
 
+/* Phones and small tablets: no full-screen gap, the emblem sits above the name (never under
+   the text), and the scroll cue goes because the page already continues in view. */
+@media (max-width: 900px) {
+  .hero {
+    min-height: auto;
+    padding: 84px 0 56px;
+  }
+  .hero-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .hero-emblem {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+    width: min(46vw, 220px);
+  }
+  .hero-copy {
+    grid-row: 2;
+  }
+  .scroll-cue {
+    display: none;
+  }
+}
+
 @media (max-width: 720px) {
-  .hero-hex { right: -10%; top: 8%; width: 70vw; opacity: 0.14; }
   .hero-vignette {
     background:
       linear-gradient(to bottom, color-mix(in srgb, var(--bg) 30%, transparent), color-mix(in srgb, var(--bg) 70%, transparent) 60%, var(--bg));

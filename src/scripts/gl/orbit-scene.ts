@@ -34,6 +34,10 @@ const RINGS = [
 ];
 const NODE_SPEED = 0.09;
 const PROJECT_MIN_WIDTH = 480;
+// Must match the sections.css query that turns the button grid into the projected stage.
+const ORBIT_MEDIA = window.matchMedia('(min-width: 1000px)');
+// Keeps every projected button this far inside the stage edge.
+const EDGE_PAD = 16;
 const STARS = 500;
 const SLOW = 0.15;
 
@@ -167,6 +171,7 @@ export function mountOrbit(canvas: HTMLCanvasElement, host: HTMLElement): void {
   let width = 1;
   let height = 1;
   let project = false;
+  let halfWidths: number[] = [];
   let speed = 1;
   let spin = -Math.PI / 2;
   const v = new Vector3();
@@ -178,8 +183,10 @@ export function mountOrbit(canvas: HTMLCanvasElement, host: HTMLElement): void {
     onResize: (w, h, dpr) => {
       width = w;
       height = h;
-      project = w >= PROJECT_MIN_WIDTH;
+      project = w >= PROJECT_MIN_WIDTH && ORBIT_MEDIA.matches;
       host.classList.toggle('is-projected', project);
+      // Measured after the class lands (node lines hide); 0.6 = half the width at the largest scale (1.2).
+      halfWidths = buttons.map((b) => b.offsetWidth * 0.6);
       uniforms.uScale.value = 30 * dpr * Math.min(h / 600, 1.3);
       camera.position.z = project ? 11 : 9.5;
       if (!project) buttons.forEach((b) => b.style.removeProperty('transform'));
@@ -204,9 +211,11 @@ export function mountOrbit(canvas: HTMLCanvasElement, host: HTMLElement): void {
         if (project) {
           const depth = v.z;
           v.project(camera);
-          const x = ((v.x + 1) / 2) * width;
+          const hw = halfWidths[i] ?? 0;
+          const x = Math.min(Math.max(((v.x + 1) / 2) * width, hw + EDGE_PAD), width - hw - EDGE_PAD);
           const y = ((1 - v.y) / 2) * height;
-          const s = 0.82 + (depth + 4.3) * 0.045;
+          // Never below 1: a scaled-down button would fall under the 44 px tap target.
+          const s = Math.max(1, 0.82 + (depth + 4.3) * 0.045);
           buttons[i].style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -50%) scale(${s.toFixed(3)})`;
           buttons[i].style.zIndex = String(Math.round(depth * 10) + 100);
         }
