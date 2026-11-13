@@ -8,4 +8,6 @@
     /* storage blocked: keep the default */
   }
   document.documentElement.dataset.theme = theme;
+  // Lets CSS lay out JS-only controls (the phone menu) from the first paint, with no jump.
+  document.documentElement.classList.add('js');
 })();

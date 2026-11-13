@@ -314,20 +314,15 @@ main > section:not(.hero):nth-of-type(even) {
 
 @media (max-width: 960px) {
   .featured { grid-template-columns: minmax(0, 1fr); }
-  /* One swipeable row instead of three full-height cards stacked down the page. The row is
-     its own scroller (focusable, labelled), so the page itself never scrolls sideways. */
+  /* Stacked, never a sideways row: a carousel on a phone read as cards running off the screen. */
   .project-grid {
-    grid-template-columns: none;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(260px, 84%);
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scroll-snap-type: x mandatory;
-    padding-bottom: 12px;
-    scrollbar-width: thin;
   }
-  .project-grid .card { scroll-snap-align: start; }
+}
+
+@media (max-width: 600px) {
+  .featured .card-links .btn { flex: 1 1 100%; }
 }
 
 /* Live network view as a holographic plate, with the 3D emblem floating above its core. */
@@ -400,7 +395,7 @@ main > section:not(.hero):nth-of-type(even) {
 .netview .nv-link { stroke: var(--teal); stroke-opacity: 0.45; stroke-width: 1; }
 .netview .nv-spoke { stroke: color-mix(in srgb, var(--glow) 35%, transparent); stroke-width: 1; stroke-dasharray: 3 5; }
 .netview .halo { fill: color-mix(in srgb, var(--teal) 14%, transparent); stroke: color-mix(in srgb, var(--teal) 70%, transparent); stroke-width: 1; }
-.netview .dot { fill: var(--bronze); }
+.netview .dot { fill: var(--warm); }
 .netview .pulse { fill: none; stroke: var(--glow); stroke-width: 1.5; transform-origin: 200px 130px; animation: nv-pulse 2.6s cubic-bezier(0.2, 0.7, 0.3, 1) forwards; }
 
 .nv-stats {
@@ -526,6 +521,11 @@ main > section:not(.hero):nth-of-type(even) {
 .gl-on > .orbit-core {
   color: var(--on-accent);
   text-shadow: none;
+}
+
+/* The light-theme core is bright amber, so its label goes dark (8:1) instead of white. */
+:root[data-theme='light'] .gl-on > .orbit-core {
+  color: var(--text);
 }
 
 .orbit-nodes {

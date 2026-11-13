@@ -11,6 +11,7 @@ export const GITHUB_PROFILE = 'https://github.com/EricWijesinghe';
 export const MAYA2C_SITE = 'https://maya2c.dev';
 export const MAYA2C_REPO = 'https://github.com/EricWijesinghe/Maya2C';
 // Public, and the one written contact route: no email address is published here.
+export const MAYA2C_CONTRIBUTING = 'https://github.com/EricWijesinghe/Maya2C/blob/master/CONTRIBUTING.md';
 export const MAYA2C_DISCUSSIONS = 'https://github.com/EricWijesinghe/Maya2C/discussions';
 
 // Support: no donation account exists yet. Set this to a real URL (GitHub Sponsors,
@@ -23,7 +24,7 @@ export const ROLES = ['Rust-First Engineer', 'Founder & Builder', 'Security Rese
 export const ABOUT_PARAGRAPHS = [
   "I'm an independent developer and self-directed learner. Growth is limited by complexity, not by knowledge.",
   "Rust is my primary language. It makes you think correctly about memory, ownership, and concurrency. The compiler is the strictest teacher I've had.",
-  'I work at the systems layer: network protocols, binary analysis, threat detection, and AI-assisted security tooling. Right now I am building Maya2C, a post-quantum blockchain designed from the ground up.',
+  'My focus is the systems layer: network protocols, security, and where AI fits into security work. Right now I am building Maya2C, a Layer-1 blockchain that uses NIST post-quantum signatures (FIPS 204, FIPS 205).',
 ] as const;
 
 // Facts, not numbers: each one is checkable in the public Maya2C repository.
@@ -38,11 +39,12 @@ export const FEATURED_PROJECT = {
   name: 'Maya2C',
   badge: 'flagship · testnet paused, mainnet not live',
   description:
-    'A post-quantum Layer-1 blockchain written in Rust. It reaches deterministic finality through DAG-BFT consensus and secures every transaction with two NIST post-quantum signatures, ML-DSA-65 and SLH-DSA. Built to stay safe after large-scale quantum computers arrive.',
-  tags: ['Rust', 'Post-Quantum', 'DAG-BFT', 'ML-DSA-65', 'SLH-DSA', 'Layer-1'],
+    'A post-quantum Layer-1 blockchain written in Rust. It reaches deterministic finality through DAG-BFT consensus, and each transaction is signed with two NIST post-quantum schemes, ML-DSA (FIPS 204) and SLH-DSA (FIPS 205), both of which must verify.',
+  tags: ['Rust', 'Post-Quantum', 'DAG-BFT', 'ML-DSA', 'SLH-DSA', 'Layer-1'],
   spec: [
     ['consensus', 'DAG-BFT'],
-    ['signatures', 'ML-DSA-65 + SLH-DSA'],
+    // No parameter set: the repo's README and ADRs name different ones (65 vs 87) for different keys.
+    ['signatures', 'ML‑DSA + SLH‑DSA'], // U+2011: the names never break at the hyphen
     ['language', 'Rust'],
     ['license', 'Apache-2.0'],
   ],
@@ -62,8 +64,9 @@ export const PROJECTS = [
     name: 'UNICRON',
     badge: 'security platform · private repo',
     description:
-      'A modular-monolith cybersecurity platform built entirely in Rust: threat detection, network analysis, and AI-assisted security intelligence.',
-    tags: ['Rust', 'AI/ML', 'Threat Detection'],
+      // Worded from the private repo's own GitHub description; no language claim (metadata says mostly HTML).
+      'A security assessment and pentesting platform, kept in a private repository while it takes shape.',
+    tags: ['Security assessment', 'Pentesting'],
     href: null,
     note: 'Private repository.',
   },
@@ -71,8 +74,8 @@ export const PROJECTS = [
     name: 'Security Research',
     badge: 'security tooling',
     description:
-      'Vulnerability research, binary analysis, and offensive/defensive security tooling. Exploring the boundary between AI and traditional security methodology.',
-    tags: ['Rust', 'Fuzzing', 'Threat Modelling'],
+      'Where I want to go deeper: security research, and how AI fits next to traditional security methods.',
+    tags: ['Security', 'Rust'],
     href: null,
     note: 'Focus area: no public repository yet.',
   },
@@ -80,8 +83,8 @@ export const PROJECTS = [
     name: 'AI × Security',
     badge: 'ai engineering',
     description:
-      'Integrating LLM capabilities into security workflows: automated threat intelligence, AI-assisted code auditing, and anomaly detection.',
-    tags: ['LLMs', 'Rust', 'Claude API', 'Agents'],
+      'Where I want to go deeper: language models used inside security workflows.',
+    tags: ['LLMs', 'Security'],
     href: null,
     note: 'Focus area: no public repository yet.',
   },
@@ -96,13 +99,14 @@ export const SKILL_GROUPS = [
   },
   {
     name: 'Security',
-    items: ['Threat detection', 'Network analysis', 'Fuzzing', 'Binary analysis', 'Malware analysis'],
+    // Fuzzing is in the public Maya2C repo (fuzz/ targets); unevidenced skills stay off until shown.
+    items: ['Threat detection', 'Network analysis', 'Fuzzing'],
     line: 'Find it before attackers do',
   },
   {
     name: 'AI Engineering',
-    items: ['LLM integration', 'Claude API', 'Agentic systems', 'RAG', 'Security-focused AI'],
-    line: 'Models wired into real tools',
+    items: ['LLM integration', 'AI-assisted development'],
+    line: 'Models as working tools',
   },
   {
     name: 'Networking',
@@ -111,8 +115,8 @@ export const SKILL_GROUPS = [
   },
   {
     name: 'Tooling',
-    items: ['Linux', 'Git', 'Docker', 'GDB/LLDB', 'Wireshark', 'Ghidra', 'VS Code'],
-    line: 'Debuggers, disassemblers, sniffers',
+    items: ['Linux', 'Git', 'Docker', 'GDB/LLDB', 'Wireshark', 'VS Code'],
+    line: 'Debuggers, containers, sniffers',
   },
   {
     name: 'Architecture',

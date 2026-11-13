@@ -3,7 +3,7 @@ import { FEATURED_PROJECT, PROJECTS } from '../data/content';
 const f = FEATURED_PROJECT;
 // Live network view: the four validators on a ring around the core. Every
 // real block (polled from rpc.maya2c.dev) sends a pulse ring outward; the
-// numbers under it are the chain's own. Without data it says so and stops asking.
+// numbers under it are the chain's own. Without data it says so and asks less often.
 const VALIDATORS = [0, 1, 2, 3].map((i) => {
   const a = (i / 4) * Math.PI * 2 - Math.PI / 4;
   return { x: +(200 + Math.cos(a) * 92).toFixed(1), y: +(130 + Math.sin(a) * 92).toFixed(1) };
@@ -33,8 +33,8 @@ const VALIDATORS = [0, 1, 2, 3].map((i) => {
         </dl>
         <p class="card-desc disclosure">{f.disclosure}</p>
         <div class="card-links">
-          {f.links.map((l) => (
-            <a href={l.href} rel="noopener noreferrer" target="_blank">{l.label} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+          {f.links.map((l, i) => (
+            <a class:list={['btn', i === 0 ? 'btn-primary' : 'btn-ghost']} href={l.href} rel="noopener noreferrer" target="_blank">{l.label} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
           ))}
         </div>
       </div>
@@ -72,7 +72,7 @@ const VALIDATORS = [0, 1, 2, 3].map((i) => {
       </figure>
     </article>
 
-    <div class="project-grid" role="region" aria-label="More projects" tabindex="0">
+    <div class="project-grid">
       {
         PROJECTS.map((p, i) => (
           <article class="card panel" data-tilt data-reveal>
@@ -101,18 +101,21 @@ const VALIDATORS = [0, 1, 2, 3].map((i) => {
 </section>
 
 <script>
-  // Polls the public gateway; each new height pulses the core once.
+  // Polls the public gateway; each new height pulses the core once. "live" is earned only by a
+  // height that moves: a gateway answering with a frozen height is a stalled chain, not a live one.
   const RPC = "https://rpc.maya2c.dev/rpc";
+  const POLL_MS = 2000;
+  const RETRY_MS = 30_000; // once the gateway is down, keep asking, just less often
+  const STALE_MS = 60_000; // no new height for this long: say when the last block came
+  const MAX_MISSES = 3;
   const pulses = document.getElementById("nv-pulses");
-  const heightEl = document.getElementById("nv-height");
-  const btEl = document.getElementById("nv-bt");
-  const stateEl = document.getElementById("nv-state");
+  const heightEl = document.getElementById("nv-height")!;
+  const btEl = document.getElementById("nv-bt")!;
+  const stateEl = document.getElementById("nv-state")!;
   const view = document.getElementById("netview");
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  // After this many misses in a row the gateway is treated as down: stop polling, say so once.
-  const MAX_MISSES = 3;
   let misses = 0;
-  let last = 0, lastAt = 0;
+  let last = 0, lastAt = 0, moved = false;
   const gaps: number[] = [];
   function pulse() {
     if (reduce || !pulses) return;
@@ -122,30 +125,43 @@ const VALIDATORS = [0, 1, 2, 3].map((i) => {
     pulses.appendChild(c);
     setTimeout(() => c.remove(), 2600);
   }
+  function setState(text: string, on: boolean) {
+    stateEl.textContent = text;
+    stateEl.classList.toggle("on", on);
+  }
   async function tick() {
     try {
       const r = await fetch(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "get_chain_info", params: [] }) });
       const h = ((await r.json()).result ?? {}).height as number;
       if (typeof h !== "number") throw new Error("no height");
-      const now = performance.now();
+      const now = Date.now();
       if (last && h > last) {
         gaps.push((now - lastAt) / (h - last)); if (gaps.length > 12) gaps.shift();
-        btEl!.textContent = (gaps.reduce((a, b) => a + b, 0) / gaps.length / 1000).toFixed(1) + " s";
+        btEl.textContent = (gaps.reduce((a, b) => a + b, 0) / gaps.length / 1000).toFixed(1) + " s";
+        moved = true;
         pulse();
       }
       if (h !== last) { last = h; lastAt = now; }
-      heightEl!.textContent = h.toLocaleString("en-US");
+      heightEl.textContent = h.toLocaleString("en-US");
       misses = 0;
-      stateEl!.textContent = "live"; stateEl!.classList.add("on");
+      view?.classList.remove("is-paused");
+      if (now - lastAt >= STALE_MS) {
+        const at = new Date(lastAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        setState(`no new blocks since ${at}`, false);
+      } else {
+        setState(moved ? "live" : "waiting for a new block…", moved);
+      }
     } catch {
       misses += 1;
-      stateEl!.classList.remove("on");
-      if (misses < MAX_MISSES) { stateEl!.textContent = "connecting…"; return; }
-      clearInterval(timer);
+      if (misses < MAX_MISSES) { setState("connecting…", false); return; }
       view?.classList.add("is-paused");
-      stateEl!.textContent = "Testnet paused: no live data right now";
+      // A failed fetch says nothing about the chain, only that this page cannot reach it.
+      setState("Live data unavailable right now", false);
     }
   }
-  const timer = setInterval(tick, 2000);
-  tick();
+  async function loop() {
+    await tick();
+    setTimeout(loop, misses >= MAX_MISSES ? RETRY_MS : POLL_MS);
+  }
+  loop();
 </script>

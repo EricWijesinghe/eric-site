@@ -18,6 +18,8 @@
   --bronze-text: #ffd39b;
   --steel: #96b8da;
   --ember: #f5a04a;
+  /* Decorative warm light (glows, emblem core, 3D core): never used for text. */
+  --warm: #ffbb6b;
   --on-accent: #04222a;
   --shadow: 0 30px 80px -30px rgb(2 10 16 / 0.65);
   --grad-accent: linear-gradient(100deg, #52e5dd 0%, #1fd3cc 40%, #ffd39b 78%, #f5a04a 100%);
@@ -58,17 +60,21 @@
   --bronze-text: #6f4612;
   --steel: #4a5a70;
   --ember: #b5671f;
+  /* Light theme keeps text bronze dark for AA, but lights the decoration with real amber so
+     the paper theme glows like the dark one instead of going flat brown. */
+  --warm: #f2a245;
   --on-accent: #ffffff;
   --shadow: 0 24px 48px -12px rgb(60 45 20 / 0.18);
-  --grad-accent: linear-gradient(100deg, #0a7568 0%, #086356 45%, #8a5a1f 85%, #6f4612 100%);
+  /* Every stop is >= 3.4:1 on the paper background (large display text only). */
+  --grad-accent: linear-gradient(100deg, #0a7568 0%, #0a8576 52%, #b8701e 74%, #c27419 100%);
   --grad-btn: linear-gradient(180deg, #0a7568 0%, #086356 100%);
   --grad-hero:
     radial-gradient(120% 80% at 50% 0%, rgb(10 117 104 / 0.08) 0%, transparent 60%),
     radial-gradient(70% 60% at 100% 100%, rgb(181 103 34 / 0.08) 0%, transparent 70%),
     linear-gradient(180deg, #ffffff 0%, #faf8f4 100%);
   --gl-a: #0a7568;
-  --gl-b: #075c52;
-  --gl-c: #8a5a1f;
+  --gl-b: #1fb5a8;
+  --gl-c: #f2a245;
   color-scheme: light;
 }
 
@@ -184,7 +190,7 @@ a:hover {
 }
 
 .aurora span:nth-child(1) { --c: var(--teal); left: -20vmax; top: 30vh; }
-.aurora span:nth-child(2) { --c: var(--bronze); right: -25vmax; top: 90vh; opacity: 0.1; }
+.aurora span:nth-child(2) { --c: var(--warm); right: -25vmax; top: 90vh; opacity: 0.1; }
 .aurora span:nth-child(3) { --c: var(--ember); left: 30vw; bottom: -40vmax; opacity: 0.07; }
 
 :root[data-theme='light'] .aurora span { opacity: 0.12; }
@@ -257,8 +263,6 @@ a:hover {
   margin: 0;
   padding: 0;
   list-style: none;
-  overflow-x: auto;
-  scrollbar-width: none;
 }
 
 .nav-links a {
@@ -306,22 +310,71 @@ a:hover {
   display: block;
 }
 
-@media (max-width: 520px) {
-  .logo > span:not(.logo-mark, .visually-hidden) {
+.nav-menu {
+  display: none;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* Three bars that fold into an X when the menu is open. */
+.nav-menu-bars,
+.nav-menu-bars::before,
+.nav-menu-bars::after {
+  display: block;
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transition: transform 0.25s var(--ease), background-color 0.2s;
+}
+
+.nav-menu-bars { position: relative; }
+.nav-menu-bars::before,
+.nav-menu-bars::after { content: ''; position: absolute; left: 0; }
+.nav-menu-bars::before { top: -6px; }
+.nav-menu-bars::after { top: 6px; }
+.menu-open .nav-menu-bars { background: transparent; }
+.menu-open .nav-menu-bars::before { transform: translateY(6px) rotate(45deg); }
+.menu-open .nav-menu-bars::after { transform: translateY(-6px) rotate(-45deg); }
+
+/* Phones: four links never fit beside the logo and toggle at a tappable size, so they are
+   never squeezed or scrolled. With JS they open from a menu button as full-width rows;
+   without JS they wrap onto a second row of their own. */
+@media (max-width: 480px) {
+  .nav-inner { flex-wrap: wrap; gap: 8px; }
+  .nav nav { display: flex; justify-content: flex-end; }
+  :root:not(.js) .nav nav { order: 3; flex: 1 0 100%; }
+  :root:not(.js) .nav .nav-links { justify-content: space-between; width: 100%; }
+  :root:not(.js) .nav .nav-links a { padding: 0 6px; }
+
+  .js .nav .nav-menu { display: inline-grid; }
+  .js .nav .nav-links {
     display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    gap: 0;
+    padding: 6px var(--gutter) 12px;
+    background: var(--surface-solid);
+    border-bottom: 1px solid var(--line);
+    box-shadow: var(--shadow);
   }
-  .nav-inner {
-    gap: 8px;
-  }
-  .nav-links a {
-    padding: 0 10px;
-    font-size: 0.85rem;
-  }
-  /* Too narrow for four links at a readable size: they scroll inside the bar, and the fade
-     at the right edge says there is more. Nothing reaches past the viewport. */
-  .nav-links {
-    mask-image: linear-gradient(to right, #000 82%, transparent);
-    padding-right: 24px;
+  .js .menu-open .nav-links { display: flex; }
+  .js .nav .nav-links a {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 12px;
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 0.95rem;
   }
 }
 
@@ -410,7 +463,13 @@ a:hover {
   border-radius: 50%;
   background:
     radial-gradient(closest-side, color-mix(in srgb, var(--teal) 38%, transparent), transparent 70%),
-    radial-gradient(closest-side at 70% 75%, color-mix(in srgb, var(--bronze) 30%, transparent), transparent 75%);
+    radial-gradient(closest-side at 70% 75%, color-mix(in srgb, var(--warm) 30%, transparent), transparent 75%);
+}
+
+:root[data-theme='light'] .hero-emblem::before {
+  background:
+    radial-gradient(closest-side, rgb(60 201 189 / 0.3), transparent 70%),
+    radial-gradient(closest-side at 70% 75%, rgb(255 179 92 / 0.4), transparent 75%);
 }
 
 .hero-emblem svg {
@@ -423,15 +482,16 @@ a:hover {
 .he-a { stop-color: var(--glow); }
 .he-b { stop-color: var(--teal); }
 .he-c { stop-color: var(--bronze); }
-.he-core-a { stop-color: var(--bronze-text); }
-.he-core-b { stop-color: var(--bronze); stop-opacity: 0; }
+.he-core-a { stop-color: var(--warm); }
+.he-core-b { stop-color: var(--warm); stop-opacity: 0; }
+:root[data-theme='light'] .he-core-a { stop-color: #ffe2b0; }
 .he-ring { fill: none; stroke: color-mix(in srgb, var(--glow) 40%, transparent); stroke-width: 1; }
 .he-ring.faint { stroke: color-mix(in srgb, var(--bronze) 35%, transparent); stroke-dasharray: 2 6; }
 .he-hex { fill: color-mix(in srgb, var(--teal) 10%, transparent); stroke: url(#he-edge); stroke-width: 5; stroke-linejoin: round; }
 .he-bond { fill: none; stroke: url(#he-edge); stroke-width: 1.6; opacity: 0.6; }
 .he-inner { fill: none; stroke: color-mix(in srgb, var(--glow) 55%, transparent); stroke-width: 1.2; }
 .he-glow { fill: url(#he-core); }
-.he-dot { fill: var(--bronze); }
+.he-dot { fill: var(--warm); }
 .he-node { fill: var(--bg); stroke: var(--glow); stroke-width: 2; }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -525,8 +585,8 @@ a:hover {
   height: 8px;
   flex: none;
   border-radius: 50%;
-  background: var(--bronze);
-  box-shadow: 0 0 0 0 var(--bronze);
+  background: var(--warm);
+  box-shadow: 0 0 0 0 var(--warm);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -534,7 +594,7 @@ a:hover {
 }
 
 @keyframes ping {
-  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--bronze) 70%, transparent); }
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--warm) 70%, transparent); }
   100% { box-shadow: 0 0 0 12px transparent; }
 }
 
@@ -650,7 +710,7 @@ a:hover {
   .hero-emblem {
     grid-column: 1;
     grid-row: 1;
-    justify-self: start;
+    justify-self: center;
     width: min(46vw, 220px);
   }
   .hero-copy {
@@ -658,6 +718,50 @@ a:hover {
   }
   .scroll-cue {
     display: none;
+  }
+}
+
+/* Phones: one centred column, the emblem lit above the name, and spacing tight enough that
+   both buttons sit fully inside the first screen (360x740). */
+@media (max-width: 600px) {
+  .hero {
+    padding: 72px 0 40px;
+  }
+  .hero-emblem {
+    width: min(44vw, 176px);
+  }
+  .hero-copy {
+    text-align: center;
+  }
+  .eyebrow {
+    margin-bottom: 14px;
+  }
+  .eyebrow-tail {
+    display: none;
+  }
+  .hero-roles,
+  .hero-actions {
+    justify-content: center;
+  }
+  .hero-roles {
+    margin-top: 18px;
+    gap: 6px;
+  }
+  .hero-bio {
+    margin: 14px auto 0;
+  }
+  .hero-actions {
+    margin-top: 20px;
+  }
+}
+
+/* Light theme: the lattice stays a backdrop, washed out behind the copy column. */
+@media (min-width: 721px) {
+  :root[data-theme='light'] .hero-vignette {
+    background:
+      radial-gradient(circle 440px at 78% 46%, color-mix(in srgb, var(--teal) 12%, transparent), transparent 70%),
+      radial-gradient(ellipse 72% 75% at 24% 50%, color-mix(in srgb, var(--bg) 94%, transparent) 40%, transparent 75%),
+      linear-gradient(to bottom, transparent 70%, var(--bg));
   }
 }
 
