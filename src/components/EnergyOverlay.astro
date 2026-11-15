@@ -1,0 +1,47 @@
+---
+// The whole page answers his charge and release (src/scripts/energy-overlay.ts). Decoration only.
+---
+
+<canvas class="energy-overlay" data-energy aria-hidden="true"></canvas>
+
+<script>
+  import { whenIdle } from '../scripts/idle';
+
+  const c = document.querySelector<HTMLCanvasElement>('[data-energy]');
+  if (c) whenIdle(() => import('../scripts/energy-overlay').then(({ mountEnergy }) => mountEnergy(c)));
+</script>
+
+<style is:global>
+  .energy-overlay {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 40;
+    pointer-events: none;
+  }
+  /* A release makes the page's headings and accents surge for a moment, in both themes. */
+  .section-title,
+  .section-label,
+  #hero-title,
+  .btn-primary {
+    transition: text-shadow 0.5s ease, box-shadow 0.5s ease, filter 0.5s ease;
+  }
+  .m2c-surge .section-title,
+  .m2c-surge #hero-title {
+    text-shadow: 0 0 18px rgb(56 225 255 / 0.75), 0 0 42px rgb(139 92 246 / 0.45);
+  }
+  .m2c-surge .btn-primary {
+    box-shadow: 0 0 0 1px rgb(56 225 255 / 0.6), 0 0 28px rgb(56 225 255 / 0.55);
+  }
+  :root[data-theme='light'].m2c-surge .section-title,
+  :root[data-theme='light'].m2c-surge #hero-title {
+    text-shadow: 0 0 14px rgb(11 95 191 / 0.45), 0 0 34px rgb(91 43 214 / 0.3);
+  }
+  :root[data-theme='light'].m2c-surge .btn-primary {
+    box-shadow: 0 0 0 1px rgb(11 95 191 / 0.5), 0 0 24px rgb(11 95 191 / 0.4);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .energy-overlay { display: none; }
+  }
+</style>

@@ -1,167 +1,139 @@
 ---
-import { FEATURED_PROJECT, PROJECTS } from '../data/content';
-const f = FEATURED_PROJECT;
-// Live network view: the four validators on a ring around the core. Every
-// real block (polled from rpc.maya2c.dev) sends a pulse ring outward; the
-// numbers under it are the chain's own. Without data it says so and asks less often.
-const VALIDATORS = [0, 1, 2, 3].map((i) => {
-  const a = (i / 4) * Math.PI * 2 - Math.PI / 4;
-  return { x: +(200 + Math.cos(a) * 92).toFixed(1), y: +(130 + Math.sin(a) * 92).toFixed(1) };
-});
+import { FEATURED_PROJECT as f, PROJECTS } from '../data/content';
+import { CHAPTERS, STRUCTURE_ONLY } from '../data/scenes';
+import '../styles/projects.css';
+
+// Order of the chapters on the page: Maya2C first, then the three focus areas.
+const [unicron, research, ai] = PROJECTS;
 ---
 
-<section id="projects" aria-labelledby="projects-title">
+<section id="projects" class="projects" aria-labelledby="projects-title">
   <div class="wrap">
-    <p class="section-label" data-reveal><span>02</span> portfolio</p>
-    <h2 class="section-title" id="projects-title" data-reveal>What I'm building</h2>
+    <header class="projects-head">
+      <p class="section-label" data-reveal><span>02</span> portfolio</p>
+      <h2 class="section-title" id="projects-title" data-reveal>What I'm building</h2>
+    </header>
 
-    <article class="card panel featured" data-tilt="3" data-reveal>
-      <div class="panel-body">
-        <p class="card-badge"><span class="pulse-dot" aria-hidden="true"></span>{f.badge}</p>
-        <h3 class="card-name featured-name">{f.name}</h3>
-        <p class="card-desc">{f.description}</p>
-        <ul class="tags">
+    <!-- Chapter 01: Maya2C. The live readout is the chain's own numbers, or nothing. -->
+    <article class="chapter" data-reveal>
+      <figure class="chapter-scene" data-live="false">
+        <div class="sig-viewport scene" data-scene={CHAPTERS.maya.scene} role="img" aria-label={CHAPTERS.maya.aria}></div>
+        <div class="scene-bar">
+          <button type="button" class="scene-act">{CHAPTERS.maya.act}</button>
+          <span class="scene-badge"><span class="tag-live">live readout</span><span class="tag-structure">{STRUCTURE_ONLY}</span></span>
+        </div>
+        <figcaption class="scene-caption">{CHAPTERS.maya.caption}</figcaption>
+        <div class="hud" id="netview">
+          <p class="hud-row nv-num"><span class="hud-k">height</span> <b id="nv-height">—</b></p>
+          <p class="hud-row nv-num"><span class="hud-k">block time</span> <b id="nv-bt">—</b></p>
+          <p class="hud-row"><span class="hud-k">finality</span> <b>DAG-BFT</b></p>
+          <p class="hud-row"><span class="hud-k">state</span> <span id="nv-state" class="nv-live" role="status">connecting…</span></p>
+        </div>
+      </figure>
+      <div class="chapter-text">
+        <p class="chapter-index"><span>01</span> {f.badge}</p>
+        <h3 class="chapter-name">{f.name}</h3>
+        <p class="chapter-desc">{f.description}</p>
+        <ul class="chapter-tags">
           {f.tags.map((t) => <li>{t}</li>)}
         </ul>
-        <dl class="spec">
+        <dl class="chapter-spec">
           {f.spec.map(([k, v]) => (
-            <div class="spec-row">
+            <div class="spec-cell">
               <dt>{k}</dt>
               <dd>{v}</dd>
             </div>
           ))}
         </dl>
-        <p class="card-desc disclosure">{f.disclosure}</p>
-        <div class="card-links">
-          {f.links.map((l, i) => (
-            <a class:list={['btn', i === 0 ? 'btn-primary' : 'btn-ghost']} href={l.href} rel="noopener noreferrer" target="_blank">{l.label} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+        <p class="chapter-disclosure">{f.disclosure}</p>
+        <div class="chapter-links">
+          {f.links.map((l) => (
+            <a href={l.href} rel="noopener noreferrer" target="_blank">{l.label} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
           ))}
         </div>
       </div>
-      <figure class="netview" id="netview" aria-label="Maya2C testnet: validators, blocks and finality">
-        <div class="holo" data-gl="emblem">
-          <div class="holo-plate">
-            <svg viewBox="0 0 400 260" aria-hidden="true" focusable="false">
-              <defs>
-                <radialGradient id="nv-core"><stop offset="0" stop-color="#f2f9fa" /><stop offset=".35" stop-color="#52e5dd" stop-opacity=".85" /><stop offset="1" stop-color="#1fd3cc" stop-opacity="0" /></radialGradient>
-              </defs>
-              <circle class="nv-orbit" cx="200" cy="130" r="92" />
-              <circle class="nv-orbit faint" cx="200" cy="130" r="122" />
-              {VALIDATORS.map((v, i) => VALIDATORS.slice(i + 1).map((w) => <line class="nv-link" x1={v.x} y1={v.y} x2={w.x} y2={w.y} />))}
-              {VALIDATORS.map((v) => <line class="nv-spoke" x1="200" y1="130" x2={v.x} y2={v.y} />)}
-              <g id="nv-pulses"></g>
-              <circle cx="200" cy="130" r="34" fill="url(#nv-core)" class="core" />
-              {VALIDATORS.map((v) => (
-                <g class="validator">
-                  <circle cx={v.x} cy={v.y} r="11" class="halo" />
-                  <circle cx={v.x} cy={v.y} r="4.5" class="dot" />
-                </g>
-              ))}
-            </svg>
-          </div>
-          <span class="holo-beam" aria-hidden="true"></span>
-          <span class="holo-mark" aria-hidden="true"></span>
-          <canvas class="gl-canvas" aria-hidden="true"></canvas>
-        </div>
-        <figcaption class="nv-stats">
-          <span class="nv-num"><b id="nv-height">—</b> height</span>
-          <span class="nv-num"><b id="nv-bt">—</b> block time</span>
-          <span><b>DAG-BFT</b> finality</span>
-          <span class="nv-live" id="nv-state" role="status">connecting…</span>
-        </figcaption>
-      </figure>
     </article>
 
-    <div class="project-grid">
-      {
-        PROJECTS.map((p, i) => (
-          <article class="card panel" data-tilt data-reveal>
-            <span class="panel-index" aria-hidden="true">0{i + 1}</span>
-            <p class="card-badge">{p.badge}</p>
-            <h3 class="card-name">{p.name}</h3>
-            <p class="card-desc">{p.description}</p>
-            <ul class="tags">
-              {p.tags.map((t) => <li>{t}</li>)}
-            </ul>
-            {p.href ? (
-              <div class="card-links">
-                <a href={p.href} rel="noopener noreferrer" target="_blank">
-                  View on GitHub <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span>
-                </a>
-              </div>
-            ) : (
-              <p class="card-desc card-note">{p.note}</p>
-            )}
-          </article>
-        ))
-      }
-    </div>
+    <!-- Chapter 02: UNICRON, described only. Its scene is an illustration. -->
+    <article class="chapter flip" data-reveal>
+      <figure class="chapter-scene">
+        <div class="sig-viewport scene" data-scene={CHAPTERS.unicron.scene} role="img" aria-label={CHAPTERS.unicron.aria}></div>
+        <div class="scene-bar">
+          <button type="button" class="scene-act">{CHAPTERS.unicron.act}</button>
+          <span class="scene-badge"><span class="tag-illustration">illustration</span></span>
+        </div>
+        <figcaption class="scene-caption">{CHAPTERS.unicron.caption}</figcaption>
+      </figure>
+      <div class="chapter-text">
+        <p class="chapter-index"><span>02</span> {unicron.badge}</p>
+        <h3 class="chapter-name">{unicron.name}</h3>
+        <p class="chapter-desc">{unicron.description}</p>
+        <ul class="chapter-tags">
+          {unicron.tags.map((t) => <li>{t}</li>)}
+        </ul>
+        <p class="chapter-note">{unicron.note}</p>
+      </div>
+    </article>
 
+    <!-- Chapter 03: security research. A focus area, not a shipped product. -->
+    <article class="chapter" data-reveal>
+      <figure class="chapter-scene">
+        <div class="sig-viewport scene" data-scene={CHAPTERS.research.scene} role="img" aria-label={CHAPTERS.research.aria}></div>
+        <div class="scene-bar">
+          <button type="button" class="scene-act">{CHAPTERS.research.act}</button>
+          <span class="scene-badge"><span class="tag-illustration">illustration</span></span>
+        </div>
+        <figcaption class="scene-caption">{CHAPTERS.research.caption}</figcaption>
+      </figure>
+      <div class="chapter-text">
+        <p class="chapter-index"><span>03</span> {research.badge}</p>
+        <h3 class="chapter-name">{research.name}</h3>
+        <p class="chapter-desc">{research.description}</p>
+        <ul class="chapter-tags">
+          {research.tags.map((t) => <li>{t}</li>)}
+        </ul>
+        <p class="chapter-note">{research.note}</p>
+      </div>
+    </article>
+
+    <!-- Chapter 04: AI x Security. A focus area, not a shipped product. -->
+    <article class="chapter flip" data-reveal>
+      <figure class="chapter-scene">
+        <div class="sig-viewport scene" data-scene={CHAPTERS.ai.scene} role="img" aria-label={CHAPTERS.ai.aria}></div>
+        <div class="scene-bar">
+          <button type="button" class="scene-act">{CHAPTERS.ai.act}</button>
+          <span class="scene-badge"><span class="tag-illustration">illustration</span></span>
+        </div>
+        <figcaption class="scene-caption">{CHAPTERS.ai.caption}</figcaption>
+      </figure>
+      <div class="chapter-text">
+        <p class="chapter-index"><span>04</span> {ai.badge}</p>
+        <h3 class="chapter-name">{ai.name}</h3>
+        <p class="chapter-desc">{ai.description}</p>
+        <ul class="chapter-tags">
+          {ai.tags.map((t) => <li>{t}</li>)}
+        </ul>
+        <p class="chapter-note">{ai.note}</p>
+      </div>
+    </article>
   </div>
 </section>
 
 <script>
-  // Polls the public gateway; each new height pulses the core once. "live" is earned only by a
-  // height that moves: a gateway answering with a frozen height is a stalled chain, not a live one.
-  const RPC = "https://rpc.maya2c.dev/rpc";
-  const POLL_MS = 2000;
-  const RETRY_MS = 30_000; // once the gateway is down, keep asking, just less often
-  const STALE_MS = 60_000; // no new height for this long: say when the last block came
-  const MAX_MISSES = 3;
-  const pulses = document.getElementById("nv-pulses");
-  const heightEl = document.getElementById("nv-height")!;
-  const btEl = document.getElementById("nv-bt")!;
-  const stateEl = document.getElementById("nv-state")!;
-  const view = document.getElementById("netview");
-  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let misses = 0;
-  let last = 0, lastAt = 0, moved = false;
-  const gaps: number[] = [];
-  function pulse() {
-    if (reduce || !pulses) return;
-    const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    c.setAttribute("cx", "200"); c.setAttribute("cy", "130"); c.setAttribute("r", "34");
-    c.setAttribute("class", "pulse");
-    pulses.appendChild(c);
-    setTimeout(() => c.remove(), 2600);
-  }
-  function setState(text: string, on: boolean) {
-    stateEl.textContent = text;
-    stateEl.classList.toggle("on", on);
-  }
-  async function tick() {
-    try {
-      const r = await fetch(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "get_chain_info", params: [] }) });
-      const h = ((await r.json()).result ?? {}).height as number;
-      if (typeof h !== "number") throw new Error("no height");
-      const now = Date.now();
-      if (last && h > last) {
-        gaps.push((now - lastAt) / (h - last)); if (gaps.length > 12) gaps.shift();
-        btEl.textContent = (gaps.reduce((a, b) => a + b, 0) / gaps.length / 1000).toFixed(1) + " s";
-        moved = true;
-        pulse();
-      }
-      if (h !== last) { last = h; lastAt = now; }
-      heightEl.textContent = h.toLocaleString("en-US");
-      misses = 0;
-      view?.classList.remove("is-paused");
-      if (now - lastAt >= STALE_MS) {
-        const at = new Date(lastAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-        setState(`no new blocks since ${at}`, false);
-      } else {
-        setState(moved ? "live" : "waiting for a new block…", moved);
-      }
-    } catch {
-      misses += 1;
-      if (misses < MAX_MISSES) { setState("connecting…", false); return; }
-      view?.classList.add("is-paused");
-      // A failed fetch says nothing about the chain, only that this page cannot reach it.
-      setState("Live data unavailable right now", false);
-    }
-  }
-  async function loop() {
-    await tick();
-    setTimeout(loop, misses >= MAX_MISSES ? RETRY_MS : POLL_MS);
-  }
-  loop();
+  import { startChainPoll } from '../scripts/scene-chain';
+  import { mountMaya } from '../scripts/scene-maya';
+  import { mountNeural } from '../scripts/scene-neural';
+  import { mountFuzz } from '../scripts/scene-fuzz';
+  import { mountUnicron } from '../scripts/scene-unicron';
+
+  const MOUNTS: Record<string, (host: HTMLElement) => void> = {
+    maya: mountMaya,
+    unicron: mountUnicron,
+    fuzz: mountFuzz,
+    neural: mountNeural,
+  };
+  document.querySelectorAll<HTMLElement>('[data-scene]').forEach((el) => {
+    MOUNTS[el.dataset.scene ?? '']?.(el);
+  });
+  startChainPoll();
 </script>

@@ -103,8 +103,8 @@ export function load(src: string): Promise<HTMLImageElement> {
 // HALO_PAD so the margin also covers the space above his hair.
 const HALO_STEP = 4;
 const HALO_PAD = 128;
-const HALO_IN = 28;
-const HALO_OUT = 110;
+const HALO_IN = 18;
+const HALO_OUT = 64; // was 110: a wide halo left a visible blank clearing around his head (Eric 2026-11-16)
 const HEAD_BLUE = 170;
 
 export interface Halo {
@@ -115,6 +115,8 @@ export interface Halo {
   rect: [number, number, number, number];
   /** 0..1 at a point in figure px. */
   at: (x: number, y: number) => number;
+  /** The head's own extent in figure px (the blue-255 cells of the region mask). */
+  head: { x0: number; x1: number; y0: number; y1: number };
 }
 
 export function buildHalo(region: HTMLImageElement, figW: number, figH: number): Halo {
@@ -150,5 +152,11 @@ export function buildHalo(region: HTMLImageElement, figW: number, figH: number):
     const q = Math.round((fx + HALO_PAD) / HALO_STEP), r = Math.round((fy + HALO_PAD) / HALO_STEP);
     return q < 0 || r < 0 || q >= w || r >= h ? 0 : data[r * w + q] / 255;
   };
-  return { data, w, h, rect: [-HALO_PAD, -HALO_PAD, w * HALO_STEP, h * HALO_STEP], at };
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (let r = 0; r < h; r++) for (let q = 0; q < w; q++) {
+    if (px[(r * w + q) * 4 + 2] <= HEAD_BLUE) continue;
+    const fx = q * HALO_STEP - HALO_PAD, fy = r * HALO_STEP - HALO_PAD;
+    x0 = Math.min(x0, fx); x1 = Math.max(x1, fx); y0 = Math.min(y0, fy); y1 = Math.max(y1, fy);
+  }
+  return { data, w, h, rect: [-HALO_PAD, -HALO_PAD, w * HALO_STEP, h * HALO_STEP], at, head: { x0, x1, y0, y1 } };
 }

@@ -93,9 +93,10 @@ export function startLoop(opts: LoopOptions): Loop {
   return { renderer, dispose };
 }
 
-/** Reads a CSS custom property as a three-friendly hex string, so scenes follow the theme. */
-export function cssColor(name: string): string {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#ffffff';
+/** Reads a CSS custom property as a three-friendly hex string, so scenes follow the theme. Pass a
+ *  scene's own element as `root` to pick up tokens redefined for that section (light theme). */
+export function cssColor(name: string, fallback = '#ffffff', root: Element = document.documentElement): string {
+  return getComputedStyle(root).getPropertyValue(name).trim() || fallback;
 }
 
 /** Calls back whenever the light/dark theme changes. */

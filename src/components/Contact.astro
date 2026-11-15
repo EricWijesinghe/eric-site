@@ -1,9 +1,13 @@
 ---
 import { CONTACT_TEXT, MAYA2C_DISCUSSIONS, SOCIALS } from '../data/content';
 import SocialIcon from './SocialIcon.astro';
+import '../styles/sections-signal.css';
+import '../styles/sections-signal-contact.css';
+import '../styles/contact-globe.css';
 ---
 
 <section id="contact" aria-labelledby="contact-title">
+  <canvas class="code-rain" data-code-rain aria-hidden="true"></canvas>
   <div class="wrap contact-inner">
     <p class="section-label" data-reveal><span>05</span> contact</p>
     <h2 class="section-title" id="contact-title" data-reveal>Work together</h2>
@@ -11,17 +15,43 @@ import SocialIcon from './SocialIcon.astro';
     <div class="contact-actions" data-reveal>
       <a class="btn btn-primary" href={MAYA2C_DISCUSSIONS} rel="noopener noreferrer" target="_blank">Start a discussion <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
     </div>
-    <ul class="social-row" aria-label="Social profiles">
-      {
-        SOCIALS.map((s) => (
-          <li>
-            <a href={s.href} rel="me noopener noreferrer" target="_blank" aria-label={`${s.label} (opens in a new tab)`}>
-              <SocialIcon name={s.icon} />
-              <span>{s.label}</span>
-            </a>
-          </li>
-        ))
-      }
-    </ul>
+    <div class="signal-terminal sig-frame" data-reveal>
+      <!-- A living globe of signal (src/scripts/contact-globe.ts): the contact links below are its satellites. -->
+      <figure class="globe" role="img" aria-label="A rotating dotted globe with arcs of light between places, a ring of binary in orbit and three satellites beaming signal down: reach Eric from anywhere.">
+        <canvas data-globe aria-hidden="true"></canvas>
+      </figure>
+      <ul class="social-row" aria-label="Social profiles">
+        {
+          SOCIALS.map((s) => (
+            <li>
+              <a href={s.href} rel="me noopener noreferrer" target="_blank" aria-label={`${s.label} (opens in a new tab)`}>
+                <SocialIcon name={s.icon} />
+                <span>{s.label}</span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
   </div>
 </section>
+
+<script>
+  import { mountCodeRain } from '../scripts/gl/code-rain';
+  import { mountGlobe } from '../scripts/contact-globe';
+
+  const globe = document.querySelector<HTMLCanvasElement>('[data-globe]');
+  if (globe) mountGlobe(globe);
+
+  // Each link's light follows the pointer across it.
+  document.querySelectorAll<HTMLAnchorElement>('#contact .social-row a').forEach((a) => {
+    a.addEventListener('pointermove', (e) => {
+      const r = a.getBoundingClientRect();
+      a.style.setProperty('--mx', `${e.clientX - r.left}px`);
+      a.style.setProperty('--my', `${e.clientY - r.top}px`);
+    });
+  });
+
+  const rain = document.querySelector<HTMLCanvasElement>('[data-code-rain]');
+  if (rain) mountCodeRain(rain);
+</script>

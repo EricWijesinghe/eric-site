@@ -1,92 +1,102 @@
 ---
-// "Singularity" (v11, approved 2026-11-15): a full-bleed hero with no text. Eric's binary hologram is
-// the centre of gravity of a GPU-simulated disk of bits (src/scripts/singularity-hero.ts). The page's
-// words live below it, in Intro.astro; nothing is laid over the graphic.
-// Move: space bends at the cursor · Hold: charge · Release / tap / Space: pulse · Idle: pulses on its own.
-// Without WebGL2 the figure shows as a cyan-filtered still; reduced motion gets a settled still frame.
+// The hero stage. Left: the copy and the energised name (src/scripts/hero-name.ts). Right: Eric's
+// singularity graphic (src/scripts/singularity-hero.ts). Behind the copy: the layered field
+// (src/scripts/hero-field.ts). Below 1024px, or in portrait, the graphic stacks above the copy.
+import { ROLES } from '../data/content';
+import '../styles/hero.css';
 ---
 
-<section
-  class="m2c-sing"
-  id="top"
-  tabindex="0"
-  aria-label="Interactive graphic: a holographic figure of Eric Wijesinghe made of binary code, at the centre of a vast orbiting disk of data that bends space around him. Press and hold to charge, release to send a shockwave."
->
-  <canvas role="img" aria-label="Eric Wijesinghe as a binary hologram at the centre of an orbiting disk of data"></canvas>
-  <img src="/eric/eric-v11-figure.webp" width="1309" height="1201" alt="" aria-hidden="true" decoding="async" />
-  <span class="m2c-ms" data-ms aria-hidden="true"></span>
+<section class="m2c-stage" id="top" aria-labelledby="hero-title" data-stage>
+  <!-- One accessible name: the focusable group carries the description; the canvas is decoration under it. -->
+  <div
+    class="m2c-sing"
+    role="group"
+    tabindex="0"
+    aria-label="Interactive graphic: a holographic figure of Eric Wijesinghe made of binary code, at the centre of a vast orbiting disk of data that bends space around him. Press and hold to charge, release to send a shockwave."
+  >
+    <canvas role="img" aria-label="Holographic figure of Eric Wijesinghe in a field of code and quantum hardware"></canvas>
+    <img src="/eric/eric-v11-figure.webp" width="1309" height="1201" alt="" aria-hidden="true" decoding="async" />
+    <span class="m2c-ms" data-ms aria-hidden="true"></span>
+  </div>
+
+  <canvas class="m2c-field" aria-hidden="true"></canvas>
+
+  <div class="m2c-copy">
+    <p class="m2c-eyebrow">Rust · Post-quantum · Security</p>
+    <div class="m2c-name-wrap">
+      <h1 id="hero-title" class="m2c-name"><span class="m2c-word">Eric</span> <span class="m2c-word">Wijesinghe</span></h1>
+      <canvas class="m2c-name-fx" aria-hidden="true"></canvas>
+    </div>
+    <p class="m2c-roles">{ROLES.join(' · ')}</p>
+    <p class="m2c-bio">
+      Building systems at the intersection of <strong>Rust</strong>, cryptography, cybersecurity, and AI.
+      Creator of <strong>Maya2C</strong>, a post-quantum Layer-1 blockchain.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#projects">View projects</a>
+      <a class="btn btn-ghost" href="https://maya2c.dev" rel="noopener noreferrer" target="_blank">maya2c.dev <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+    </div>
+    <p class="m2c-chain" data-chain data-live="false">
+      <span class="m2c-chain-dot" aria-hidden="true"></span>
+      <span class="m2c-chain-label">Chain</span>
+      <span data-chain-text>connecting…</span>
+    </p>
+  </div>
 </section>
 
 <script>
   import { whenIdle } from '../scripts/idle';
+  import { mountHeroName } from '../scripts/hero-name';
+  import { mountHeroField } from '../scripts/hero-field';
 
-  const root = document.getElementById('top');
-  if (root) {
+  // Gap kept between the copy and the figure's left edge (CSS px).
+  const COPY_GAP = 24;
+
+  interface LayoutDetail { fig: { x: number; y: number; w: number; h: number } }
+  interface ChainDetail { height: number | null; blockTime: string | null; state: string; live: boolean }
+
+  const stage = document.querySelector<HTMLElement>('.m2c-stage');
+  const sing = document.querySelector<HTMLElement>('.m2c-sing');
+  const field = document.querySelector<HTMLCanvasElement>('.m2c-field');
+  const copy = document.querySelector<HTMLElement>('.m2c-copy');
+  const name = document.querySelector<HTMLElement>('.m2c-name');
+  const nameFx = document.querySelector<HTMLCanvasElement>('.m2c-name-fx');
+
+  if (stage && sing && field && copy && name && nameFx) {
     whenIdle(() => {
       import('../scripts/singularity-hero')
-        .then(({ mountSingularity }) => mountSingularity(root))
+        .then(({ mountSingularity }) => mountSingularity(sing))
         .catch((err: unknown) => {
           // The cyan still is the fallback; say why in the console, not on the page.
-          root.classList.add('m2c-nogl');
+          sing.classList.add('m2c-nogl');
           console.warn('Singularity hero unavailable, showing the still image:', err);
         });
     });
-  }
-</script>
 
-<style>
-  /* Black, deep blue and cyan in both themes: the hero never reads the page's theme colours.
-     61px is the sticky nav (60px row plus its 1px border), so the hero fills the first screen below it. */
-  .m2c-sing {
-    position: relative;
-    height: calc(100vh - 61px);
-    height: calc(100svh - 61px);
-    min-height: 520px;
-    overflow: hidden;
-    background: #010409;
-    isolation: isolate;
-    cursor: crosshair;
-    -webkit-user-select: none;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
+    // The name waits for its face so the outline it samples matches the glyphs on screen.
+    void document.fonts.ready.then(() => mountHeroName(name, nameFx, stage));
+    whenIdle(() => {
+      mountHeroField(field, stage, copy, name);
+    });
+
+    // The engine reports the figure's box; the copy stops at its left edge on desktop.
+    window.addEventListener('m2c:layout', (e: Event) => {
+      const fig = (e as CustomEvent<LayoutDetail>).detail?.fig;
+      if (!fig || !Number.isFinite(fig.x)) return;
+      stage.style.setProperty('--copy-right', `${Math.max(0, fig.x - COPY_GAP)}px`);
+    });
   }
-  .m2c-sing canvas {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-    touch-action: pan-y;
-  }
-  .m2c-sing img {
-    position: absolute;
-    left: 50%;
-    bottom: 0;
-    width: auto;
-    height: 80%;
-    max-width: none;
-    transform: translateX(-50%);
-    opacity: 0;
-    pointer-events: none;
-    filter: grayscale(1) sepia(1) hue-rotate(150deg) saturate(3) brightness(0.85) contrast(1.2);
-    mix-blend-mode: screen;
-  }
-  .m2c-nogl img {
-    opacity: 0.9;
-  }
-  .m2c-ms {
-    position: absolute;
-    right: 10px;
-    top: 8px;
-    font: 11px var(--font-mono, ui-monospace), monospace;
-    color: #5f8a96;
-    display: none;
-  }
-  .m2c-debug .m2c-ms {
-    display: block;
-  }
-  .m2c-sing:focus-visible {
-    outline: 2px solid #7ff3fb;
-    outline-offset: -4px;
-  }
-</style>
+
+  // The chain ticker shows only what the RPC poller reports; before the first poll it says so.
+  const chainBox = document.querySelector<HTMLElement>('[data-chain]');
+  const chainText = document.querySelector<HTMLElement>('[data-chain-text]');
+  window.addEventListener('m2c:chain', (e: Event) => {
+    const d = (e as CustomEvent<Partial<ChainDetail>>).detail;
+    if (!chainBox || !chainText || !d) return;
+    const live = d.live === true;
+    const height = typeof d.height === 'number' && Number.isFinite(d.height) ? d.height.toLocaleString('en-US') : null;
+    const state = typeof d.state === 'string' && d.state ? d.state : 'unreachable';
+    chainBox.dataset.live = String(live && height !== null);
+    chainText.textContent = live && height !== null ? `Height ${height} · ${state}` : state;
+  });
+</script>

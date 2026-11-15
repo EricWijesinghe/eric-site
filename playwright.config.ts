@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 // Layout and accessibility checks against the built site (`npm run build` first).
-const PORT = 4399;
+const PORT = Number(process.env.PW_PORT ?? 4399);
 
 export default defineConfig({
   testDir: 'tests',

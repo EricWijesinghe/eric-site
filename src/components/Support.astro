@@ -1,12 +1,17 @@
 ---
 import { DONATION_URL, MAYA2C_CONTRIBUTING, MAYA2C_REPO } from '../data/content';
+import '../styles/sections-signal.css';
+import '../styles/sections-signal-support.css';
+
+// Binary carried along two soft paths: the transmission is data, not a wave. Decorative, so aria-hidden.
+const BITS = '01101001 00111010 11000101 01101001 10100011 '.repeat(3);
 ---
 
 <section id="support" aria-labelledby="support-title">
   <div class="wrap">
     <p class="section-label" data-reveal><span>04</span> support</p>
     <h2 class="section-title" id="support-title" data-reveal>Support my work</h2>
-    <div class="card panel support-card" data-tilt="4" data-reveal>
+    <div class="support-card sig-frame" data-reveal data-glow>
       <p>
         Maya2C is open for anyone to read, star, and build on. A star helps other developers find it;
         an issue or a pull request helps it get better.
@@ -18,6 +23,24 @@ import { DONATION_URL, MAYA2C_CONTRIBUTING, MAYA2C_REPO } from '../data/content'
           <a class="btn btn-ghost" href={DONATION_URL} rel="noopener noreferrer" target="_blank">Donate <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
         )}
       </div>
+      <svg class="carrier" viewBox="0 0 440 160" aria-hidden="true" focusable="false">
+        <path id="carrier-a" d="M0 80 C 60 10, 120 150, 180 80 S 300 10, 360 80 S 420 150, 440 80" />
+        <path id="carrier-b" d="M0 96 C 70 40, 130 140, 200 96 S 320 36, 380 96 S 430 130, 440 100" />
+        <g>
+          <text><textPath href="#carrier-a">{BITS}</textPath></text>
+          <text class="carrier-b"><textPath href="#carrier-b">{BITS}</textPath></text>
+        </g>
+      </svg>
     </div>
   </div>
 </section>
+
+<script>
+  // The glow follows the pointer, so the call answers the visitor's hand.
+  const card = document.querySelector<HTMLElement>('[data-glow]');
+  card?.addEventListener('pointermove', (e) => {
+    const r = card.getBoundingClientRect();
+    card.style.setProperty('--mx', `${e.clientX - r.left}px`);
+    card.style.setProperty('--my', `${e.clientY - r.top}px`);
+  });
+</script>

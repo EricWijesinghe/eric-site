@@ -1,17 +1,27 @@
 ---
 import { SKILL_GROUPS } from '../data/content';
+import { CORE_POWERS } from '../data/journey';
+import '../styles/sections-signal.css';
+import '../styles/sections-signal-skills.css';
+import '../styles/sections-signal-skills-layout.css';
+
+// A node previews up to four real items from its group; the panel lists them all.
+const PREVIEW_ITEMS = 4;
 ---
 
 <section id="skills" aria-labelledby="skills-title">
   <div class="wrap">
     <p class="section-label" data-reveal><span>03</span> skills</p>
     <h2 class="section-title" id="skills-title" data-reveal>Stack &amp; expertise</h2>
-    <p class="section-lede" data-reveal>Six skill groups orbit one core. Pick one to open it.</p>
+    <p class="section-lede" data-reveal>Six skill groups orbit one core. Pick one to open it, or drag the constellation to turn it.</p>
     <div class="orbit-wrap" data-reveal>
-      <div class="orbit-stage" data-orbit data-gl="orbit">
+      <div class="orbit-stage sig-frame" data-orbit data-gl="orbit">
         <div class="orbit-poster" aria-hidden="true"><span></span><span></span><span></span></div>
         <canvas class="gl-canvas" aria-hidden="true"></canvas>
         <div class="orbit-core" aria-hidden="true">Rust</div>
+        <ul class="core-powers" aria-label="What the Rust core powers">
+          {CORE_POWERS.map((p) => <li>{p}</li>)}
+        </ul>
         <ul class="orbit-nodes" aria-label="Skill groups">
           {
             SKILL_GROUPS.map((g, i) => (
@@ -19,6 +29,9 @@ import { SKILL_GROUPS } from '../data/content';
                 <button class="orbit-node" type="button" data-node aria-controls={`skill-panel-${i}`}>
                   <span class="node-name">{g.name}</span>
                   <span class="node-line">{g.line}</span>
+                  <span class="node-items" aria-hidden="true">
+                    {g.items.slice(0, PREVIEW_ITEMS).map((item) => <span>{item}</span>)}
+                  </span>
                 </button>
               </li>
             ))

@@ -1,25 +1,73 @@
 ---
-import { ABOUT_PARAGRAPHS, STATS } from '../data/content';
+// The About journey: the statement in display type, then a timeline whose nodes each open one
+// short line. Every line and number comes from content.ts through data/journey.ts.
+import { JOURNEY, STATEMENT } from '../data/journey';
+import '../styles/sections-signal.css';
+import '../styles/sections-signal-about.css';
 ---
 
 <section id="about" aria-labelledby="about-title">
   <div class="wrap">
     <p class="section-label" data-reveal><span>01</span> about</p>
     <h2 class="section-title" id="about-title" data-reveal>Who I am</h2>
-    <div class="about-grid">
-      <div class="about-text" data-reveal>
-        {ABOUT_PARAGRAPHS.map((p) => <p>{p}</p>)}
-      </div>
-      <ul class="stat-grid" data-reveal>
+    <p class="about-statement" data-reveal>{STATEMENT}</p>
+    <div class="j-scene sig-frame" data-reveal>
+      <ol class="journey" data-journey>
         {
-          STATS.map((s) => (
-            <li class="stat-card" data-tilt>
-              <div class="stat-number">{s.value}</div>
-              <div class="stat-label">{s.label}</div>
+          JOURNEY.map((node, i) => (
+            <li class:list={['j-step', { 'is-open': i === 0, 'is-pending': node.pending }]} data-step data-reveal>
+              <button
+                class="j-node"
+                type="button"
+                aria-expanded={i === 0 ? 'true' : 'false'}
+                aria-controls={`j-line-${i}`}
+                data-node
+              >
+                <span class="j-orb" aria-hidden="true"></span>
+                <span class="j-kick">{node.kicker}</span>
+                <span class="j-title">{node.title}</span>
+              </button>
+              {node.stats.length > 0 && (
+                <ul class="j-readouts" aria-label={`${node.title} readouts`}>
+                  {node.stats.map((s) => (
+                    <li>
+                      <span class="j-val">{s.value}</span>
+                      <span class="j-lab">{s.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div class="j-line" id={`j-line-${i}`}>
+                <div class="j-body">
+                  <p>{node.line}</p>
+                  {node.note && <p class="j-note">{node.note}</p>}
+                </div>
+              </div>
             </li>
           ))
         }
-      </ul>
+      </ol>
     </div>
   </div>
 </section>
+
+<script>
+  // One node opens at a time and the rest fold away. The class is added here, so without JS
+  // every line stays visible.
+  const root = document.querySelector<HTMLOListElement>('[data-journey]');
+  if (root) {
+    root.classList.add('js-journey');
+    const steps = Array.from(root.querySelectorAll<HTMLLIElement>('[data-step]'));
+    const buttons = steps.map((s) => s.querySelector<HTMLButtonElement>('[data-node]'));
+    steps.forEach((step, i) => {
+      buttons[i]?.addEventListener('click', () => {
+        const open = !step.classList.contains('is-open');
+        steps.forEach((s, j) => {
+          const on = open && j === i;
+          s.classList.toggle('is-open', on);
+          buttons[j]?.setAttribute('aria-expanded', String(on));
+        });
+      });
+    });
+  }
+</script>

@@ -1,0 +1,127 @@
+/* Signal support: the call sits in open air. Split from sections-signal.css to keep files under 400 lines. */
+
+/* ---------- support: the transmission ----------
+   The call sits in a sig-frame viewport (round 4): its rim is crisp, its content is never masked, and a
+   soft light follows the pointer (--mx, --my) inside the frame. */
+
+#support .support-card {
+  --mx: 70%;
+  --my: 20%;
+  max-width: 820px;
+  padding: clamp(26px, 3.5vw, 44px);
+  color: var(--sig-ice);
+}
+
+#support .support-card::before {
+  content: '';
+  position: absolute;
+  inset: -40px -16px;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(260px circle at var(--mx) var(--my), color-mix(in srgb, var(--sig-cyan) 16%, transparent), transparent 70%),
+    radial-gradient(60% 70% at 0% 0%, color-mix(in srgb, var(--sig-violet) 18%, transparent), transparent 70%),
+    radial-gradient(60% 70% at 100% 100%, color-mix(in srgb, var(--sig-emerald) 12%, transparent), transparent 70%);
+  -webkit-mask-image: radial-gradient(closest-side, #000 45%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 45%, transparent 100%);
+}
+
+/* The carrier: a binary stream running along two soft paths, drawn as text, so it is data, not a wave. */
+/* The carrier is in the flow below the buttons (round 3 polish): no copy or control can sit under it, and it
+   is hidden on phones where the buttons take the full width. */
+#support .carrier {
+  position: relative;
+  display: block;
+  width: min(100%, 440px);
+  height: auto;
+  margin: clamp(24px, 3vw, 36px) 0 0;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  #support .carrier {
+    display: none;
+  }
+}
+
+#support .carrier path {
+  fill: none;
+  stroke: none;
+}
+
+#support .carrier text {
+  font: 500 11px / 1 var(--font-mono);
+  letter-spacing: 0.32em;
+  fill: var(--sig-cyan);
+}
+
+#support .carrier .carrier-b {
+  fill: var(--sig-violet);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  #support .carrier g {
+    animation: sig-wave 9s ease-in-out infinite alternate;
+  }
+}
+
+@media (min-width: 760px) {
+  #support .support-card::before {
+    inset: -48px -72px;
+  }
+}
+
+@keyframes sig-wave {
+  from { transform: translate3d(-10px, 0, 0); }
+  to { transform: translate3d(10px, 0, 0); }
+}
+
+#support .support-card p {
+  position: relative;
+  max-width: 60ch;
+  margin-top: 0;
+  color: var(--sig-ice);
+}
+
+/* The heading-to-body gap matches the other sections (audit pass 3): the card's padding and the copy's
+   top margin made it 42px longer, so the card lifts under the heading. Its rim stays clear of the title. */
+#support .support-card {
+  margin-top: -27px;
+}
+
+@media (min-width: 760px) {
+  #support .support-card {
+    margin-top: -45px;
+  }
+}
+
+/* Buttons keep a 12px gap in a row and when they wrap on phones (they touched at 0 px before). */
+#support .support-actions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* Light theme: ink text on the pastel field; the carrier glyphs keep their deep tokens. */
+:root[data-theme='light'] #support .support-card {
+  color: var(--text);
+}
+
+:root[data-theme='light'] #support .support-card p {
+  color: var(--text-dim);
+}
+
+/* Light theme (round 5, J1): the carrier's glyphs take a deep ink so they keep 4.5:1 against the pearl card. */
+:root[data-theme='light'] #support .carrier {
+  opacity: 0.9;
+}
+
+:root[data-theme='light'] #support .carrier text {
+  fill: #05485c;
+}
+
+:root[data-theme='light'] #support .carrier .carrier-b {
+  fill: #3b2bd6;
+}

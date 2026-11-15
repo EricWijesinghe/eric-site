@@ -2,28 +2,28 @@
 import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
 import SingularityHero from '../components/SingularityHero.astro';
-import Intro from '../components/Intro.astro';
+import Conduit from '../components/Conduit.astro';
 import About from '../components/About.astro';
 import Projects from '../components/Projects.astro';
 import Skills from '../components/Skills.astro';
 import Support from '../components/Support.astro';
 import Contact from '../components/Contact.astro';
 import Footer from '../components/Footer.astro';
+import EnergyOverlay from '../components/EnergyOverlay.astro';
 ---
 
 <Base>
   <Nav />
-  <!-- Outside <main>: the skip link lands on the words, past the graphic. -->
-  <SingularityHero />
+  <EnergyOverlay />
   <main id="main">
-    <Intro />
+    <!-- One continuous page: the singularity is the source, and the conduit carries its energy
+         down through every section (Conduit.astro). No dividers between sections. -->
+    <SingularityHero />
+    <Conduit />
     <About />
     <Projects />
-    <div class="section-rule" aria-hidden="true"></div>
     <Skills />
-    <div class="section-rule" aria-hidden="true"></div>
     <Support />
-    <div class="section-rule" aria-hidden="true"></div>
     <Contact />
   </main>
   <Footer />

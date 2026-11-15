@@ -18,7 +18,6 @@ function webglAvailable(): boolean {
 }
 
 const loaders: Record<string, () => Promise<Mount>> = {
-  emblem: async () => (await import('./emblem-scene')).mountEmblem,
   orbit: async () => (await import('./orbit-scene')).mountOrbit,
 };
 

@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { chromium, expect, test, type Page } from '@playwright/test';
 
 // Phones first; 1024/1440 cover the projected 3D orbit, which is where 768 px used to break.
 const WIDTHS = [
@@ -142,23 +142,81 @@ for (const width of [320, 360]) {
   });
 }
 
-// Eric's rule (2026-11-15): the Singularity graphic owns the first screen and nothing sits on top
-// of it; the name, roles and buttons follow directly below.
-test('phone: the hero fills the first screen and the words start right below it', async ({ browser }) => {
-  const ctx = await browser.newContext({ viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true });
-  const page = await ctx.newPage();
-  await offlineRpc(page);
+// The hero geometry needs the engine to run, so these tests turn WebGL2 on (the file default blocks it)
+// and read his figure box from the engine's m2c:layout event (relative to the stage).
+type Box = { x: number; y: number; w: number; h: number };
+type HeroGeometry = { stage: Box; nav: Box; h1: Box; graphic: Box; fig: Box };
+const WEBGL_ARGS = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
+
+async function heroGeometry(page: Page): Promise<HeroGeometry> {
+  await page.addInitScript(() => {
+    window.addEventListener('m2c:layout', (e) => {
+      (window as unknown as { __fig?: unknown }).__fig = (e as CustomEvent).detail.fig;
+    });
+  });
+  await page.route('https://rpc.maya2c.dev/**', (route) => route.abort());
   await page.goto('/');
-  const hero = await page.locator('.m2c-sing').evaluate((e) => e.getBoundingClientRect().toJSON());
-  const nav = await page.locator('.nav').evaluate((e) => e.getBoundingClientRect().bottom);
-  const intro = await page.locator('#intro').evaluate((e) => e.getBoundingClientRect().top);
-  expect(hero.top).toBeCloseTo(nav, 0);
-  expect(hero.bottom).toBeCloseTo(740, 0);
-  expect(intro).toBeCloseTo(hero.bottom, 0);
-  await expect(page.locator('.hero-actions .btn')).toHaveCount(2);
-  const eyebrow = await page.locator('.eyebrow').evaluate((e) => e.getBoundingClientRect().height);
-  expect(eyebrow, 'eyebrow wraps to two lines').toBeLessThan(40);
-  await ctx.close();
+  await expect
+    .poll(() => page.evaluate(() => Boolean((window as unknown as { __fig?: unknown }).__fig)), { timeout: 60_000 })
+    .toBe(true);
+  return page.evaluate(() => {
+    const box = (sel: string): Box => {
+      const b = document.querySelector(sel)!.getBoundingClientRect();
+      return { x: b.left, y: b.top, w: b.width, h: b.height };
+    };
+    const stage = box('.m2c-stage');
+    const fig = (window as unknown as { __fig: Omit<Box, 'x' | 'y'> & { x: number; y: number } }).__fig;
+    return {
+      stage,
+      nav: box('.nav'),
+      h1: box('#hero-title'),
+      graphic: box('.m2c-sing'),
+      fig: { x: stage.x + fig.x, y: stage.y + fig.y, w: fig.w, h: fig.h },
+    };
+  });
+}
+
+const overlaps = (a: Box, b: Box): boolean => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+const inside = (inner: Box, outer: Box): boolean =>
+  inner.x >= outer.x - 1 && inner.y >= outer.y - 1 && inner.x + inner.w <= outer.x + outer.w + 1 && inner.y + inner.h <= outer.y + outer.h + 1;
+
+// Eric: the graphic owns the first screen under the nav, and the name sits clear of him on the left.
+// Playwright cannot set launch args per describe, so these tests launch their own WebGL browser.
+test.describe('hero geometry (WebGL on)', () => {
+  // The engine's first layout waits for its idle slot and the SwiftShader figure build: 30 s is not enough on CI.
+  test.describe.configure({ timeout: 120_000 });
+
+  test('desktop 1440x900: the stage fills the first screen, the name is left of him and does not overlap him', async () => {
+    const browser = await chromium.launch({ args: WEBGL_ARGS });
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    const g = await heroGeometry(page);
+    expect(g.stage.y, 'stage starts under the nav').toBeLessThanOrEqual(g.nav.y + g.nav.h + 1);
+    expect(g.stage.y + g.stage.h, 'stage fills the first screen').toBeGreaterThanOrEqual(900 - 1);
+    expect(g.h1.x + g.h1.w / 2, 'name centred in the left half').toBeLessThan(720);
+    expect(overlaps(g.h1, g.fig), 'name box overlaps his figure box').toBe(false);
+    await ctx.close();
+    await browser.close();
+  });
+
+  // Phone: the graphic is on top, the name directly below it, both inside the stage.
+  test('phone 360x740: the graphic is on top and the name sits below it, both inside the stage', async () => {
+    const browser = await chromium.launch({ args: WEBGL_ARGS });
+    const ctx = await browser.newContext({ viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true });
+    const page = await ctx.newPage();
+    const g = await heroGeometry(page);
+    expect(g.fig.y + g.fig.h, 'figure ends above the name').toBeLessThanOrEqual(g.h1.y + 1);
+    // His bounding box may run past the phone edges (the disk is wider than the screen); his body axis must not.
+    expect(g.fig.x + g.fig.w / 2, 'body axis on screen').toBeGreaterThanOrEqual(0);
+    expect(g.fig.x + g.fig.w / 2, 'body axis on screen').toBeLessThanOrEqual(360);
+    expect(inside(g.graphic, g.stage), 'graphic inside the stage').toBe(true);
+    expect(inside(g.h1, g.stage), 'name inside the stage').toBe(true);
+    await expect(page.locator('.m2c-stage .hero-actions .btn')).toHaveCount(2);
+    const eyebrow = await page.locator('.m2c-eyebrow').evaluate((e) => e.getBoundingClientRect().height);
+    expect(eyebrow, 'eyebrow wraps to two lines').toBeLessThan(40);
+    await ctx.close();
+    await browser.close();
+  });
 });
 
 test('RPC down: says live data is unavailable (not "paused"), slows polling, claims no finality figure', async ({ page }) => {

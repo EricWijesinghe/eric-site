@@ -1,7 +1,24 @@
-// Scroll-driven reveals and the top progress bar. Both are skipped under reduced motion,
-// and content is visible by default, so a failed script leaves nothing hidden.
+// Scroll reveals (the data-reveal API every section uses) and the top progress bar. Content stays
+// visible unless JS adds js-reveal to <html>, and reduced motion never hides anything.
+// A section reveals as one staggered group: the walk through the page, or the conduit's draw front
+// arriving at its heading (revealGroup), triggers it.
 
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const STAGGER_MS = 90;
+const MAX_STAGGER_MS = 720;
+
+/** Reveals the root (if it is itself data-reveal) and its pending data-reveal descendants, in order. */
+export function revealGroup(root: Element): void {
+  const pending: HTMLElement[] = [];
+  if (root instanceof HTMLElement && root.matches('[data-reveal]')) pending.push(root);
+  root.querySelectorAll<HTMLElement>('[data-reveal]').forEach((el) => pending.push(el));
+  pending
+    .filter((el) => !el.classList.contains('is-in'))
+    .forEach((el, i) => {
+      el.style.setProperty('--d', String(Math.min(i * STAGGER_MS, MAX_STAGGER_MS)));
+      el.classList.add('is-in');
+    });
+}
 
 const bar = document.querySelector<HTMLElement>('[data-progress]');
 if (bar && !reduceMotion) {
@@ -30,13 +47,15 @@ if (!reduceMotion && 'IntersectionObserver' in window) {
     (entries) => {
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
-        entry.target.classList.add('is-in');
+        revealGroup(entry.target.closest('main > section') ?? entry.target);
         io.unobserve(entry.target);
       }
     },
     { rootMargin: '0px 0px -8% 0px', threshold: 0.12 },
   );
-  document.querySelectorAll<HTMLElement>('[data-reveal]').forEach((el) => io.observe(el));
+  document.querySelectorAll<HTMLElement>('[data-reveal]').forEach((el) => {
+    // Anything in or above the viewport is shown at load; the rest waits for the walk or the conduit.
+    if (el.getBoundingClientRect().top < window.innerHeight) revealGroup(el);
+    else io.observe(el);
+  });
 }
-
-export {};
