@@ -2,12 +2,8 @@
 import { ROLES } from '../data/content';
 ---
 
-<section class="hero" id="top" aria-labelledby="hero-title" data-gl="hero">
-  <div class="hero-poster" aria-hidden="true">
-    <span class="hero-floor"></span>
-  </div>
-  <canvas class="gl-canvas" aria-hidden="true"></canvas>
-  <div class="hero-vignette" aria-hidden="true"></div>
+<!-- The words that used to sit in the hero. They follow the Singularity graphic, never on top of it. -->
+<section class="hero" id="intro" aria-labelledby="hero-title">
   <div class="wrap hero-grid">
     <!-- The focal image: drawn inline so it is crisp at any size, themed by CSS, and painted
          with the first frame. The WebGL lattice is only ever a backdrop behind it. -->
@@ -47,5 +43,4 @@ import { ROLES } from '../data/content';
       </div>
     </div>
   </div>
-  <a class="scroll-cue" href="#about"><span class="scroll-line" aria-hidden="true"></span><span class="visually-hidden">Scroll to about</span></a>
 </section>

@@ -422,15 +422,13 @@ a:hover {
   border-color: var(--accent);
 }
 
-/* ---------- hero ---------- */
+/* ---------- intro (the words below the Singularity hero; the class name is kept from PR #1) ---------- */
 
 .hero {
   position: relative;
-  min-height: 100svh;
   display: flex;
   align-items: center;
-  padding: 96px 0 120px;
-  margin-top: -61px;
+  padding: clamp(64px, 9vw, 120px) 0;
   overflow: hidden;
   isolation: isolate;
   background: var(--grad-hero);
@@ -515,48 +513,6 @@ a:hover {
 
 .gl-on > .gl-canvas {
   opacity: 1;
-}
-
-.hero > .gl-canvas,
-.hero-poster,
-.hero-vignette {
-  z-index: -1;
-}
-
-/* Poster: what reduced motion, no WebGL, and the moment before the scene loads all show. */
-.hero-poster {
-  position: absolute;
-  inset: 0;
-  transition: opacity 1.6s var(--ease);
-}
-
-.gl-on > .hero-poster {
-  opacity: 0.25;
-}
-
-.hero-floor {
-  position: absolute;
-  left: -30%;
-  right: -30%;
-  bottom: -10%;
-  height: 75%;
-  background-image: radial-gradient(circle, var(--teal) 1.3px, transparent 1.8px);
-  background-size: 34px 34px;
-  transform: perspective(500px) rotateX(64deg);
-  transform-origin: 50% 100%;
-  mask-image: linear-gradient(to top, #000 10%, transparent 85%);
-  opacity: 0.55;
-}
-
-
-.hero-vignette {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle 440px at 78% 46%, color-mix(in srgb, var(--teal) 20%, transparent), transparent 70%),
-    radial-gradient(ellipse 70% 60% at 22% 50%, color-mix(in srgb, var(--bg) 72%, transparent), transparent 70%),
-    linear-gradient(to bottom, transparent 70%, var(--bg));
 }
 
 .hero-copy {
@@ -669,39 +625,10 @@ a:hover {
   margin-top: 34px;
 }
 
-.scroll-cue {
-  position: absolute;
-  left: 50%;
-  bottom: 28px;
-  display: grid;
-  place-items: center;
-  width: var(--tap);
-  height: 64px;
-  translate: -50% 0;
-}
-
-.scroll-line {
-  width: 1px;
-  height: 48px;
-  background: linear-gradient(to bottom, transparent, var(--accent));
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .scroll-line { animation: cue 2.2s var(--ease) infinite; transform-origin: top; }
-}
-
-@keyframes cue {
-  0% { transform: scaleY(0); opacity: 1; }
-  70% { transform: scaleY(1); opacity: 1; }
-  100% { transform: scaleY(1); opacity: 0; }
-}
-
-/* Phones and small tablets: no full-screen gap, the emblem sits above the name (never under
-   the text), and the scroll cue goes because the page already continues in view. */
+/* Phones and small tablets: the emblem sits above the name (never under the text). */
 @media (max-width: 900px) {
   .hero {
-    min-height: auto;
-    padding: 84px 0 56px;
+    padding: 56px 0;
   }
   .hero-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -716,16 +643,12 @@ a:hover {
   .hero-copy {
     grid-row: 2;
   }
-  .scroll-cue {
-    display: none;
-  }
 }
 
-/* Phones: one centred column, the emblem lit above the name, and spacing tight enough that
-   both buttons sit fully inside the first screen (360x740). */
+/* Phones: one centred column, the emblem lit above the name. */
 @media (max-width: 600px) {
   .hero {
-    padding: 72px 0 40px;
+    padding: 40px 0;
   }
   .hero-emblem {
     width: min(44vw, 176px);
@@ -752,23 +675,6 @@ a:hover {
   }
   .hero-actions {
     margin-top: 20px;
-  }
-}
-
-/* Light theme: the lattice stays a backdrop, washed out behind the copy column. */
-@media (min-width: 721px) {
-  :root[data-theme='light'] .hero-vignette {
-    background:
-      radial-gradient(circle 440px at 78% 46%, color-mix(in srgb, var(--teal) 12%, transparent), transparent 70%),
-      radial-gradient(ellipse 72% 75% at 24% 50%, color-mix(in srgb, var(--bg) 94%, transparent) 40%, transparent 75%),
-      linear-gradient(to bottom, transparent 70%, var(--bg));
-  }
-}
-
-@media (max-width: 720px) {
-  .hero-vignette {
-    background:
-      linear-gradient(to bottom, color-mix(in srgb, var(--bg) 30%, transparent), color-mix(in srgb, var(--bg) 70%, transparent) 60%, var(--bg));
   }
 }
 

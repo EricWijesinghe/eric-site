@@ -1,0 +1,92 @@
+---
+// "Singularity" (v11, approved 2026-11-15): a full-bleed hero with no text. Eric's binary hologram is
+// the centre of gravity of a GPU-simulated disk of bits (src/scripts/singularity-hero.ts). The page's
+// words live below it, in Intro.astro; nothing is laid over the graphic.
+// Move: space bends at the cursor · Hold: charge · Release / tap / Space: pulse · Idle: pulses on its own.
+// Without WebGL2 the figure shows as a cyan-filtered still; reduced motion gets a settled still frame.
+---
+
+<section
+  class="m2c-sing"
+  id="top"
+  tabindex="0"
+  aria-label="Interactive graphic: a holographic figure of Eric Wijesinghe made of binary code, at the centre of a vast orbiting disk of data that bends space around him. Press and hold to charge, release to send a shockwave."
+>
+  <canvas role="img" aria-label="Eric Wijesinghe as a binary hologram at the centre of an orbiting disk of data"></canvas>
+  <img src="/eric/eric-v11-figure.webp" width="1309" height="1201" alt="" aria-hidden="true" decoding="async" />
+  <span class="m2c-ms" data-ms aria-hidden="true"></span>
+</section>
+
+<script>
+  import { whenIdle } from '../scripts/idle';
+
+  const root = document.getElementById('top');
+  if (root) {
+    whenIdle(() => {
+      import('../scripts/singularity-hero')
+        .then(({ mountSingularity }) => mountSingularity(root))
+        .catch((err: unknown) => {
+          // The cyan still is the fallback; say why in the console, not on the page.
+          root.classList.add('m2c-nogl');
+          console.warn('Singularity hero unavailable, showing the still image:', err);
+        });
+    });
+  }
+</script>
+
+<style>
+  /* Black, deep blue and cyan in both themes: the hero never reads the page's theme colours.
+     61px is the sticky nav (60px row plus its 1px border), so the hero fills the first screen below it. */
+  .m2c-sing {
+    position: relative;
+    height: calc(100vh - 61px);
+    height: calc(100svh - 61px);
+    min-height: 520px;
+    overflow: hidden;
+    background: #010409;
+    isolation: isolate;
+    cursor: crosshair;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .m2c-sing canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: pan-y;
+  }
+  .m2c-sing img {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    width: auto;
+    height: 80%;
+    max-width: none;
+    transform: translateX(-50%);
+    opacity: 0;
+    pointer-events: none;
+    filter: grayscale(1) sepia(1) hue-rotate(150deg) saturate(3) brightness(0.85) contrast(1.2);
+    mix-blend-mode: screen;
+  }
+  .m2c-nogl img {
+    opacity: 0.9;
+  }
+  .m2c-ms {
+    position: absolute;
+    right: 10px;
+    top: 8px;
+    font: 11px var(--font-mono, ui-monospace), monospace;
+    color: #5f8a96;
+    display: none;
+  }
+  .m2c-debug .m2c-ms {
+    display: block;
+  }
+  .m2c-sing:focus-visible {
+    outline: 2px solid #7ff3fb;
+    outline-offset: -4px;
+  }
+</style>

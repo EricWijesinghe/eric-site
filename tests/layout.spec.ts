@@ -13,8 +13,22 @@ const WIDTHS = [
 const TAP = 44;
 const MIN_FONT_PX = 12;
 
+// The Singularity hero is tested in hero.spec.ts. Here it shows its no-WebGL2 still: on CI its
+// 90k-bit disk renders on SwiftShader (the CPU), in parallel workers, and starves every page timer
+// these layout checks wait on. Its DOM, labels and box are the same either way.
+async function heroStill(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const get = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, type: string, ...rest: unknown[]) {
+      return type === 'webgl2' && this.closest('.m2c-sing') ? null : (get as (...a: unknown[]) => unknown).call(this, type, ...rest);
+    } as typeof get;
+  });
+}
+test.beforeEach(({ page }) => heroStill(page));
+
 // The testnet is paused; tests never depend on the live gateway.
 async function offlineRpc(page: Page): Promise<void> {
+  await heroStill(page);
   await page.route('https://rpc.maya2c.dev/**', (route) => route.abort());
 }
 
@@ -88,7 +102,8 @@ for (const theme of ['dark', 'light'] as const) {
   }
 }
 
-test('reduced motion: no WebGL scene starts, the static posters stay', async ({ browser }) => {
+// The Singularity hero draws one settled still frame under reduced motion (tests/hero.spec.ts).
+test('reduced motion: no three.js scene starts, the static posters stay', async ({ browser }) => {
   const ctx = await browser.newContext({ reducedMotion: 'reduce', viewport: { width: 390, height: 844 } });
   const page = await ctx.newPage();
   await offlineRpc(page);
@@ -127,14 +142,20 @@ for (const width of [320, 360]) {
   });
 }
 
-test('phone hero: both buttons fully inside the first screen at 360x740', async ({ browser }) => {
+// Eric's rule (2026-11-15): the Singularity graphic owns the first screen and nothing sits on top
+// of it; the name, roles and buttons follow directly below.
+test('phone: the hero fills the first screen and the words start right below it', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
   await offlineRpc(page);
   await page.goto('/');
-  const boxes = await page.locator('.hero-actions .btn').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().bottom));
-  expect(boxes).toHaveLength(2);
-  for (const bottom of boxes) expect(bottom).toBeLessThanOrEqual(740);
+  const hero = await page.locator('.m2c-sing').evaluate((e) => e.getBoundingClientRect().toJSON());
+  const nav = await page.locator('.nav').evaluate((e) => e.getBoundingClientRect().bottom);
+  const intro = await page.locator('#intro').evaluate((e) => e.getBoundingClientRect().top);
+  expect(hero.top).toBeCloseTo(nav, 0);
+  expect(hero.bottom).toBeCloseTo(740, 0);
+  expect(intro).toBeCloseTo(hero.bottom, 0);
+  await expect(page.locator('.hero-actions .btn')).toHaveCount(2);
   const eyebrow = await page.locator('.eyebrow').evaluate((e) => e.getBoundingClientRect().height);
   expect(eyebrow, 'eyebrow wraps to two lines').toBeLessThan(40);
   await ctx.close();
