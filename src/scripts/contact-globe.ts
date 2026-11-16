@@ -1,194 +1,310 @@
-// "Work together": a living globe of signal. Eric (2026-11-16) wanted a cool graphic here, not an explanation:
-// a dotted world turns in depth, links of light arc between points on it, a ring of binary orbits it, and three
-// satellites (the colours of the three contact links below) beam packets down to the surface. Drag to spin it,
-// the dots near the pointer light up, and a release in the hero sends a shock ring around the world.
-// Canvas2D, theme-aware (live), pauses offscreen and in hidden tabs; reduced motion draws one still frame.
+// "Work together": the signal globe. A dotted world turns beside the copy, arcs of light jump between places,
+// the name Maya2C circles it as a fixed ring of ASCII bits, and one satellite per contact link serves that
+// link's icon below (its ground station). Pointing at a station parks its satellite above it on a tether;
+// pointing at the button turns the satellites to the limb that faces it and opens an uplink beam. A tap (or
+// Enter on the globe button) sends an emerald wavefront round the world. Eric (round 9) wanted a cool
+// graphic here, not an explanation, so nothing is labelled.
+// One Canvas2D over the whole section, no WebGL; theme inks come from CSS tokens on the canvas and are
+// lerped on the theme switch. Pauses offscreen and in hidden tabs; reduced motion paints still frames.
 
-const DOTS = 900;
-const ARCS = 7;
-const SATS = 3;
-const RING_GLYPHS = 44;
+import { type V3, angle, checkInverse, fib, fromView, norm, projectView, unproject } from './contact-globe-math';
+import {
+  type Ink, type RGB, type Scene, ARC_TRAIL, DROP_DUR, FOCUS_NONE, FOCUS_UPLINK, PING_SPEED, paint, satPoint,
+} from './contact-globe-draw';
+
+export interface GlobeParts { hit: HTMLButtonElement; cta: HTMLElement; stations: HTMLElement[]; ring: string }
+
+const DOTS_WIDE = 1400;
+const DOTS_PHONE = 900;
+const PHONE_MAX = 899; // px: below this the layout stacks (finale-contact.css)
 const SPIN = 0.12; // rad/s at rest
-const TILT = 0.38;
-const GLYPHS = ['0', '1', '1', '0', '1', '0', '0', '1'];
+const TILT = 0.38; // the resting pitch the mouse drag springs back to
+const ARCS_MIN = 7;
+const ARCS_MAX = 21;
+const ARCS_PHONE = 2; // below PHONE_MAX: more read as tendrils on a small ball
+const ARC_MIN_RAD = 1.6;
+const ARC_MAX_RAD = 2.4;
+const ENERGY_TAU = 1.3; // s: spin energy calms in about 4 s (three time constants)
+const MAX_PINGS = 4;
+const MAX_DPR = 1.5;
+const MAX_PIXELS = 2_000_000; // backing-store cap for a section-wide canvas
+const INK_MS = 350;
+const RX_MS = 600;
+const TAP_SLOP = 6; // px of travel before a press counts as a drag, not a tap
+const RING_WIDE = 1.32;
+const RING_PHONE = 1.16;
+const RING_TIGHT = 0.894; // the uplink tightens 1.32 R to 1.18 R
+const SAT_WIDE = 1.42;
+const SAT_PHONE = 1.3;
+const SAT_HEIGHTS = [-0.18, 0.12, 0.36];
+const INTRO_UPLINK = [1.7, 4.2]; // s after the intro starts: the uplink plays once where there is no hover
 
-type V3 = [number, number, number];
-interface Arc { a: V3; b: V3; t0: number; dur: number }
-
-const DARK = { dot: '191 244 255', rim: '56 225 255', arc: ['#38e1ff', '#8b5cf6', '#2df5a0', '#e04cff'], sat: ['#38e1ff', '#8b5cf6', '#e04cff'], ring: '#38e1ff', blend: 'lighter' as GlobalCompositeOperation };
-const LIGHT = { dot: '10 40 90', rim: '11 95 191', arc: ['#0b5fbf', '#5b2bd6', '#047857', '#a21caf'], sat: ['#0b5fbf', '#5b2bd6', '#a21caf'], ring: '#0b5fbf', blend: 'source-over' as GlobalCompositeOperation };
-
-function fib(n: number): V3[] {
-  const out: V3[] = [];
-  const ga = Math.PI * (3 - Math.sqrt(5));
-  for (let i = 0; i < n; i++) {
-    const y = 1 - (i / (n - 1)) * 2, r = Math.sqrt(1 - y * y), t = ga * i;
-    out.push([Math.cos(t) * r, y, Math.sin(t) * r]);
-  }
-  return out;
-}
-const POINTS = fib(DOTS);
-const rnd = (): V3 => POINTS[Math.floor(Math.random() * DOTS)];
-const slerp = (a: V3, b: V3, t: number, lift: number): V3 => {
-  const d = Math.acos(Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]))) || 1e-6;
-  const s = Math.sin(d), wa = Math.sin((1 - t) * d) / s, wb = Math.sin(t * d) / s, h = 1 + lift * Math.sin(Math.PI * t);
-  return [(a[0] * wa + b[0] * wb) * h, (a[1] * wa + b[1] * wb) * h, (a[2] * wa + b[2] * wb) * h];
+const toRgb = (v: string): RGB => {
+  const h = v.trim().replace('#', '');
+  return [parseInt(h.slice(0, 2), 16) || 0, parseInt(h.slice(2, 4), 16) || 0, parseInt(h.slice(4, 6), 16) || 0];
 };
+const mix = (a: RGB, b: RGB, k: number): RGB => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+const approach = (v: number, to: number, rate: number): number => v + (to - v) * Math.min(1, rate);
+const wrapAngle = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
 
-export function mountGlobe(canvas: HTMLCanvasElement): void {
+/** The ring text: each byte of the name as 8 ASCII bits, a gap between bytes, so it decodes to the name. */
+export function ringBits(name: string): string {
+  return [...new TextEncoder().encode(name)].map((b) => b.toString(2).padStart(8, '0')).join(' ') + ' ';
+}
+
+function readInk(el: Element, light: boolean): Ink {
+  const cs = getComputedStyle(el), v = (n: string): RGB => toRgb(cs.getPropertyValue(n));
+  return {
+    dot: v('--gl-dot'), rim: v('--gl-rim'), ring: v('--gl-ring'), ping: v('--gl-ping'), light,
+    arc: [v('--gl-arc-1'), v('--gl-arc-2'), v('--gl-arc-3'), v('--gl-arc-4')],
+    sat: [v('--gl-sat-1'), v('--gl-sat-2'), v('--gl-sat-3')],
+  };
+}
+const lerpInk = (a: Ink, b: Ink, k: number): Ink => ({
+  dot: mix(a.dot, b.dot, k), rim: mix(a.rim, b.rim, k), ring: mix(a.ring, b.ring, k), ping: mix(a.ping, b.ping, k),
+  arc: a.arc.map((c, i) => mix(c, b.arc[i], k)), sat: a.sat.map((c, i) => mix(c, b.sat[i], k)), light: b.light,
+});
+
+export function mountGlobe(canvas: HTMLCanvasElement, parts: GlobeParts): void {
   const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+  if (!ctx || !checkInverse()) return;
+  const { hit, cta, stations } = parts;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const coarse = window.matchMedia('(pointer: coarse)').matches;
   const html = document.documentElement;
-  const arcs: Arc[] = [];
-  let W = 0, R = 0, dpr = 1, rot = 0, vel = SPIN, t = 0, last = 0, raf = 0, visible = false, shock = -1;
-  const ptr = { x: -1e4, y: -1e4, down: false, px: 0 };
+  const isLight = (): boolean => html.dataset.theme === 'light';
+  const points = { wide: fib(DOTS_WIDE), phone: [] as V3[] };
+  const seedOf = (n: number): Float32Array => Float32Array.from({ length: n }, () => Math.random());
+
+  let ink = readInk(canvas, isLight()), inkFrom = ink, inkTo = ink, inkT0 = -1;
+  const s: Scene = {
+    ctx, w: 0, h: 0, view: { cx: 0, cy: 0, r: 1, yaw: 0.6, pitch: TILT }, t: 0, ink,
+    dots: points.wide, seed: seedOf(DOTS_WIDE), intro: reduce ? 1 : 0, introT: reduce ? 99 : 0, exitX: 0,
+    arcs: [], pings: [], drops: [], ring: ringBits(parts.ring), ringR: RING_WIDE, ringPhase: 0, satR: SAT_WIDE,
+    sats: stations.map((_, i) => ({ a: (i * Math.PI * 2) / stations.length, h: SAT_HEIGHTS[i % SAT_HEIGHTS.length], speed: 0.32 + i * 0.07, q: [0, 0, 0], x: 0, y: 0 })),
+    energy: 0, focus: FOCUS_NONE, focusK: 0, uplinkK: 0,
+    ptr: { x: -1e4, y: -1e4 }, stations: stations.map(() => ({ x: 0, y: 0 })), beamTo: null, limb: { x: 0, y: 0 }, shock: -1,
+  };
+  let dpr = 1, phone = false, vel = SPIN, last = 0, raf = 0, visible = false, started = false, linked = false;
+  let introUplink = coarse && !reduce;
+  const drag = { on: false, x: 0, y: 0, x0: 0, y0: 0, moved: false, mouse: false };
 
   function size(): void {
-    dpr = Math.min(devicePixelRatio || 1, 2);
-    W = canvas.clientWidth; R = W * 0.3; // satellites orbit at 1.55 R: everything stays inside the square
-    canvas.width = Math.round(W * dpr); canvas.height = Math.round(W * dpr);
-  }
-  const project = (p: V3): [number, number, number] => {
-    const c = Math.cos(rot), s = Math.sin(rot);
-    const x = p[0] * c - p[2] * s, z0 = p[0] * s + p[2] * c;
-    const ct = Math.cos(TILT), st = Math.sin(TILT);
-    const y = p[1] * ct - z0 * st, z = p[1] * st + z0 * ct;
-    return [W / 2 + x * R, W / 2 + y * R, z];
-  };
-  const newArc = (): Arc => ({ a: rnd(), b: rnd(), t0: t + Math.random() * 1.5, dur: 1.6 + Math.random() * 1.4 });
-  for (let i = 0; i < ARCS; i++) arcs.push(newArc());
-
-  function grid(pal: typeof DARK): void {
-    // faint meridians and parallels give the world its shape
-    ctx!.lineWidth = 1;
-    for (let m = 0; m < 12; m++) {
-      const lon = (m / 12) * Math.PI;
-      ctx!.beginPath();
-      for (let k = 0; k <= 48; k++) {
-        const lat = (k / 48) * Math.PI * 2;
-        const [x, y] = project([Math.cos(lat) * Math.cos(lon), Math.sin(lat), Math.cos(lat) * Math.sin(lon)]);
-        if (k === 0) ctx!.moveTo(x, y); else ctx!.lineTo(x, y);
-      }
-      ctx!.strokeStyle = `rgb(${pal.rim} / 0.12)`; ctx!.stroke();
-    }
-    for (let q = 1; q < 6; q++) {
-      const lat = -Math.PI / 2 + (q / 6) * Math.PI;
-      ctx!.beginPath();
-      for (let k = 0; k <= 64; k++) {
-        const lon = (k / 64) * Math.PI * 2;
-        const [x, y] = project([Math.cos(lat) * Math.cos(lon), Math.sin(lat), Math.cos(lat) * Math.sin(lon)]);
-        if (k === 0) ctx!.moveTo(x, y); else ctx!.lineTo(x, y);
-      }
-      ctx!.strokeStyle = `rgb(${pal.rim} / 0.1)`; ctx!.stroke();
-    }
+    s.w = canvas.clientWidth; s.h = canvas.clientHeight;
+    phone = s.w <= PHONE_MAX;
+    dpr = Math.min(devicePixelRatio || 1, MAX_DPR, Math.sqrt(MAX_PIXELS / Math.max(1, s.w * s.h)));
+    canvas.width = Math.round(s.w * dpr); canvas.height = Math.round(s.h * dpr);
+    if (phone && !points.phone.length) points.phone = fib(DOTS_PHONE);
+    const dots = phone ? points.phone : points.wide;
+    if (dots !== s.dots) { s.dots = dots; s.seed = seedOf(dots.length); }
+    s.satR = phone ? SAT_PHONE : SAT_WIDE;
+    if (phone) s.arcs = s.arcs.slice(0, ARCS_PHONE);
+    s.ring = ringBits(parts.ring).repeat(phone ? 1 : 2); // the wide ring is long enough to carry the name twice
   }
 
-  function world(pal: typeof DARK): void {
-    // the dotted world, back dots faint, dots near the pointer lit
-    for (const p of POINTS) {
-      const [x, y, z] = project(p);
-      const near = Math.max(0, 1 - Math.hypot(x - ptr.x, y - ptr.y) / 70);
-      const a = z > 0 ? 0.35 + 0.55 * z : 0.06 + 0.1 * (1 + z);
-      ctx!.fillStyle = `rgb(${pal.dot} / ${Math.min(1, a + near * 0.8).toFixed(3)})`;
-      ctx!.beginPath(); ctx!.arc(x, y, (z > 0 ? 1.3 : 0.9) + near * 2.2, 0, Math.PI * 2); ctx!.fill();
-    }
-    // arcs of light jumping between places, a packet riding each
-    ctx!.lineCap = 'round';
-    arcs.forEach((arc, i) => {
-      const k = (t - arc.t0) / arc.dur;
-      if (k < 0) return;
-      if (k > 1.4) { arcs[i] = newArc(); return; }
-      const col = pal.arc[i % pal.arc.length];
-      const head = Math.min(1, k), tail = Math.max(0, k - 0.6);
-      ctx!.strokeStyle = col; ctx!.lineWidth = 1.6; ctx!.globalAlpha = 0.9;
-      ctx!.beginPath();
-      for (let s = tail; s <= head + 1e-6; s += 0.04) {
-        const [x, y] = project(slerp(arc.a, arc.b, s, 0.35));
-        if (s === tail) ctx!.moveTo(x, y); else ctx!.lineTo(x, y);
-      }
-      ctx!.stroke();
-      if (k <= 1) { const [x, y] = project(slerp(arc.a, arc.b, k, 0.35)); ctx!.globalAlpha = 1; ctx!.fillStyle = col; ctx!.beginPath(); ctx!.arc(x, y, 3.2, 0, Math.PI * 2); ctx!.fill(); }
+  /** Where the DOM puts things this frame, in canvas coordinates (the section shakes as one, so offsets hold). */
+  function measure(): void {
+    const c = canvas.getBoundingClientRect(), g = hit.getBoundingClientRect(), b = cta.getBoundingClientRect();
+    s.view.cx = g.left - c.left + g.width / 2; s.view.cy = g.top - c.top + g.height / 2; s.view.r = g.width / 2;
+    stations.forEach((el, i) => {
+      const r = (el.querySelector('.icon') ?? el).getBoundingClientRect();
+      s.stations[i].x = r.left - c.left + r.width / 2; s.stations[i].y = r.top - c.top + r.height / 2;
     });
-    ctx!.globalAlpha = 1;
+    const beside = b.right < g.left;
+    // Stacked, the button sits straight above the pole and a beam reads as an antenna on a ball (rejected three
+    // times): there is no beam, the satellites gather on the upper-left limb toward the button's lower corner
+    // (never on the pole), the dots and ring glyphs there light up, the ring tightens and the button rim pulses.
+    const to = beside ? { x: b.right - c.left + 6, y: b.top - c.top + b.height / 2 } : { x: b.left - c.left + 8, y: b.bottom - c.top + 6 };
+    s.beamTo = beside ? to : null;
+    const dx = to.x - s.view.cx, dy = to.y - s.view.cy, d = Math.hypot(dx, dy) || 1;
+    s.limb = { x: s.view.cx + (dx / d) * s.view.r, y: s.view.cy + (dy / d) * s.view.r };
+    const tape = [...document.querySelectorAll('[data-tape]')].map((el) => el.getBoundingClientRect()).find((r) => r.width > 0);
+    s.exitX = tape && tape.width ? tape.right - c.left - 40 : s.w * 0.85;
   }
 
-  function orbit(pal: typeof DARK): void {
-    // a tilted ring of binary orbiting the world
-    ctx!.font = '600 12px "JetBrains Mono", ui-monospace, monospace'; ctx!.textAlign = 'center'; ctx!.textBaseline = 'middle';
-    for (let i = 0; i < RING_GLYPHS; i++) {
-      const a = (i / RING_GLYPHS) * Math.PI * 2 + t * 0.25;
-      const [x, y, z] = project([Math.cos(a) * 1.32, Math.sin(a) * 0.18, Math.sin(a) * 1.32]);
-      ctx!.globalAlpha = z > 0 ? 0.85 : 0.18;
-      ctx!.fillStyle = pal.ring;
-      ctx!.fillText(GLYPHS[(i + Math.floor(t * 2)) % GLYPHS.length], x, y);
+  const limbWorld = (): V3 => fromView(norm([(s.limb.x - s.view.cx) / s.view.r, (s.limb.y - s.view.cy) / s.view.r, 0.08]), s.view);
+  function newArc(from?: V3): void {
+    // Phones keep two arcs at most; a ping's antipode arcs replace the oldest instead of adding to them.
+    if (phone && s.arcs.length >= ARCS_PHONE) { if (!from) return; s.arcs.shift(); }
+    const dots = s.dots, pick = (): V3 => dots[Math.floor(Math.random() * dots.length)];
+    const a = from ?? pick();
+    // Only beside the copy do arcs gather on the limb facing the button; stacked, a bundle aimed at one limb
+    // point read as antennae (rejected three times), so the uplink lights the dots there instead (draw linkK).
+    const aim = s.focus === FOCUS_UPLINK && s.beamTo !== null;
+    let b = aim ? limbWorld() : pick();
+    // Endpoints far enough apart that the drawn ARC_TRAIL window visibly bends (draw SAG_HIDE), no chords through.
+    for (let k = 0; k < 24 && !aim; k++) { const d = angle(a, b); if (d > ARC_MIN_RAD && d < ARC_MAX_RAD) break; b = pick(); }
+    const d = angle(a, b);
+    s.arcs.push({ a, b, t0: s.t + (from ? 0 : Math.random() * 1.2), dur: 1.4 + d * 0.6, col: s.arcs.length % 4, lift: 0.05 + 0.07 * (d / ARC_MAX_RAD) });
+  }
+  for (let i = 0; i < ARCS_MIN; i++) newArc();
+
+  const pulse = (el: Element, cls: string): void => { el.classList.add(cls); setTimeout(() => el.classList.remove(cls), RX_MS); };
+
+  /** The angle on a satellite's orbit whose screen position is closest to (x, y), on the near side when asked. */
+  function aimAngle(h: number, x: number, y: number, nearOnly: boolean): number {
+    let best = 0, bestD = Infinity;
+    for (let k = 0; k < 48; k++) {
+      const a = (k / 48) * Math.PI * 2, q = satPoint(s, a, h);
+      if (nearOnly && q[2] < 0.15) continue;
+      const [px, py] = projectView(q, s.view), d = Math.hypot(px - x, py - y);
+      if (d < bestD) { bestD = d; best = a; }
     }
-    // three satellites, one per contact link, beaming packets to the surface
-    for (let i = 0; i < SATS; i++) {
-      const a = t * (0.35 + i * 0.12) + (i * Math.PI * 2) / SATS;
-      const sp: V3 = [Math.cos(a) * 1.55, -0.55 + i * 0.5, Math.sin(a) * 1.55];
-      const [sx, sy, sz] = project(sp);
-      const ground = project([(sp[0] / 1.55) * 0.98, sp[1] * 0.5, (sp[2] / 1.55) * 0.98]);
-      const col = pal.sat[i];
-      ctx!.globalAlpha = sz > -0.3 ? 1 : 0.3;
-      ctx!.strokeStyle = col; ctx!.lineWidth = 1; ctx!.setLineDash([3, 5]);
-      ctx!.beginPath(); ctx!.moveTo(sx, sy); ctx!.lineTo(ground[0], ground[1]); ctx!.stroke(); ctx!.setLineDash([]);
-      const f = (t * 0.9 + i * 0.33) % 1;
-      ctx!.fillStyle = col;
-      ctx!.beginPath(); ctx!.arc(sx + (ground[0] - sx) * f, sy + (ground[1] - sy) * f, 2.4, 0, Math.PI * 2); ctx!.fill();
-      ctx!.beginPath(); ctx!.arc(sx, sy, 6, 0, Math.PI * 2); ctx!.fill();
-      ctx!.globalAlpha *= 0.3; ctx!.beginPath(); ctx!.arc(sx, sy, 15, 0, Math.PI * 2); ctx!.fill();
-    }
-    ctx!.globalAlpha = 1;
+    return best;
   }
 
-  function draw(): void {
-    const pal = html.dataset.theme === 'light' ? LIGHT : DARK;
-    ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx!.clearRect(0, 0, W, W);
-    ctx!.globalCompositeOperation = pal.blend;
-    const g = ctx!.createRadialGradient(W / 2, W / 2, R * 0.85, W / 2, W / 2, R * 1.25); // atmosphere
-    g.addColorStop(0, `rgb(${pal.rim} / 0)`); g.addColorStop(0.25, `rgb(${pal.rim} / 0.35)`); g.addColorStop(1, `rgb(${pal.rim} / 0)`);
-    ctx!.fillStyle = g; ctx!.fillRect(0, 0, W, W);
-    grid(pal); world(pal); orbit(pal);
-    if (shock >= 0) { // the shock ring from a release in the hero
-      const k = (t - shock) / 1.4;
-      if (k > 1) shock = -1;
-      else {
-        ctx!.strokeStyle = `rgb(${pal.rim} / ${(0.9 * (1 - k)).toFixed(3)})`; ctx!.lineWidth = 2.5;
-        ctx!.beginPath(); ctx!.arc(W / 2, W / 2, R * (1 + k * 0.6), 0, Math.PI * 2); ctx!.stroke();
+  function stepSats(dt: number): void {
+    s.sats.forEach((sat, i) => {
+      const before = wrapAngle(sat.a - Math.PI / 2);
+      if (s.focus === i) {
+        const st = s.stations[i];
+        sat.a += wrapAngle(aimAngle(sat.h, st.x, s.view.cy + s.view.r * 0.75, true) - sat.a) * Math.min(1, dt * 4);
+      } else if (s.focus === FOCUS_UPLINK) {
+        const off = (i - (s.sats.length - 1) / 2) * 0.32;
+        const out = { x: s.limb.x + (s.limb.x - s.view.cx) * 0.4, y: s.limb.y + (s.limb.y - s.view.cy) * 0.4 };
+        sat.a += wrapAngle(aimAngle(sat.h, out.x, out.y, false) + off - sat.a) * Math.min(1, dt * 3);
+      } else sat.a += sat.speed * dt * (1 + s.energy);
+      const after = wrapAngle(sat.a - Math.PI / 2);
+      // A near-side pass (the orbit's closest point) drops one packet to the station.
+      if (s.focus === FOCUS_NONE && before < 0 && after >= 0 && s.intro >= 1) s.drops.push({ sat: i, t0: s.t, x: sat.x, y: sat.y });
+      sat.q = satPoint(s, sat.a, sat.h);
+      [sat.x, sat.y] = projectView(sat.q, s.view);
+    });
+  }
+
+  function step(dt: number): void {
+    s.t += dt;
+    if (started) s.introT += dt;
+    s.intro = Math.min(1, s.introT / 0.9);
+    if (introUplink && s.introT > INTRO_UPLINK[0] && s.focus === FOCUS_NONE) s.focus = FOCUS_UPLINK;
+    if (introUplink && s.introT > INTRO_UPLINK[1]) { introUplink = false; if (s.focus === FOCUS_UPLINK) s.focus = FOCUS_NONE; }
+    if (!drag.on) { vel = approach(vel, SPIN, dt * 1.5); s.view.yaw += vel * dt; s.view.pitch = approach(s.view.pitch, TILT, dt * 3); }
+    s.energy *= Math.exp(-dt / ENERGY_TAU);
+    s.ringPhase += dt * (0.22 + 0.6 * s.energy);
+    const base = phone ? RING_PHONE : RING_WIDE;
+    s.ringR = approach(s.ringR, s.focus === FOCUS_UPLINK ? base * RING_TIGHT : base, dt * 5);
+    s.focusK = approach(s.focusK, s.focus >= 0 ? 1 : 0, dt * 6);
+    s.uplinkK = approach(s.uplinkK, s.focus === FOCUS_UPLINK ? 1 : 0, dt * 4);
+    if ((s.uplinkK > 0.5) !== linked) {
+      linked = !linked; cta.classList.toggle('is-linked', linked);
+      if (linked && !s.beamTo) pulse(cta, 'is-rx'); // stacked: the rim pulse stands in for the beam
+    }
+    stepSats(dt);
+    s.drops = s.drops.filter((d) => {
+      if (s.t - d.t0 < DROP_DUR) return true;
+      if (stations[d.sat]) pulse(stations[d.sat], 'is-rx');
+      return false;
+    });
+    s.pings = s.pings.filter((p) => {
+      const th = (s.t - p.t0) * PING_SPEED;
+      if (th >= Math.PI && !p.flashed) {
+        p.flashed = true;
+        for (let k = 0; k < 3; k++) newArc([-p.p[0], -p.p[1], -p.p[2]]);
+        pulse(cta, 'is-rx');
       }
+      return th < Math.PI + PING_SPEED * 0.5;
+    });
+    const live = ARCS_MIN + Math.round((ARCS_MAX - ARCS_MIN) * s.energy);
+    s.arcs = s.arcs.filter((a) => (s.t - a.t0) / a.dur <= 1 + ARC_TRAIL);
+    while (s.arcs.length < (phone ? Math.min(live, ARCS_PHONE) : live)) newArc();
+    if (inkT0 >= 0) {
+      const k = Math.min(1, (performance.now() - inkT0) / INK_MS);
+      ink = lerpInk(inkFrom, inkTo, k); if (k >= 1) inkT0 = -1;
     }
+    s.ink = ink;
+  }
+
+  /** Reduced motion: one still frame, arcs mid-flight, highlights switched straight to their end state. */
+  function still(): void {
+    measure();
+    s.focusK = s.focus >= 0 ? 1 : 0; s.uplinkK = s.focus === FOCUS_UPLINK ? 1 : 0;
+    const base = phone ? RING_PHONE : RING_WIDE;
+    s.ringR = s.focus === FOCUS_UPLINK ? base * RING_TIGHT : base;
+    cta.classList.toggle('is-linked', s.focus === FOCUS_UPLINK);
+    s.arcs.forEach((a) => { a.t0 = s.t - a.dur * 0.6; });
+    s.drops = [];
+    stepSats(0);
+    paint(s, dpr);
   }
 
   function frame(now: number): void {
     const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
-    t += dt;
-    if (!ptr.down) vel += (SPIN - vel) * Math.min(1, dt * 1.5);
-    rot += vel * dt;
-    draw();
+    measure(); step(dt); paint(s, dpr);
     raf = visible && !document.hidden ? requestAnimationFrame(frame) : 0;
     if (!raf) last = 0;
   }
-  const wake = (): void => { if (reduce) { draw(); return; } if (!raf && visible && !document.hidden) raf = requestAnimationFrame(frame); };
+  const wake = (): void => {
+    if (reduce) { if (visible) still(); return; }
+    if (!raf && visible && !document.hidden) raf = requestAnimationFrame(frame);
+  };
 
-  size();
-  new ResizeObserver(() => { size(); if (reduce || !raf) draw(); }).observe(canvas);
-  new IntersectionObserver((es) => { visible = es[es.length - 1].isIntersecting; wake(); }).observe(canvas);
-  document.addEventListener('visibilitychange', wake);
-  new MutationObserver(() => { if (!raf) draw(); }).observe(html, { attributes: true, attributeFilter: ['data-theme'] });
-
-  const local = (e: PointerEvent): void => { const r = canvas.getBoundingClientRect(); ptr.x = e.clientX - r.left; ptr.y = e.clientY - r.top; };
-  canvas.addEventListener('pointerdown', (e) => { ptr.down = true; ptr.px = e.clientX; canvas.setPointerCapture(e.pointerId); });
-  canvas.addEventListener('pointermove', (e) => {
-    local(e);
-    if (ptr.down) { vel = (e.clientX - ptr.px) * 0.6; rot += (e.clientX - ptr.px) / R; ptr.px = e.clientX; }
-    if (reduce) draw();
+  // ---------- input ----------
+  const local = (e: PointerEvent): void => { const c = canvas.getBoundingClientRect(); s.ptr.x = e.clientX - c.left; s.ptr.y = e.clientY - c.top; };
+  hit.addEventListener('pointerdown', (e) => {
+    Object.assign(drag, { on: true, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false, mouse: e.pointerType === 'mouse' });
+    hit.setPointerCapture(e.pointerId);
   });
-  const up = (): void => { ptr.down = false; };
-  canvas.addEventListener('pointerup', up);
-  canvas.addEventListener('pointercancel', up);
-  canvas.addEventListener('pointerleave', () => { ptr.x = ptr.y = -1e4; });
-  addEventListener('m2c:release', () => { shock = t; for (let i = 0; i < arcs.length; i++) arcs[i] = { ...newArc(), t0: t + i * 0.08 }; wake(); });
-  draw();
+  hit.addEventListener('pointermove', (e) => {
+    local(e);
+    if (drag.on) {
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      drag.x = e.clientX; drag.y = e.clientY;
+      if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > TAP_SLOP) drag.moved = true;
+      s.view.yaw += dx / s.view.r; vel = approach(vel, (dx / s.view.r) * 60, 0.5);
+      if (drag.mouse) s.view.pitch = Math.max(-0.3, Math.min(1.1, s.view.pitch + dy / s.view.r)); // touch stays yaw-only
+    }
+    if (reduce) still();
+  });
+  const up = (): void => { if (drag.on) s.energy = Math.max(s.energy, Math.min(1, Math.abs(vel) / 6)); drag.on = false; };
+  hit.addEventListener('pointerup', up);
+  hit.addEventListener('pointercancel', up);
+  hit.addEventListener('pointerleave', () => { s.ptr.x = s.ptr.y = -1e4; if (reduce) still(); });
+  hit.addEventListener('click', (e) => {
+    if (drag.moved) { drag.moved = false; return; }
+    const c = canvas.getBoundingClientRect();
+    const p = e.detail === 0 ? null : unproject(e.clientX - c.left, e.clientY - c.top, s.view);
+    const at = p ?? fromView([0, -0.2, Math.sqrt(1 - 0.04)], s.view); // keyboard: the point facing the viewer
+    if (s.pings.length >= MAX_PINGS) s.pings.shift();
+    s.pings.push({ p: at, t0: s.t, flashed: false });
+    if (reduce) { s.t += Math.PI / PING_SPEED + 0.1; pulse(cta, 'is-rx'); still(); }
+    wake();
+  });
+  hit.addEventListener('keydown', (e) => {
+    const turn = { ArrowLeft: -0.22, ArrowRight: 0.22 }[e.key], tip = { ArrowUp: -0.12, ArrowDown: 0.12 }[e.key];
+    if (turn === undefined && tip === undefined) return;
+    e.preventDefault();
+    if (turn) { s.view.yaw += turn; vel = turn * 6; }
+    if (tip) s.view.pitch = Math.max(-0.3, Math.min(1.1, s.view.pitch + tip));
+    if (reduce) still();
+  });
+
+  const focusOn = (el: HTMLElement, f: number): void => {
+    const on = (): void => { s.focus = f; introUplink = false; if (reduce) still(); };
+    const off = (): void => { if (s.focus === f) s.focus = FOCUS_NONE; if (reduce) still(); };
+    el.addEventListener('pointerenter', on); el.addEventListener('focusin', on);
+    el.addEventListener('pointerleave', off); el.addEventListener('focusout', off);
+  };
+  stations.forEach((el, i) => focusOn(el, i));
+  focusOn(cta, FOCUS_UPLINK);
+
+  // ---------- lifecycle ----------
+  size();
+  new ResizeObserver(() => { size(); if (reduce || !raf) { measure(); paint(s, dpr); } }).observe(canvas);
+  new IntersectionObserver((es) => {
+    visible = es[es.length - 1].isIntersecting;
+    if (visible) started = true;
+    wake();
+  }).observe(canvas);
+  document.addEventListener('visibilitychange', wake);
+  new MutationObserver(() => {
+    inkFrom = ink; inkTo = readInk(canvas, isLight());
+    if (reduce) { ink = s.ink = inkTo; still(); return; }
+    inkT0 = performance.now();
+    if (!raf) { ink = s.ink = inkTo; measure(); paint(s, dpr); }
+  }).observe(html, { attributes: true, attributeFilter: ['data-theme'] });
+  addEventListener('m2c:release', () => {
+    s.shock = s.t;
+    s.arcs.forEach((a, i) => { a.t0 = s.t + i * 0.08; });
+    wake();
+  });
 }

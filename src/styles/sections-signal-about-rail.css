@@ -1,0 +1,311 @@
+/* About, "The Stack": the rail (the tablist beside the stack), the caption and the breakpoints. Split from
+   sections-signal-about.css to keep both under 400 lines. */
+
+/* ---------- rail: the tablist, beside the stack, each row at its plane's height ---------- */
+
+#about .st-stagewrap {
+  --st-rail-w: 150px;
+  position: relative;
+  min-width: 0;
+}
+
+#about .st-rail {
+  position: absolute;
+  top: 0;
+  right: calc(100% - var(--st-cx) + 302px * var(--st-s));
+  width: var(--st-rail-w);
+  height: var(--st-stage-h);
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+  /* Rows are 44px targets spaced one pitch apart, so the focus ring hugs the label, not the whole band. */
+  gap: calc(var(--pitch) - 44px);
+  padding-bottom: calc(var(--st-center) - 22px);
+  box-sizing: border-box;
+}
+
+#about .st-tab {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  flex: none;
+  height: 44px;
+  min-height: 44px;
+  align-self: flex-end;
+  padding: 0 4px 0 8px;
+  border: 0;
+  border-radius: 13px;
+  background: none;
+  color: var(--text-dim);
+  font: 600 13px/1.25 var(--font-display);
+  text-align: right;
+  cursor: pointer;
+  transition: color 0.3s, translate 0.6s var(--sig-ease), --st-h 0.35s;
+}
+
+/* The ghost sits half a gap higher than the rhythm. */
+#about .st-tab:last-child {
+  margin-bottom: calc(var(--pitch) * 0.55);
+}
+
+/* Rows above the selected layer follow their planes' lift. */
+#about .st-tab.is-above {
+  translate: 0 calc(-31px * var(--st-s));
+}
+
+#about .st-tab:is(:hover, .is-preview, .is-active) {
+  color: var(--text);
+}
+
+#about .st-num {
+  font: 500 0.75rem/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+}
+
+#about .st-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--st-h);
+  opacity: 0.6;
+  transition: opacity 0.3s, box-shadow 0.3s;
+}
+
+#about .st-tab.is-active .st-dot {
+  opacity: 1;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--st-h) 80%, transparent);
+}
+
+#about .st-tab.is-pending .st-dot {
+  background: none;
+  border: 1.5px dashed var(--st-h);
+  opacity: 1;
+}
+
+/* Docked at the foot of the rail, from its left edge, in the open corner beside the lowest plane. */
+#about .st-caption {
+  position: absolute;
+  top: calc(var(--st-stage-h) - var(--st-center) + 40px);
+  left: calc(var(--st-cx) - 302px * var(--st-s) - var(--st-rail-w));
+  width: 248px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  margin: 0;
+  font: 400 0.75rem/1.45 var(--font-mono);
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+#about .st-turn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--st-hue) 10%, transparent);
+  color: var(--text);
+  cursor: pointer;
+}
+
+#about .st-turn svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Light: the hues are already deep inks here; the glow on the dot goes. */
+:root[data-theme='light'] #about .st-tab.is-active .st-dot {
+  box-shadow: none;
+}
+
+/* ---------- breakpoints ---------- */
+
+/* 900-1199: same two columns, smaller stack, rail as numerals and dots. */
+@media (max-width: 1199px) {
+  #about {
+    --st-s: 0.82;
+    --st-cx: 56%;
+    --st-stage-h: 540px;
+  }
+  #about .st-stagewrap {
+    --st-rail-w: 64px;
+  }
+  /* The numeral rail leaves a narrow corner, so the button sits on top and the text runs below it. */
+  #about .st-caption {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    gap: 8px;
+    width: 184px;
+  }
+  #about .st-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* Below 900: one column in DOM order. Statement, stack, rail row, inspector. */
+@media (max-width: 899px) {
+  #about .st-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    gap: 24px;
+  }
+  #about :is(.st-statement, .st-stagewrap, .st-inspector) {
+    grid-area: auto;
+  }
+  #about .st-statement {
+    max-width: 22ch;
+  }
+  /* The turned planes overhang the column. Clipping at the page gutter (16px out) puts the cut on the screen
+     edge, where it cannot read as a box round the stack; a 0 margin cut the light shadow inside the page. */
+  #about .st-stagewrap {
+    overflow: clip;
+    overflow-clip-margin: var(--gutter, 16px);
+  }
+  #about .st-inspector {
+    margin-top: 8px;
+  }
+  /* One column puts the panel a screen under the stack, so the running rule and its break button come
+     straight after the layer's name, before the prose. Tab order is unchanged: break, then link. */
+  #about .st-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  #about .st-panel > :is(.st-line, .st-roles, .st-facts, .st-link, .st-note) {
+    order: 1;
+  }
+  #about .st-panel > .st-mech {
+    margin-top: 8px;
+  }
+  #about .st-panel > .st-break {
+    margin: 16px 0 8px;
+  }
+  #about .st-panel > .st-line {
+    margin-top: 16px;
+  }
+  #about {
+    --st-cx: 50%;
+    --st-stage-h: 640px;
+    --st-center: 176px;
+  }
+  #about .st-rail {
+    position: static;
+    width: auto;
+    height: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding: 0;
+  }
+  #about .st-tab,
+  #about .st-tab:last-child {
+    height: 44px;
+    margin: 0;
+    flex-direction: row;
+    gap: 6px;
+    padding: 0 6px;
+  }
+  #about .st-tab.is-above {
+    translate: none;
+  }
+  #about .st-name {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+  #about .st-caption {
+    position: static;
+    width: auto;
+    margin-top: 8px;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    justify-content: center;
+    text-align: left;
+  }
+}
+
+/* Phone: numerals with hue dots, every target 44 x 44. */
+@media (max-width: 599px) {
+  #about {
+    --st-s: 0.62;
+    --gap: 60px;
+    --st-stage-h: 360px;
+    --st-center: 104px;
+  }
+  #about .st-tab,
+  #about .st-tab:last-child {
+    min-width: 44px;
+    padding: 0 6px;
+    justify-content: center;
+    gap: 6px;
+  }
+  #about .st-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  #about .st-caption {
+    justify-content: space-between;
+    margin-top: 16px;
+  }
+  /* The row is numerals only, so the selected layer's name is printed under it, centred in its hue. It stays
+     inside its tab, so the tab's accessible name is unchanged and a tap on it is a tap on that tab. */
+  #about .st-rail {
+    position: relative;
+    inset: auto;
+    padding-bottom: 28px;
+  }
+  #about .st-tab.is-active .st-name {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    height: 20px;
+    clip-path: none;
+    text-align: center;
+    font: 600 13px/20px var(--font-display);
+    color: var(--st-ink);
+  }
+}
+
+@media (max-width: 360px) {
+  #about {
+    --st-s: 0.52;
+    --st-stage-h: 312px;
+    --st-center: 92px;
+  }
+}
+
+#about .st-caption span {
+  max-width: 40ch;
+  text-wrap: balance;
+}
+
+#about .st-link span {
+  margin-left: 6px;
+}

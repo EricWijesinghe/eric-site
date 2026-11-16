@@ -1,21 +1,31 @@
-// The attack-surface graph of the UNICRON illustration. Hosts carry a severity mark and illustrative
-// ports; nearest-neighbour links show where a path could run; one illustrative path walks six hops and
-// names each hop with a MITRE ATT&CK tactic. Every value here is generated from a seed for the drawing.
-// None of it is a scan result, and the scene says so.
-import { caption, clamp01, ink, PALETTE as P, rng, stroke, tint, type Pt, type RgbKey } from './scene-core';
+// The attack-surface graph of the UNICRON illustration. Hosts carry a severity mark; nearest-neighbour
+// links show where a path could run; one illustrative path walks six hops and names each hop with a MITRE
+// ATT&CK tactic (names only). Every value here is generated from a seed for the drawing. None of it is a
+// scan result, no host has an address, and nothing here is counted on screen.
+import { caption, clamp01, ink, isLight, MONO, PALETTE as P, rgbOf, rng, stroke, tint, type Pt, type Rect, type RgbKey, type Spot } from './scene-core';
 import { lineW } from './scene-core';
 
-export const HOSTS = 22;
+export const HOSTS = 22; // how many dots the drawing scatters; never shown as a figure
 export const TACTICS = [
-  { id: 'TA0043', name: 'Reconnaissance' },
-  { id: 'TA0001', name: 'Initial Access' },
-  { id: 'TA0002', name: 'Execution' },
-  { id: 'TA0004', name: 'Privilege Escalation' },
-  { id: 'TA0008', name: 'Lateral Movement' },
-  { id: 'TA0010', name: 'Exfiltration' },
+  'Reconnaissance',
+  'Initial Access',
+  'Execution',
+  'Privilege Escalation',
+  'Lateral Movement',
+  'Exfiltration',
 ] as const;
 export const EDGES = TACTICS.length; // one hop per tactic
-const PORTS = [22, 25, 53, 80, 443, 3306, 5432, 8080];
+const TICKS_MIN = 3; // service ticks drawn round an enumerated host: decoration, not ports
+const TICKS_SPAN = 3;
+export const LIST_ROW = 44; // px: one tactic row under a narrow radar, a full touch target
+const LIST_TWO_W = 340; // px: below this width the list is one column, so no two names touch
+/** Columns of the narrow tactic list: two when they fit side by side, else one. */
+export const listCols = (w: number): number => (w >= LIST_TWO_W ? 2 : 1);
+const TICK_GAP = 14; // px from the narrow radar's rim to its tactic numbers
+const CLUSTER_PX = 24; // hosts nearer than this share one hotspot
+const HOST_R = 3; // px: a host dot reads as a target, not a speck
+const RING_GAP = 30; // px from the radar's rim to the tactic names round it
+const PEARL_LINE_A = 0.3; // pearl: spokes and links are 1px hairlines; the sweep carries the weight
 // Severity 0 is no finding. The colours follow the palette; critical alone takes the threat mark.
 const SEVERITY: readonly { name: string; colour: RgbKey | 'alert' }[] = [
   { name: 'none', colour: 'cyan' },
@@ -24,16 +34,13 @@ const SEVERITY: readonly { name: string; colour: RgbKey | 'alert' }[] = [
   { name: 'high', colour: 'magenta' },
   { name: 'critical', colour: 'alert' },
 ];
-const LIST_ROW0 = 22; // the tactic list's first row, under its caption
-const ROW_H = 20;
-const CHAIN_LABEL = 'MITRE ATT&CK · TACTICS';
 
 export interface Host {
   x: number; // unit-disc position, scaled to the radar at draw time
   y: number;
   services: number;
   links: number[]; // index of the nearest neighbour: an attack path
-  ports: number[]; // illustrative only: shown on hover, never a real scan result
+  ticks: number; // service ticks once enumerated
   sev: number; // index into SEVERITY
 }
 export interface Graph {
@@ -48,11 +55,10 @@ function buildHosts(): Host[] {
   return Array.from({ length: HOSTS }, () => {
     const a = rand() * Math.PI * 2;
     const r = 0.22 + 0.74 * Math.sqrt(rand());
-    const count = 3 + Math.floor(rand() * 3);
-    const ports = Array.from({ length: count }, () => PORTS[Math.floor(rand() * PORTS.length)]);
+    const ticks = TICKS_MIN + Math.floor(rand() * TICKS_SPAN);
     const services = 1 + Math.floor(rand() * 3);
     const sev = Math.floor(rand() * SEVERITY.length);
-    return { x: r * Math.cos(a), y: r * Math.sin(a), services, links: [], ports, sev };
+    return { x: r * Math.cos(a), y: r * Math.sin(a), services, links: [], ticks, sev };
   });
 }
 
@@ -101,17 +107,18 @@ export function reveal(stage: number, from: number, i: number): number {
 
 /** Hairline links between hosts, and the centre spokes: the surface, drawn quietly. */
 export function drawLinks(g: CanvasRenderingContext2D, hosts: Host[], at: (h: Host) => Pt, cx: number, cy: number): void {
-  g.lineWidth = lineW(1);
+  const light = isLight();
+  g.lineWidth = light ? 1 : lineW(1);
   hosts.forEach((h) => {
     const p = at(h);
-    g.strokeStyle = stroke('cyan', 0.08);
+    g.strokeStyle = light ? rgbOf('cyan', PEARL_LINE_A) : stroke('cyan', 0.08);
     g.beginPath();
     g.moveTo(cx, cy);
     g.lineTo(p.x, p.y);
     g.stroke();
     for (const j of h.links) {
       const q = at(hosts[j]);
-      g.strokeStyle = stroke('magenta', 0.12);
+      g.strokeStyle = light ? rgbOf('magenta', PEARL_LINE_A) : stroke('magenta', 0.12);
       g.beginPath();
       g.moveTo(p.x, p.y);
       g.lineTo(q.x, q.y);
@@ -134,8 +141,8 @@ export function drawHosts(
     const p = at(h);
     const pinged = ping(i);
     const ports = reveal(stage, 1, i);
-    for (let k = 0; k < h.ports.length && ports > 0; k++) {
-      const a = t * 0.1 + (k * Math.PI * 2) / h.ports.length;
+    for (let k = 0; k < h.ticks && ports > 0; k++) {
+      const a = t * 0.1 + (k * Math.PI * 2) / h.ticks;
       g.strokeStyle = stroke('cyan', (0.3 + 0.5 * pinged) * ports);
       g.beginPath();
       g.moveTo(p.x + Math.cos(a) * 7, p.y + Math.sin(a) * 7);
@@ -151,7 +158,7 @@ export function drawHosts(
     }
     g.fillStyle = ink(0.5 + 0.5 * pinged);
     g.beginPath();
-    g.arc(p.x, p.y, 2.2 + pinged * 1.5 + (i === hover ? 1.5 : 0), 0, Math.PI * 2);
+    g.arc(p.x, p.y, HOST_R + pinged * 1.5 + (i === hover ? 1.5 : 0), 0, Math.PI * 2);
     g.fill();
     const found = reveal(stage, 2, i) * (h.sev > 0 ? 1 : 0);
     if (found > 0) {
@@ -173,6 +180,7 @@ export function drawPath(
   at: (h: Host) => Pt,
   path: number[],
   stage: number,
+  numbered: boolean, // narrow scenes number each hop (the list under the radar names it); wide ones name them on the ring
 ): void {
   const progress = clamp01(stage - 3) * EDGES;
   for (let e = 0; e < EDGES; e++) {
@@ -189,26 +197,87 @@ export function drawPath(
     g.lineTo(x, y);
     g.stroke();
     g.lineWidth = lineW(1);
-    if (k >= 1) caption(g, TACTICS[e].name, (a.x + b.x) / 2 + 6, (a.y + b.y) / 2 - 6, ink(0.9));
+    if (numbered && k >= 1) caption(g, String(e + 1), (a.x + b.x) / 2 + 6, (a.y + b.y) / 2 - 6, ink(0.95));
   }
 }
 
-/** The tactic chain as a column: the hop being walked is lit, the walked ones stay readable. */
-export function drawTacticList(g: CanvasRenderingContext2D, x: number, y: number, stage: number): void {
+/** A tactic name's hit box: its centre (the focusable spot) and half extents. */
+export interface TacticHit {
+  spot: Spot;
+  hw: number;
+  hh: number;
+}
+
+const tacticState = (progress: number, e: number): 'active' | 'done' | 'ahead' =>
+  progress > e && progress < e + 1 ? 'active' : progress >= e + 1 ? 'done' : 'ahead';
+const tacticInk = (st: string): string => (st === 'active' ? P.ice : ink(st === 'done' ? 0.95 : 0.75));
+
+/**
+ * The tactic chain as a ring round the radar, clockwise from the top: the hop being walked is lit, the walked
+ * ones stay readable. Returns a hit box per name.
+ */
+export function drawTacticRing(g: CanvasRenderingContext2D, cx: number, cy: number, radius: number, stage: number): TacticHit[] {
   const progress = clamp01(stage - 3) * EDGES;
-  caption(g, CHAIN_LABEL, x, y, ink(0.78));
-  TACTICS.forEach((tac, e) => {
-    const row = y + LIST_ROW0 + e * ROW_H;
-    const active = progress > e && progress < e + 1;
-    const done = progress >= e + 1;
-    caption(g, `${tac.id}  ${tac.name}`, x, row, active ? P.ice : ink(done ? 0.85 : 0.4));
+  const rl = radius + RING_GAP;
+  g.font = MONO;
+  return TACTICS.map((name, e) => {
+    const a = -Math.PI / 2 + (e * Math.PI * 2) / EDGES;
+    const x = cx + Math.cos(a) * rl;
+    const y = cy + Math.sin(a) * rl + 4;
+    const tw = g.measureText(name).width;
+    const cos = Math.cos(a);
+    const left = cos > 0.2 ? x : cos < -0.2 ? x - tw : x - tw / 2;
+    caption(g, name, left, y, tacticInk(tacticState(progress, e)));
+    return { spot: { x: left + tw / 2, y: y - 4, label: `ATT&CK tactic: ${name}` }, hw: tw / 2 + 4, hh: 10 };
   });
+}
+
+/**
+ * Narrow stages: numbered ticks round the radar, and the six names as a two-column list under it, each row a
+ * 44 px target. The number on the ring, on the walked hop and in the list is the same.
+ */
+export function drawTacticList(g: CanvasRenderingContext2D, cx: number, cy: number, radius: number, box: Rect, stage: number): TacticHit[] {
+  const progress = clamp01(stage - 3) * EDGES;
+  const cols = listCols(box.w);
+  const colW = box.w / cols;
+  g.font = MONO;
+  return TACTICS.map((name, e) => {
+    const st = tacticState(progress, e);
+    const a = -Math.PI / 2 + (e * Math.PI * 2) / EDGES;
+    g.textAlign = 'center';
+    caption(g, String(e + 1), cx + Math.cos(a) * (radius + TICK_GAP), cy + Math.sin(a) * (radius + TICK_GAP) + 4, tacticInk(st));
+    g.textAlign = 'left';
+    const col = e % cols;
+    const row = Math.floor(e / cols);
+    const x = box.x + col * colW;
+    const y = box.y + row * LIST_ROW + LIST_ROW / 2;
+    caption(g, `${e + 1} ${name}`, x, y + 4, tacticInk(st));
+    return { spot: { x: x + colW / 2, y, label: `ATT&CK tactic: ${name}` }, hw: colW / 2, hh: LIST_ROW / 2 };
+  });
+}
+
+/** The index of the tactic under `p`, or -1. */
+export function tacticAt(hits: readonly TacticHit[], p: Pt | null): number {
+  if (!p) return -1;
+  return hits.findIndex((h) => Math.abs(h.spot.x - p.x) <= h.hw && Math.abs(h.spot.y - p.y) <= h.hh);
+}
+
+/** Hotspots for the hosts: hosts nearer than CLUSTER_PX share one, so every target can be picked by touch. */
+export function hostSpots(hosts: Host[], at: (h: Host) => Pt): Spot[] {
+  const groups: { x: number; y: number; n: number; first: number }[] = [];
+  hosts.forEach((h, k) => {
+    const p = at(h);
+    const near = groups.find((c) => Math.hypot(c.x - p.x, c.y - p.y) < CLUSTER_PX);
+    if (!near) groups.push({ ...p, n: 1, first: k });
+    else [near.x, near.y, near.n] = [(near.x * near.n + p.x) / (near.n + 1), (near.y * near.n + p.y) / (near.n + 1), near.n + 1];
+  });
+  return groups.map((c) => ({ x: c.x, y: c.y, label: c.n > 1 ? 'illustrative host cluster' : `illustrative host ${c.first + 1}` }));
 }
 
 /** Severity key: each mark's colour, drawn in a row. */
 export function drawLegend(g: CanvasRenderingContext2D, x: number, y: number): void {
   let cx = x;
-  g.font = '12px "JetBrains Mono", ui-monospace, monospace';
+  g.font = MONO;
   for (const s of SEVERITY.slice(1)) {
     const colour = s.colour === 'alert' ? P.alert : tint(s.colour, 0.95);
     g.fillStyle = colour;
@@ -220,8 +289,9 @@ export function drawLegend(g: CanvasRenderingContext2D, x: number, y: number): v
   }
 }
 
-/** The hover caption of a host: its severity and its illustrative ports. */
-export function hostCaption(h: Host): string {
-  return `${SEVERITY[h.sev].name} · illustrative ports ${h.ports.join(' · ')}`;
+/** The inspect line for a host. */
+export function hostText(h: Host, k: number): string {
+  const mark = h.sev === 0 ? 'no finding' : `${SEVERITY[h.sev].name} severity`;
+  return `Host ${k}: ${mark} once scanned. Illustration, not a scan result.`;
 }
 

@@ -1,6 +1,5 @@
 ---
-import { GITHUB_PROFILE, MAYA2C_REPO, MAYA2C_SITE, SOCIALS } from '../data/content';
-import SocialIcon from './SocialIcon.astro';
+import { GITHUB_PROFILE, MAYA2C_REPO, MAYA2C_SITE } from '../data/content';
 
 // Source of this site. Public, so a visitor can read exactly what they are looking at.
 const SITE_REPO = 'https://github.com/EricWijesinghe/eric-site';
@@ -8,6 +7,8 @@ const SITE_REPO = 'https://github.com/EricWijesinghe/eric-site';
 const built = new Date();
 const builtDate = built.toISOString().slice(0, 10);
 const year = built.getUTCFullYear();
+// The last byte of the stream: ASCII EOT (end of transmission), 0x04.
+const EOT = (4).toString(2).padStart(8, '0');
 
 const SECTIONS = [
   { label: 'About', href: '#about' },
@@ -15,184 +16,172 @@ const SECTIONS = [
   { label: 'Skills', href: '#skills' },
   { label: 'Contact', href: '#contact' },
 ] as const;
+// Short on screen; the hidden part keeps each link's full name for screen readers.
 const SOURCES = [
-  { label: 'GitHub profile', href: GITHUB_PROFILE },
-  { label: 'Maya2C site', href: MAYA2C_SITE },
-  { label: 'Maya2C repository', href: MAYA2C_REPO },
-  { label: 'Source of this site', href: SITE_REPO },
+  { label: 'GitHub', before: '', after: ' profile', href: GITHUB_PROFILE },
+  { label: 'maya2c.dev', before: '', after: ' (Maya2C site)', href: MAYA2C_SITE },
+  { label: 'Repository', before: 'Maya2C ', after: '', href: MAYA2C_REPO },
+  { label: 'Source', before: '', after: ' of this site', href: SITE_REPO },
 ] as const;
 ---
 
+<!-- A sign-off and one HUD line. The socials are not repeated: they sit just above, as the globe's stations. -->
 <footer class="site-foot" aria-labelledby="foot-name">
-  <div class="wrap foot-grid">
-    <div class="foot-id">
-      <p class="foot-name" id="foot-name">Eric Wijesinghe</p>
-      <p class="foot-line">Rust developer and security researcher. Creator of Maya2C, a post-quantum Layer-1 blockchain in development.</p>
-      <ul class="foot-social" aria-label="Social profiles">
-        {SOCIALS.map((s) => (
+  <div class="wrap">
+    <p class="foot-sign">
+      <span class="foot-name" id="foot-name">Eric Wijesinghe</span>
+      <span class="foot-line">Rust developer and security researcher. Creator of Maya2C, a post-quantum Layer-1 blockchain in development.</span>
+    </p>
+    <div class="foot-hud">
+      <nav aria-label="Footer">
+        <ul class="foot-group">
+          {SECTIONS.map((s) => <li><a href={s.href}>{s.label}</a></li>)}
+        </ul>
+      </nav>
+      <ul class="foot-group" aria-label="Links">
+        {SOURCES.map((s) => (
           <li>
-            <a href={s.href} rel="me noopener" target="_blank" aria-label={s.label} title={s.label}>
-              <SocialIcon name={s.icon} />
+            <a href={s.href} rel="noopener noreferrer" target="_blank">
+              {s.before && <span class="visually-hidden">{s.before}</span>}{s.label}<span class="visually-hidden">{s.after} (opens in a new tab)</span>
             </a>
           </li>
         ))}
       </ul>
+      <p class="foot-group foot-meta">
+        <span>© {year} · Built with Astro</span>
+        <span>hosted on Cloudflare · <span class="visually-hidden">built </span><time datetime={builtDate}>{builtDate}</time></span>
+      </p>
+      <p class="foot-end">
+        <a class="foot-top" href="#top" aria-label="Back to top">↑</a>
+        <span class="foot-eot" aria-hidden="true">{EOT}</span>
+      </p>
     </div>
-
-    <nav class="foot-col" aria-label="Footer">
-      <p class="foot-head">Site</p>
-      <ul>
-        {SECTIONS.map((s) => <li><a href={s.href}>{s.label}</a></li>)}
-      </ul>
-    </nav>
-
-    <nav class="foot-col" aria-label="Links">
-      <p class="foot-head">Links</p>
-      <ul>
-        {SOURCES.map((s) => (
-          <li><a href={s.href} rel="noopener" target="_blank">{s.label}</a></li>
-        ))}
-      </ul>
-    </nav>
-  </div>
-
-  <div class="wrap foot-base">
-    <p class="foot-meta">
-      <span>© {year} Eric Wijesinghe</span>
-      <span aria-hidden="true">·</span>
-      <span>Built with Astro · hosted on Cloudflare</span>
-      <span aria-hidden="true">·</span>
-      <span>Built <time datetime={builtDate}>{builtDate}</time></span>
-    </p>
-    <a class="foot-top" href="#top">Back to top <span aria-hidden="true">↑</span></a>
   </div>
 </footer>
 
 <style>
-  /* No top edge and no solid fill: the page field runs straight through, so the footer has no seam. */
+  /* No top edge, no fill, no chips: the page field runs straight through, so the footer has no seam. */
   .site-foot {
     position: relative;
-    margin-top: clamp(64px, 10vw, 120px);
-    padding: clamp(40px, 6vw, 64px) 0 calc(24px + env(safe-area-inset-bottom));
+    margin-top: clamp(48px, 6vw, 80px);
+    padding: 24px 0 calc(16px + env(safe-area-inset-bottom));
   }
-  .foot-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.4fr);
-    gap: 32px 40px;
+  /* Wide: the contact stage above already ends in its stations, so a tall gap here only pushes the globe's top
+     off the last screen (round 11 finding 7). */
+  @media (min-width: 900px) {
+    .site-foot {
+      margin-top: 32px;
+    }
+  }
+  .foot-sign {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 20px;
+    margin: 0 0 8px;
   }
   .foot-name {
-    margin: 0 0 8px;
-    font: 800 clamp(1.3rem, 2.4vw, 1.6rem) / 1.1 var(--font-display);
+    font: 800 clamp(1.25rem, 2.2vw, 1.5rem) / 1.2 var(--font-display);
     letter-spacing: -0.02em;
     color: var(--text);
   }
   .foot-line {
-    max-width: 30rem;
-    margin: 0 0 18px;
     color: var(--text-dim);
-    font-size: 0.95rem;
+    font-size: 15px;
   }
-  .foot-social {
+  .foot-hud {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  /* Soft chips, theme-aware: tinted in dark, pale in light; the icon is the accent. No edge. */
-  .foot-social a {
-    display: grid;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    border-radius: var(--sig-radius);
-    background: var(--ctl-bg);
-    color: var(--accent);
-    transition: color 0.2s, background-color 0.2s;
-  }
-  .foot-social a:hover,
-  .foot-social a:focus-visible {
-    color: var(--text);
-    background: var(--ctl-bg-hover);
-  }
-  .foot-head {
-    margin: 0 0 10px;
+    align-items: center;
+    gap: 0 28px;
     color: var(--text-dim);
-    font: 500 0.75rem/1.4 var(--font-mono);
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
+    font: 500 12px / 1.5 var(--font-mono);
   }
-  .foot-col ul {
-    display: grid;
-    gap: 12px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .foot-col a {
+  .foot-hud > nav {
     display: inline-flex;
     align-items: center;
-    min-width: var(--tap);
-    min-height: var(--tap);
-    color: var(--text);
-    font-size: 0.95rem;
-    text-decoration: none;
   }
-  .foot-col a:hover {
-    color: var(--accent);
-    text-decoration: underline;
-    text-underline-offset: 4px;
-  }
-  .foot-base {
+  .foot-group {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px 24px;
-    margin-top: clamp(32px, 5vw, 56px);
-    padding-top: 0;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  /* The dots are drawn, not typed, so a screen reader reads a clean list. */
+  .foot-group > li + li::before,
+  .foot-meta > span + span::before {
+    content: '·';
+    margin: 0 6px;
+    opacity: 0.7;
+  }
+  .foot-group > li {
+    display: inline-flex;
+    align-items: center;
+  }
+  .foot-hud a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    color: var(--text);
+    text-decoration: underline 1px transparent;
+    text-underline-offset: 5px;
+    transition: color 0.3s var(--sig-ease), text-decoration-color 0.3s var(--sig-ease);
+  }
+  .foot-hud a:hover,
+  .foot-hud a:focus-visible {
+    color: var(--accent);
+    text-decoration-color: currentColor;
   }
   .foot-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 10px;
-    margin: 0;
-    color: var(--text-dim);
-    font: 500 0.75rem/1.5 var(--font-mono);
-    letter-spacing: 0.08em;
+    min-height: 44px;
   }
-  .foot-top {
+  .foot-meta > span {
+    white-space: nowrap;
+  }
+  .foot-end {
     display: inline-flex;
     align-items: center;
-    min-height: 44px;
-    padding: 0 16px;
-    border-radius: var(--sig-radius);
-    background: var(--ctl-bg);
-    color: var(--text-dim);
-    font: 500 0.75rem/1 var(--font-mono);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    text-decoration: none;
-    transition: color 0.2s, background-color 0.2s;
+    gap: 8px;
+    margin: 0 0 0 auto;
   }
-  .foot-top:hover {
-    color: var(--accent);
-    background: var(--ctl-bg-hover);
+  .foot-hud .foot-top {
+    font-size: 1rem;
   }
+  .foot-eot {
+    color: var(--text); /* dim + 0.7 opacity failed axe contrast on the light theme */
+    opacity: 1;
+  }
+  /* Phone: each group on its own row, the meta in two lines, no dots at the wrap points. */
   @media (max-width: 720px) {
-    .foot-grid {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    .foot-sign {
+      flex-direction: column;
+      align-items: flex-start;
     }
-    .foot-id {
-      grid-column: 1 / -1;
+    .foot-hud {
+      flex-direction: column;
+      align-items: flex-start;
     }
-    /* One item per line on phones: a dot separator at a wrap point reads as a stray mark. */
     .foot-meta {
       flex-direction: column;
-      gap: 4px;
+      align-items: flex-start;
+      min-height: 0;
+      padding-block: 8px;
     }
-    .foot-meta > [aria-hidden='true'] {
+    .foot-meta > span + span::before {
+      display: none;
+    }
+    .foot-end {
+      margin-left: 0;
+    }
+    .foot-group {
+      gap: 0 18px;
+    }
+    .foot-group > li + li::before {
       display: none;
     }
   }

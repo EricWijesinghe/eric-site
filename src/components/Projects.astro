@@ -1,10 +1,17 @@
 ---
 import { FEATURED_PROJECT as f, PROJECTS } from '../data/content';
-import { CHAPTERS, STRUCTURE_ONLY } from '../data/scenes';
+import { ACTS, BENCH, STRUCTURE_ONLY } from '../data/scenes';
 import '../styles/projects.css';
 
-// Order of the chapters on the page: Maya2C first, then the three focus areas.
+// Page order: the Maya2C stage, the UNICRON stage, then one bench holding both focus areas.
 const [unicron, research, ai] = PROJECTS;
+const FACTS = { maya: f, unicron } as const;
+const BENCH_ITEMS = [
+  { p: research, s: BENCH.research, id: 'research' },
+  { p: ai, s: BENCH.ai, id: 'ai' },
+];
+// Both focus areas carry the same note today: it is printed once, under the label, instead of twice.
+const sharedNote = research.note === ai.note ? research.note : null;
 ---
 
 <section id="projects" class="projects" aria-labelledby="projects-title">
@@ -14,108 +21,85 @@ const [unicron, research, ai] = PROJECTS;
       <h2 class="section-title" id="projects-title" data-reveal>What I'm building</h2>
     </header>
 
-    <!-- Chapter 01: Maya2C. The live readout is the chain's own numbers, or nothing. -->
-    <article class="chapter" data-reveal>
-      <figure class="chapter-scene" data-live="false">
-        <div class="sig-viewport scene" data-scene={CHAPTERS.maya.scene} role="img" aria-label={CHAPTERS.maya.aria}></div>
-        <div class="scene-bar">
-          <button type="button" class="scene-act">{CHAPTERS.maya.act}</button>
-          <span class="scene-badge"><span class="tag-live">live readout</span><span class="tag-structure">{STRUCTURE_ONLY}</span></span>
-        </div>
-        <figcaption class="scene-caption">{CHAPTERS.maya.caption}</figcaption>
-        <div class="hud" id="netview">
-          <p class="hud-row nv-num"><span class="hud-k">height</span> <b id="nv-height">—</b></p>
-          <p class="hud-row nv-num"><span class="hud-k">block time</span> <b id="nv-bt">—</b></p>
-          <p class="hud-row"><span class="hud-k">finality</span> <b>DAG-BFT</b></p>
-          <p class="hud-row"><span class="hud-k">state</span> <span id="nv-state" class="nv-live" role="status">connecting…</span></p>
-        </div>
-      </figure>
-      <div class="chapter-text">
-        <p class="chapter-index"><span>01</span> {f.badge}</p>
-        <h3 class="chapter-name">{f.name}</h3>
-        <p class="chapter-desc">{f.description}</p>
-        <ul class="chapter-tags">
-          {f.tags.map((t) => <li>{t}</li>)}
-        </ul>
-        <dl class="chapter-spec">
-          {f.spec.map(([k, v]) => (
-            <div class="spec-cell">
-              <dt>{k}</dt>
-              <dd>{v}</dd>
+    {ACTS.map((a, i) => {
+      const p = FACTS[a.key];
+      return (
+        <article class="act" data-reveal aria-labelledby={`act-${a.key}`}>
+          <div class="act-lockup">
+            <div class="act-id">
+              <p class="act-index"><span>{`0${i + 1}`}</span> {p.badge}</p>
+              <h3 class="act-name" id={`act-${a.key}`}>{p.name}</h3>
             </div>
-          ))}
-        </dl>
-        <p class="chapter-disclosure">{f.disclosure}</p>
-        <div class="chapter-links">
-          {f.links.map((l) => (
-            <a href={l.href} rel="noopener noreferrer" target="_blank">{l.label} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
-          ))}
-        </div>
-      </div>
-    </article>
+            <p class="act-desc">{p.description}</p>
+          </div>
 
-    <!-- Chapter 02: UNICRON, described only. Its scene is an illustration. -->
-    <article class="chapter flip" data-reveal>
-      <figure class="chapter-scene">
-        <div class="sig-viewport scene" data-scene={CHAPTERS.unicron.scene} role="img" aria-label={CHAPTERS.unicron.aria}></div>
-        <div class="scene-bar">
-          <button type="button" class="scene-act">{CHAPTERS.unicron.act}</button>
-          <span class="scene-badge"><span class="tag-illustration">illustration</span></span>
-        </div>
-        <figcaption class="scene-caption">{CHAPTERS.unicron.caption}</figcaption>
-      </figure>
-      <div class="chapter-text">
-        <p class="chapter-index"><span>02</span> {unicron.badge}</p>
-        <h3 class="chapter-name">{unicron.name}</h3>
-        <p class="chapter-desc">{unicron.description}</p>
-        <ul class="chapter-tags">
-          {unicron.tags.map((t) => <li>{t}</li>)}
-        </ul>
-        <p class="chapter-note">{unicron.note}</p>
-      </div>
-    </article>
+          <!-- The stage: the canvas host and its tag are siblings, so pointer capture on the host never eats a control. -->
+          <div class="stage" role="group" aria-label={p.name} aria-describedby={`stage-${a.key}-d`} data-live="false">
+            <p class="visually-hidden" id={`stage-${a.key}-d`}>{a.aria}</p>
+            <div class="stage-view" data-scene={a.scene}></div>
+            <p class="stage-inspect" aria-live="polite" data-hint={a.hint}>{a.hint}</p>
+            <p class="stage-tag">
+              {a.tag === 'live'
+                ? (<><span class="tag-live">live readout</span><span class="tag-structure">{STRUCTURE_ONLY}</span></>)
+                : (<span class="tag-illustration">illustration</span>)}
+            </p>
+          </div>
 
-    <!-- Chapter 03: security research. A focus area, not a shipped product. -->
-    <article class="chapter" data-reveal>
-      <figure class="chapter-scene">
-        <div class="sig-viewport scene" data-scene={CHAPTERS.research.scene} role="img" aria-label={CHAPTERS.research.aria}></div>
-        <div class="scene-bar">
-          <button type="button" class="scene-act">{CHAPTERS.research.act}</button>
-          <span class="scene-badge"><span class="tag-illustration">illustration</span></span>
-        </div>
-        <figcaption class="scene-caption">{CHAPTERS.research.caption}</figcaption>
-      </figure>
-      <div class="chapter-text">
-        <p class="chapter-index"><span>03</span> {research.badge}</p>
-        <h3 class="chapter-name">{research.name}</h3>
-        <p class="chapter-desc">{research.description}</p>
-        <ul class="chapter-tags">
-          {research.tags.map((t) => <li>{t}</li>)}
-        </ul>
-        <p class="chapter-note">{research.note}</p>
-      </div>
-    </article>
+          <div class="explainer">
+            <div class="explainer-text">
+              <p class="explainer-line">{a.caption}</p>
+              {a.formula && <p class="explainer-formula">{a.formula}</p>}
+            </div>
+            <button type="button" class="scene-act">{a.act}</button>
+          </div>
 
-    <!-- Chapter 04: AI x Security. A focus area, not a shipped product. -->
-    <article class="chapter flip" data-reveal>
-      <figure class="chapter-scene">
-        <div class="sig-viewport scene" data-scene={CHAPTERS.ai.scene} role="img" aria-label={CHAPTERS.ai.aria}></div>
-        <div class="scene-bar">
-          <button type="button" class="scene-act">{CHAPTERS.ai.act}</button>
-          <span class="scene-badge"><span class="tag-illustration">illustration</span></span>
-        </div>
-        <figcaption class="scene-caption">{CHAPTERS.ai.caption}</figcaption>
-      </figure>
-      <div class="chapter-text">
-        <p class="chapter-index"><span>04</span> {ai.badge}</p>
-        <h3 class="chapter-name">{ai.name}</h3>
-        <p class="chapter-desc">{ai.description}</p>
-        <ul class="chapter-tags">
-          {ai.tags.map((t) => <li>{t}</li>)}
-        </ul>
-        <p class="chapter-note">{ai.note}</p>
+          {a.key === 'maya' && (
+            <div class="facts">
+              <dl class="facts-spec">
+                {f.spec.map(([k, v]) => (
+                  <div class="facts-pair"><dt>{k}</dt><dd>{v}</dd></div>
+                ))}
+              </dl>
+              <div class="facts-net" id="netview">
+                <p class="facts-pair nv-num"><span class="facts-k">height</span> <b id="nv-height">—</b></p>
+                <p class="facts-pair nv-num"><span class="facts-k">block time</span> <b id="nv-bt">—</b></p>
+                <p class="facts-pair"><span class="facts-k">state</span> <span id="nv-state" class="nv-live" role="status">connecting…</span></p>
+              </div>
+              <p class="facts-disclosure">{f.disclosure}</p>
+              <div class="facts-links">
+                {f.links.map((l) => (
+                  <a href={l.href} rel="noopener noreferrer" target="_blank">{l.label} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+                ))}
+              </div>
+            </div>
+          )}
+        </article>
+      );
+    })}
+
+    <!-- The bench: both focus areas side by side. Neither is a shipped product, and each scene says so. -->
+    <div class="bench" data-reveal>
+      <p class="bench-label">focus areas</p>
+      {sharedNote && <p class="bench-note bench-shared">{sharedNote}</p>}
+      <div class="bench-grid">
+        {BENCH_ITEMS.map(({ p, s, id }) => (
+          <figure class="bench-item" aria-labelledby={`bench-${id}`}>
+            <div class="bench-lockup">
+              <p class="act-index">{p.badge}</p>
+              <h3 class="bench-name" id={`bench-${id}`}>{p.name}</h3>
+              <p class="bench-desc">{p.description}</p>
+              <p class="bench-tags">{p.tags.join(' · ')}</p>
+              {!sharedNote && <p class="bench-note">{p.note}</p>}
+            </div>
+            <div class="bench-view" data-scene={s.scene} role="img" aria-label={s.aria}></div>
+            <div class="scene-bar">
+              <button type="button" class="scene-act">{s.act}</button>
+              <span class="scene-badge">illustration</span>
+            </div>
+          </figure>
+        ))}
       </div>
-    </article>
+    </div>
   </div>
 </section>
 

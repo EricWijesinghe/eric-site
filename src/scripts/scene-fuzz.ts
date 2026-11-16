@@ -8,6 +8,7 @@ import {
   clamp01,
   glass,
   ink,
+  isLight,
   mountScene,
   PALETTE as P,
   rng,
@@ -31,7 +32,15 @@ const GROW_CYCLE_S = 24;
 const COVER_MAX = 0.7; // the illustration never covers the whole map
 const RECENT = 3; // the last few tiles lit are drawn brighter
 const TILE_GAP = 4;
-const TILE_R = 4;
+const TILE_R = 2; // ticks, not pills
+const TICK = 14; // px: a narrow map's tick size
+const STATUS_DY = 40; // px from the ring's bottom to the step caption's baseline
+const MAP_DY = 34; // narrow: px from the step caption to the coverage map's caption line
+const PAIR_MIN_W = 480; // px: from this width the C and Rust panels sit side by side
+const HEX_DX = 12; // the hex readout sits this far outside the ring, beyond the token along its radius
+const MAP_MIN = 5 * TICK + 4 * TILE_GAP; // px: five rows of ticks, the least a coverage map can read as one
+const RING_MIN = 28;
+const HEX_CLEAR = 40; // and hides while the token is this near a node
 const RAIL_Y = 12;
 const TOP = 64; // below the rail, whose narrow active-name line ends near y 58
 const WIDE_RATIO = 1.15;
@@ -70,17 +79,23 @@ function layout(w: number, h: number): Layout {
       rust: { x: w * 0.54, y: panelY, w: w * 0.46, h: PANEL_H },
     };
   }
-  const cPanelY = h - PANEL_H * 2 - PANEL_GAP;
-  const mapTop = 248;
-  const r = Math.min(w * 0.22, h * 0.15);
+  // Tall boxes: ring, its caption, the map, then the C and Rust panels, side by side when they fit.
+  const pair = w >= PAIR_MIN_W;
+  const cPanelY = pair ? h - PANEL_H : h - PANEL_H * 2 - PANEL_GAP;
+  // The map keeps at least MAP_MIN of height: the ring gives way first, so the code panels never take its rows.
+  const room = cPanelY - (TOP + 8) - STATUS_DY - MAP_DY - PANEL_GAP * 2 - MAP_MIN;
+  const r = Math.max(RING_MIN, Math.min(w * 0.2, h * 0.12, room / 2));
+  const ringY = TOP + 8 + r;
+  const mapTop = ringY + r + STATUS_DY + MAP_DY;
   return {
     wide: false,
-    ring: { x: w / 2, y: 124, r },
-    map: { x: 0, y: mapTop, w, h: cPanelY - mapTop - PANEL_GAP },
-    cols: 16,
-    rows: 3,
-    c: { x: 0, y: cPanelY, w, h: PANEL_H },
-    rust: { x: 0, y: h - PANEL_H, w, h: PANEL_H },
+    ring: { x: w / 2, y: ringY, r },
+    map: { x: 0, y: mapTop, w, h: Math.max(0, cPanelY - mapTop - PANEL_GAP * 2) },
+    // Small square ticks, as many as fit, so the map reads as a fine coverage grid at any size.
+    cols: Math.max(1, Math.floor((w + TILE_GAP) / (TICK + TILE_GAP))),
+    rows: Math.max(1, Math.floor((cPanelY - mapTop - PANEL_GAP * 2 + TILE_GAP) / (TICK + TILE_GAP))),
+    c: { x: 0, y: cPanelY, w: pair ? w * 0.48 : w, h: PANEL_H },
+    rust: pair ? { x: w * 0.52, y: cPanelY, w: w * 0.48, h: PANEL_H } : { x: 0, y: h - PANEL_H, w, h: PANEL_H },
   };
 }
 
@@ -113,7 +128,8 @@ function rankTable(n: number): number[] {
 
 function drawTile(g: CanvasRenderingContext2D, x: number, y: number, tw: number, th: number, lit: number, recent: boolean): void {
   rrect(g, x, y, tw, th, TILE_R);
-  g.fillStyle = lit > 0 ? tint('emerald', 0.15 + 0.5 * lit) : `rgb(${glass()} / 0.6)`;
+  // Pearl: an unlit tick is a faint ink tint, not a white tile.
+  g.fillStyle = lit > 0 ? tint('emerald', 0.15 + 0.5 * lit) : isLight() ? 'rgb(10 63 134 / 0.07)' : `rgb(${glass()} / 0.6)`;
   g.fill();
   if (recent && lit > 0) {
     g.strokeStyle = P.ice;
@@ -125,9 +141,12 @@ function drawTile(g: CanvasRenderingContext2D, x: number, y: number, tw: number,
 
 /** The C and Rust comparison: a title, two lines of code, and what happens when it runs. */
 function drawMemory(g: CanvasRenderingContext2D, box: Rect, title: string, code: readonly string[], verdict: string, bad: boolean, t: number): void {
-  g.fillStyle = `rgb(${glass()} / 0.7)`;
-  rrect(g, box.x, box.y, box.w, box.h, 14);
-  g.fill();
+  // Dark keeps its glass panel; pearl sets the code straight on the surface, no card.
+  if (!isLight()) {
+    g.fillStyle = `rgb(${glass()} / 0.7)`;
+    rrect(g, box.x, box.y, box.w, box.h, 14);
+    g.fill();
+  }
   caption(g, title, box.x + 14, box.y + 18, ink(0.8));
   code.forEach((line, i) => caption(g, line, box.x + 14, box.y + 36 + i * 16, ink(0.92)));
   const pulse = 0.5 + 0.5 * Math.sin(t * 2.2);
@@ -179,7 +198,14 @@ function makeScene(_host: HTMLElement, reduce: boolean): Painter {
     g.beginPath();
     g.arc(tok.x, tok.y, TOKEN_R, 0, Math.PI * 2);
     g.fill();
-    caption(g, `0x${hex(Math.floor(p * 97) + 0x3a, 2)} ${hex(Math.floor(p * 53) + 0x7f, 2)}`, tok.x + 8, tok.y - 8, ink(0.7));
+    // The input's bytes ride beside the token, and step aside while it passes a node.
+    if (pos().every((n) => Math.hypot(n.x - tok.x, n.y - tok.y) > HEX_CLEAR)) {
+      // Outside the ring, so it never reads as a second line of the TRIAGE label inside it.
+      const [ux, uy] = [Math.cos(end), Math.sin(end)];
+      g.textAlign = ux > 0.2 ? 'left' : ux < -0.2 ? 'right' : 'center';
+      caption(g, `0x${hex(Math.floor(p * 97) + 0x3a, 2)} ${hex(Math.floor(p * 53) + 0x7f, 2)}`, tok.x + ux * HEX_DX, tok.y + uy * HEX_DX + 4 + (uy > 0.2 ? 8 : 0), ink(0.7));
+      g.textAlign = 'left';
+    }
   };
 
   const drawNodes = (g: CanvasRenderingContext2D, p: number, nodes: Pt[], crash: boolean): void => {
@@ -190,13 +216,7 @@ function makeScene(_host: HTMLElement, reduce: boolean): Painter {
       g.beginPath();
       g.arc(n.x, n.y, k === active ? 5.5 : 4, 0, Math.PI * 2);
       g.fill();
-      const name = LOOP[k];
-      const width = name.length * 7.2;
-      if (k === 0) caption(g, name, n.x - width / 2, n.y - 14, ink(0.9));
-      // Side labels sit inside the ring on wide scenes, outside it on narrow ones where the ring is small.
-      else if (k === 1) caption(g, name, L.wide ? n.x - 12 - width : n.x + 12, n.y + 4, ink(0.9));
-      else if (k === 2) caption(g, name, n.x - width / 2, n.y + 22, ink(0.9));
-      else caption(g, name, L.wide ? n.x + 12 : n.x - 12 - width, n.y + 4, ink(0.9));
+      // The nodes carry no names: the rail above names every step, and the active one is lit on both.
     });
     // Triage: the crashing input leaves the loop for the centre bucket.
     const c = L.ring;
@@ -258,12 +278,10 @@ function makeScene(_host: HTMLElement, reduce: boolean): Painter {
       const nodes = pos();
       drawNodes(g, p, nodes, crash);
       const status = p >= 3 && crash ? STATUS_CRASH : STATUS[Math.min(STATUS.length - 1, Math.floor(p))];
-      // The status sits on a glass chip so the ring line never runs through its words.
-      const sw = status.length * 7.2 + 14;
-      g.fillStyle = `rgb(${glass()} / 0.75)`;
-      rrect(g, L.ring.x - sw / 2, L.ring.y + 32, sw, 22, 8);
-      g.fill();
-      caption(g, status, L.ring.x - sw / 2 + 7, L.ring.y + 47, ink(0.95));
+      // The step caption sits under the ring, so no line runs through its words.
+      g.textAlign = 'center';
+      caption(g, status, L.ring.x, L.ring.y + L.ring.r + STATUS_DY, ink(0.95));
+      g.textAlign = 'left';
       drawMap(g, t);
       drawMemory(g, L.c, 'C · READ AFTER FREE', ['free(p);', '*p;  // compiles, runs'], 'undefined behaviour', true, t);
       drawMemory(g, L.rust, 'RUST · BORROW OUTLIVES OWNER', ['let r = &v[0]; drop(v);', 'use(r);  // compile error'], 'never runs', false, t);

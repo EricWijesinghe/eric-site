@@ -1,64 +1,83 @@
-/* Projects: four chapters, each a scene beside a spec column. Each scene is a box with a crisp edge: a
-   16-20px corner, a thin luminous rim and a gentle glow into the page. Nothing is feathered, so every
-   detail the scene draws stays whole (the canvas keeps a safe inset; see SAFE in scene-core). Text and
-   controls take the page tokens, so the section follows the theme. */
+/* Projects: two wide stages (Maya2C, UNICRON) and one bench for the two focus areas. Blocks are separated by
+   space alone: no rules, no panels. A stage is one canvas with a crisp 20px corner and a luminous gradient rim;
+   nothing is feathered, so every detail stays whole (the canvas keeps a safe inset; see SAFE in scene-core).
+   Text and controls take the page tokens, so the section follows the theme. */
 
 .projects {
   --p-mono: var(--font-mono, ui-monospace, monospace);
   --p-display: var(--font-display, system-ui, sans-serif);
-  --p-radius: 18px; /* scene corners: 16-20px, a middle ground between hard and soft */
+  --p-radius: 20px;
   --p-glass: color-mix(in srgb, var(--bg) 72%, transparent);
   --p-rim: color-mix(in srgb, var(--accent) 55%, transparent);
   --p-glow: color-mix(in srgb, var(--sig-indigo, #4b3cff) 34%, transparent);
+  --p-surface: rgb(5 13 26 / 0.55);
+  --p-gap: clamp(96px, 12vw, 160px);
   padding-block: clamp(72px, 12vw, 160px);
 }
 
-.projects-head { margin-bottom: clamp(24px, 4vw, 56px); }
+.projects-head { margin-bottom: clamp(32px, 5vw, 72px); }
+.act + .act,
+.act + .bench { margin-top: var(--p-gap); }
 
-.chapter {
+/* ---------- lockup: index, badge and name on the left; the description on the right ---------- */
+.act-lockup {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-  gap: clamp(28px, 4vw, 64px);
+  gap: 24px clamp(32px, 5vw, 80px);
+  align-items: end;
+  margin-bottom: clamp(32px, 4vw, 48px);
+}
+@media (min-width: 1024px) {
+  .act-lockup { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+}
+.act-index {
+  margin: 0 0 16px;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  padding-block: clamp(24px, 4vw, 64px);
+  gap: 8px 12px;
+  font: 12px/1.4 var(--p-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
-.chapter.flip { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); } /* the scene keeps the wide column on every chapter */
-.chapter.flip .chapter-scene { order: 2; }
-.chapter.flip .chapter-text { order: 1; }
-
-/* The scene, its control row, its caption and (chapter 01) the readout, stacked in order. */
-.chapter-scene {
+.act-index span { color: var(--text-dim); }
+.act-name {
   margin: 0;
-  position: relative;
-  min-width: 0;
-  display: grid;
-  gap: 0;
+  font-family: var(--p-display);
+  font-weight: 800;
+  font-size: clamp(32px, 4.4vw, 64px); /* never above the section title it sits under */
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+.act-desc {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: var(--text-dim);
 }
 
-/* The box: a crisp edge on a soft glow. The global feather mask is cancelled here on purpose. */
-.projects .sig-viewport {
+/* ---------- the stage ---------- */
+.stage { position: relative; }
+.stage-view {
   position: relative;
-  height: clamp(460px, 62vh, 620px);
-  background: none;
-  border: 0;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: min(74vh, 664px);
   border-radius: var(--p-radius);
-  -webkit-mask-image: none;
-  mask-image: none;
+  background: var(--p-surface);
   box-shadow:
-    0 22px 60px -34px var(--p-glow),
-    inset 0 0 40px -18px color-mix(in srgb, var(--accent) 36%, transparent);
+    0 28px 80px -40px var(--p-glow),
+    inset 0 0 48px -20px color-mix(in srgb, var(--accent) 36%, transparent);
   overflow: hidden;
   isolation: isolate;
-  touch-action: pan-y; /* vertical scroll stays with the page; a sideways drag turns the scene */
+  touch-action: pan-y; /* vertical scroll stays with the page; a sideways drag works the scene */
 }
-/* Phones stack the bands of a scene, and each band keeps its own chip rows: a taller box leaves room for them. */
-@media (max-width: 719px) {
-  .projects .sig-viewport { height: clamp(560px, 80vh, 680px); }
-}
-/* The shared scene frame and vignette are not used here: the rim below is the only edge. */
-.projects .sig-viewport::before { content: none; display: none; }
-/* The luminous rim: a 1px gradient edge, bright at the top-left and fading round the box. */
-.projects .sig-viewport::after {
+/* The luminous rim: a 1px gradient edge, bright at the top-left and fading round the box. Shared by the
+   stages and the bench scenes. */
+.stage-view::after,
+.bench-view::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -77,7 +96,6 @@
   -webkit-mask-composite: xor;
   mask-composite: exclude;
 }
-
 .projects .scene-canvas {
   position: absolute;
   inset: 0;
@@ -87,23 +105,71 @@
   border-radius: inherit;
 }
 
-/* The control row sits under the scene, never on it: the button and the status line share it. */
-.scene-bar {
-  margin-top: 14px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 18px;
+/* Inspect points: one real button per drawn hotspot (scene-spots.ts). They ignore the pointer, so the canvas
+   keeps mouse and touch; they exist for focus, and only the focused one shows, as a ring on the drawing. */
+.scene-spots { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.scene-spot {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  pointer-events: none;
+  transform: translate(calc(var(--sx, 0px) - 50%), calc(var(--sy, 0px) - 50%));
+}
+.projects .scene-spot:focus-visible { outline: 2px solid var(--accent); outline-offset: -6px; }
+/* The inspect line: what the pointer or focus is on, one short line under the stage. */
+.stage-inspect { margin: 16px 0 0; min-height: 1.5em; font: 13px/1.5 var(--p-mono); color: var(--text); }
+
+/* The stage tag: what the drawing is (live readout, structure only, or illustration), under its corner. */
+.stage-tag {
+  margin: 8px 0 0;
+  font: 12px/1.5 var(--p-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.tag-structure, .tag-live { display: none; }
+.stage[data-live='true'] .tag-live { display: inline; color: var(--accent); }
+.stage[data-live='false'] .tag-structure { display: inline; }
+
+/* ---------- explainer: one sentence, one formula, the control ---------- */
+.explainer {
+  display: grid;
+  gap: 24px clamp(32px, 5vw, 80px);
+  align-items: start;
+  margin-top: 24px;
+}
+@media (min-width: 900px) {
+  .explainer { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+  .explainer .scene-act { justify-self: end; }
+}
+.explainer-line {
+  margin: 0;
+  max-width: 48ch;
+  min-height: 2lh;
+  font-size: clamp(18px, 1.6vw, 22px);
+  line-height: 1.45;
+  color: var(--text);
+}
+.explainer-formula {
+  margin: 16px 0 0;
+  font: 13px/1.6 var(--p-mono);
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+  overflow-wrap: anywhere;
 }
 
-/* Keyboard and touch control of a scene: outside the viewport, since role=img has no children. */
+/* Keyboard and touch control of a scene. It is outside the canvas host, which captures the pointer. */
 .scene-act {
   min-width: 44px;
   min-height: 44px;
-  box-sizing: border-box;
   padding: 0 18px;
   border: 0;
-  border-radius: 13px;
+  border-radius: 12px;
   background: var(--p-glass);
   color: var(--text);
   font: 12px/1 var(--p-mono);
@@ -116,59 +182,51 @@
   transition: background 0.4s var(--sig-ease, ease), color 0.4s var(--sig-ease, ease);
 }
 .scene-act:hover { background: color-mix(in srgb, var(--accent) 18%, var(--bg)); }
-.scene-act:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
-.scene-badge {
-  font: 12px/1.5 var(--p-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  pointer-events: none;
-}
-.tag-structure,
-.tag-live,
-.tag-illustration { display: none; }
-.chapter-scene[data-live='true'] .tag-live { display: inline-block; color: var(--accent); }
-.chapter-scene[data-live='false'] .tag-structure { display: inline-block; }
-.chapter-scene .tag-illustration { display: inline-block; }
-
-/* The one-line caption under each scene: what the drawing shows, in plain words. */
-.scene-caption {
-  margin: 14px 0 0;
-  max-width: 64ch;
-  font-size: 0.95rem;
-  line-height: 1.55;
-  color: var(--text-dim);
-}
-
-/* Chapter 01 readout: real chain numbers under the scene, plain columns with no boxes. */
-.hud {
+/* ---------- Maya2C facts: one mono row, then the disclosure and the links ---------- */
+.facts {
+  margin-top: clamp(40px, 5vw, 64px);
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-  margin: 18px 0 0;
-  color: var(--text);
-}
-.hud-row {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px; /* label and value: at least 8px apart, so the stack never reads as cramped */
+  gap: 24px 48px;
   font: 12px/1.4 var(--p-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.hud-k { color: var(--text-dim); }
-.hud b {
+@media (min-width: 1024px) {
+  .facts { grid-template-columns: auto auto; justify-content: space-between; }
+  .facts-disclosure,
+  .facts-links { grid-column: 1 / -1; }
+}
+.facts-spec,
+.facts-net {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 40px;
+}
+.facts-pair {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.facts-pair dt, .facts-k { color: var(--text-dim); }
+.facts-pair dd { margin: 0; }
+.facts-pair dd, .facts-pair b {
   font-family: var(--p-display);
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 18px;
+  font-weight: 700;
   letter-spacing: 0;
   text-transform: none;
   color: var(--text);
   font-variant-numeric: tabular-nums;
 }
-.nv-live { color: var(--text); }
+.nv-live {
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 13px;
+}
 .nv-live::before {
   content: '';
   display: inline-block;
@@ -181,156 +239,160 @@
 }
 .nv-live.on::before { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
 #netview.is-paused .nv-num { display: none; }
-
-/* Text column */
-.chapter-text { min-width: 0; }
-.chapter-index {
-  margin: 0 0 18px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font: 12px/1.4 var(--p-mono);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-.chapter-index span { color: var(--text-dim); }
-.chapter-name {
-  margin: 0 0 18px;
-  font-family: var(--p-display);
-  font-weight: 800;
-  font-size: clamp(2rem, 4.2vw, 3.4rem);
-  line-height: 1.02;
-  letter-spacing: -0.02em;
-  color: var(--text);
-}
-.chapter-desc {
-  margin: 0 0 22px;
-  max-width: 60ch;
-  font-size: 1.0625rem;
-  line-height: 1.65;
-  color: var(--text-dim);
-}
-/* Tags are mono text separated by middots: no chips, no pills. */
-.chapter-tags {
-  list-style: none;
-  margin: 0 0 26px;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: 12px; /* real space between tag boxes; the dot below sits inside the next tag */
-  row-gap: 8px;
-}
-.chapter-tags li {
-  font: 12px/1.6 var(--p-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-}
-.chapter-tags li + li::before {
-  content: '\00b7';
-  margin: 0 0.7em;
-  color: var(--accent);
-}
-.chapter-spec {
-  margin: 0 0 22px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px 24px;
-}
-.spec-cell { margin: 0; }
-.spec-cell dt {
-  margin: 0 0 8px; /* label to value: 8px, owned by the label so no margin collapse can shrink it */
-  font: 12px/1.4 var(--p-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-}
-.spec-cell dd {
+.facts-disclosure {
   margin: 0;
-  font-family: var(--p-display);
-  font-weight: 600;
-  font-size: 1rem;
-  color: var(--text);
-}
-.chapter-disclosure,
-.chapter-note {
-  margin: 0 0 22px;
-  font-size: 0.95rem;
-  line-height: 1.6;
+  max-width: 62ch;
+  font: 13px/20px var(--font-body, system-ui, sans-serif); /* the same size as this sentence in About and Support */
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--text-dim);
 }
-.chapter-links { display: flex; flex-wrap: wrap; gap: 22px; }
-.chapter-links a {
+.facts-links { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+.facts-links a {
   min-height: var(--tap, 44px);
   display: inline-flex;
   align-items: center;
-  font-weight: 600;
+  font: 600 1rem/1.2 var(--font-body, system-ui, sans-serif);
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--accent);
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 5px;
   border-radius: 12px;
 }
-.chapter-links a:focus-visible,
-.projects a:focus-visible,
-.projects button:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 
-@media (max-width: 900px) {
-  .chapter,
-  .chapter.flip { grid-template-columns: minmax(0, 1fr); }
-  .chapter.flip .chapter-scene,
-  .chapter.flip .chapter-text { order: 0; }
-  .projects .sig-viewport { height: clamp(440px, 66vh, 560px); }
+/* ---------- the bench: two figures in one shared frame (subgrid rows: lockup / scene / control) ---------- */
+.bench-label {
+  margin: 0 0 32px;
+  font: 12px/1.4 var(--p-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.bench-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  column-gap: 48px;
+}
+.bench-item {
+  margin: 0;
+  min-width: 0;
+  grid-row: 1 / span 3;
+  display: grid;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+}
+/* Explicit columns: auto-placement would push the figures past the frame's cells into implicit columns. */
+.bench-item:nth-of-type(1) { grid-column: 1; }
+.bench-item:nth-of-type(2) { grid-column: 2; }
+.bench-lockup { padding-bottom: 32px; }
+.bench-name {
+  margin: 0 0 16px;
+  font-family: var(--p-display);
+  font-weight: 800;
+  font-size: clamp(28px, 3vw, 40px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.bench-desc,
+.bench-note {
+  margin: 0 0 16px;
+  max-width: 52ch;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+.bench-note { margin: 0; font-size: 15px; }
+.bench-shared { margin: -24px 0 32px; } /* the focus areas' one shared note, 8 px under their label */
+.bench-tags {
+  margin: 0 0 16px;
+  font: 12px/1.6 var(--p-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.bench-view {
+  position: relative;
+  z-index: 1;
+  height: clamp(440px, 56vh, 560px);
+  border-radius: var(--p-radius);
+  overflow: hidden;
+  touch-action: pan-y;
+  background: var(--p-surface);
+  box-shadow:
+    0 28px 80px -40px var(--p-glow),
+    inset 0 0 48px -20px color-mix(in srgb, var(--accent) 36%, transparent);
+}
+.scene-bar {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+}
+.scene-badge { font: 12px/1.5 var(--p-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); }
+
+.projects :is(a, button):focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+/* Below 1200 px the bench stacks: two 470 px columns crushed the coverage map. Tablets get taller stages. */
+@media (min-width: 641px) and (max-width: 1023px) {
+  .stage-view { aspect-ratio: auto; height: 620px; max-height: none; }
+  .stage-view[data-scene='unicron'] { height: 520px; } }
+@media (max-width: 1199px) {
+  .bench-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; row-gap: 72px; }
+  .bench-item,
+  .bench-item:nth-of-type(n) { grid-row: auto; grid-column: 1; grid-template-rows: auto auto auto; }
 }
 
-/* Phone: the heading, the first scene and its status line sit close together. */
+/* Phone: tall stages, so each scene's stacked layout keeps room for its labels. */
 @media (max-width: 640px) {
-  .projects { padding-block: 72px; }
-  .projects-head { margin-bottom: 20px; }
-  .chapter { padding-block: 16px 40px; }
-  .projects .sig-viewport { height: 520px; }
-  .hud { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .scene-caption { font-size: 0.9rem; }
+  .projects { padding-block: 72px; --p-gap: 96px; }
+  /* Stacked painters: each module gets its own band (two chip rows, then its drawing), so the stage is tall. */
+  .stage-view { aspect-ratio: auto; height: 820px; max-height: none; }
+  .stage-view[data-scene='unicron'] { height: 720px; } /* one radar, its tactic list, then its log */
+  .scene-bar .scene-act { width: 100%; }
+  .explainer-line { min-height: 3lh; }
+  .facts-spec,
+  .facts-net { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; }
+  #netview .facts-pair:last-child { grid-column: 1 / -1; }
+  .bench-view { height: 600px; }
 }
+@media (max-width: 359px) { .stage-view[data-scene='unicron'] { height: 852px; } } /* one-column tactic list */
 
 /* ---------- light theme: deep ink on pearl (K1, J1). Every rule below is light-only; dark is untouched. ----------
-   Ink is #0a3f86 (8.8:1 on the pearl ground) for kickers, act numbers and links; body and caption text takes
-   the deeper #2a3f57. Scene controls are white glass with ink text, never the dark void. */
+   Ink #0a3f86 for kickers and links; body text the deeper #2a3f57. Surfaces are white glass with a deep-ink rim. */
 :root[data-theme='light'] .projects {
   --p-ink: #0a3f86;
   --p-dim: #2a3f57;
+  --p-surface: rgb(255 255 255 / 0.3); /* the page shows through; the rim alone draws the frame */
+  --p-rim: rgb(10 63 134 / 0.55);
+  --p-glow: rgb(10 63 134 / 0.28);
 }
-:root[data-theme='light'] .projects .chapter-index,
-:root[data-theme='light'] .projects .chapter-index span,
-:root[data-theme='light'] .projects .section-label span,
-:root[data-theme='light'] .projects .chapter-links a,
-:root[data-theme='light'] .projects .chapter-tags li + li::before {
-  color: var(--p-ink);
-}
-/* The chapter number is the smallest ink on the page; one step deeper clears 4.5:1 on its worst pixel. */
-:root[data-theme='light'] .projects .chapter-index span {
-  color: #08326e;
-}
-:root[data-theme='light'] .projects .chapter-desc,
-:root[data-theme='light'] .projects .chapter-disclosure,
-:root[data-theme='light'] .projects .chapter-note,
-:root[data-theme='light'] .projects .scene-caption,
-:root[data-theme='light'] .projects .scene-badge,
-:root[data-theme='light'] .projects .hud-k,
-:root[data-theme='light'] .projects .spec-cell dt,
-:root[data-theme='light'] .projects .chapter-tags li {
-  color: var(--p-dim);
-}
+:root[data-theme='light'] .projects :is(.stage-view, .bench-view) { box-shadow: 0 28px 80px -48px var(--p-glow); }
+:root[data-theme='light'] .projects :is(.act-index, .section-label span, .facts-links a, .tag-live) { color: var(--p-ink); }
+/* The act number is the smallest ink on the page; one step deeper clears 4.5:1 on its worst pixel. */
+:root[data-theme='light'] .projects .act-index span { color: #08326e; }
+:root[data-theme='light'] .projects .act-desc,
+:root[data-theme='light'] .projects .explainer-formula,
+:root[data-theme='light'] .projects .stage-tag,
+:root[data-theme='light'] .projects .facts-pair dt,
+:root[data-theme='light'] .projects .facts-k,
+:root[data-theme='light'] .projects .facts-disclosure,
+:root[data-theme='light'] .projects .bench-label,
+:root[data-theme='light'] .projects .bench-desc,
+:root[data-theme='light'] .projects .bench-note,
+:root[data-theme='light'] .projects .bench-tags,
+:root[data-theme='light'] .projects .scene-badge { color: var(--p-dim); }
 :root[data-theme='light'] .projects .scene-act {
   background: rgb(255 255 255 / 0.8);
   color: #0a1830;
   box-shadow: inset 0 0 0 1px rgb(10 63 134 / 0.45), 0 6px 18px -12px rgb(10 63 134 / 0.5);
 }
-:root[data-theme='light'] .projects .scene-act:hover {
-  background: rgb(255 255 255 / 0.97);
-  color: #0a3f86;
+:root[data-theme='light'] .projects .scene-act:hover { background: rgb(255 255 255 / 0.97); color: #0a3f86; }
+:root[data-theme='light'] .projects :is(.act-name, .bench-name, .explainer-line, .facts-pair dd, .facts-pair b, .stage-inspect) {
+  color: #0a1830;
 }
-:root[data-theme='light'] .projects .hud b,
-:root[data-theme='light'] .projects .spec-cell dd,
-:root[data-theme='light'] .projects .chapter-name { color: #0a1830; }

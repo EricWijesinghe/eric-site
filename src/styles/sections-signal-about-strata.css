@@ -1,0 +1,371 @@
+/* About, "The Stack": the 3D half. Five planes in one preserve-3d world, the vias between them, the billboard
+   tags, each plane's motif and its phase and breach states, in both themes. Rule of the world: only planes,
+   vias and tags are its direct children, and nothing on .st-world sets opacity, filter, mask or overflow,
+   because any of those flattens the 3D context. Dimming goes through --rim-a / --art-a instead. */
+
+@property --st-h {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #38e1ff;
+}
+@property --rim-a {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
+@property --art-a {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
+@property --lift {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+@property --yaw {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: -38deg;
+}
+
+#about [data-layer='1'] { --st-h: var(--sig-cyan); }
+#about [data-layer='2'] { --st-h: var(--sig-azure); }
+#about [data-layer='3'] { --st-h: var(--sig-violet); }
+#about [data-layer='4'] { --st-h: var(--sig-magenta); }
+#about [data-layer='5'] { --st-h: var(--sig-ice); }
+#about :is(.st-plane, .st-tag)[data-layer='2'] { --z: 1; }
+#about :is(.st-plane, .st-tag)[data-layer='3'] { --z: 2; }
+#about :is(.st-plane, .st-tag)[data-layer='4'] { --z: 3; }
+#about .st-plane[data-layer='5'] { --z: 4.55; }
+
+/* ---------- stage and world ---------- */
+
+#about .st-stage {
+  position: relative;
+  height: var(--st-stage-h);
+  perspective: 1800px;
+  perspective-origin: 50% 40%;
+  touch-action: pan-y;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: --yaw 0.8s var(--sig-ease);
+}
+
+#about .st-stage.is-dragging {
+  cursor: grabbing;
+  transition: none;
+}
+
+#about .st-world {
+  --z: 0;
+  /* How far the stack has opened: z of a plane caps at this, so it arrives as one slab and opens upward. */
+  --open: calc(var(--build, 1) * 4.55);
+  position: absolute;
+  left: var(--st-cx);
+  top: calc(var(--st-stage-h) - var(--st-center));
+  width: 420px;
+  height: 300px;
+  margin: -150px 0 0 -210px;
+  transform-style: preserve-3d;
+  transform: scale(var(--st-s)) rotateX(60deg) rotateZ(var(--yaw));
+}
+
+/* ---------- planes ---------- */
+
+#about .st-plane {
+  --z: 0;
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  /* The small z * 2px keeps a collapsed slab from z-fighting. */
+  transform: translateZ(calc(min(var(--z), var(--open)) * var(--gap) + var(--z) * 2px + var(--lift)));
+  background: color-mix(in srgb, var(--st-h) calc(5.5% * var(--rim-a)), transparent);
+  box-shadow: 0 0 44px color-mix(in srgb, var(--st-h) calc(22% * var(--rim-a)), transparent);
+  cursor: pointer;
+  transition:
+    --lift 0.6s var(--sig-ease),
+    --rim-a 0.45s var(--sig-ease),
+    --art-a 0.45s var(--sig-ease),
+    --st-h 0.35s,
+    background-color 0.35s,
+    box-shadow 0.35s;
+}
+
+/* The rim: a masked ring, so the gradient never shows through the translucent fill. */
+#about .st-plane::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1.5px;
+  border-radius: inherit;
+  /* Raw azure sits near 4:1 on the void, so a 1.5px rim at partial alpha fell to 2:1 (measured). The rim ink
+     leans a fifth toward white and its weakest stop stays at 72%. */
+  --st-rim: color-mix(in srgb, var(--st-h) 80%, var(--sig-white));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--st-rim) calc(92% * var(--rim-a)), transparent),
+    color-mix(in srgb, var(--st-rim) calc(72% * var(--rim-a)), transparent) 50%,
+    color-mix(in srgb, var(--st-rim) calc(86% * var(--rim-a)), transparent)
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+
+#about .st-plane.is-below { --rim-a: 0.75; --art-a: 0.5; }
+#about .st-plane.is-above { --rim-a: 0.2; --art-a: 0; --lift: 36px; }
+#about .st-plane.is-preview { --rim-a: 1; }
+
+/* The ghost: no fill, no glow; its dashed rim is drawn in the SVG and never fades below 3:1. */
+#about .st-ghost {
+  background: none;
+  box-shadow: none;
+}
+#about .st-ghost::before {
+  content: none;
+}
+#about .st-ghost.is-above { --art-a: 0.8; }
+
+/* ---------- motif drawing ---------- */
+
+#about .st-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  opacity: var(--art-a);
+}
+
+#about .st-art :is(path, rect, circle, g) {
+  fill: none;
+  stroke: var(--st-h);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  transition: opacity 0.5s var(--sig-ease), transform 0.9s var(--sig-ease), fill 0.35s, stroke 0.35s;
+}
+
+#about .st-art .f { fill: var(--st-h); stroke: none; }
+#about .st-art .w { stroke: var(--sig-white); }
+#about .st-art .wf { fill: var(--sig-white); stroke: none; }
+#about .st-art .d { opacity: 0.42; }
+#about .st-art .dash { stroke-dasharray: 4 6; }
+
+/* ---------- vias: 2px uprights through gaps 0-2, open below the ghost ---------- */
+
+#about .st-via {
+  --z: 0;
+  --lo: var(--sig-cyan);
+  --hi: var(--sig-azure);
+  position: absolute;
+  width: 2px;
+  height: calc(clamp(0, var(--open) - var(--z), 1) * var(--gap));
+  margin-left: -1px;
+  transform-origin: 50% 0;
+  transform-style: preserve-3d;
+  transform: translateZ(calc(min(var(--z), var(--open)) * var(--gap) + var(--z) * 2px)) rotateX(90deg);
+  background: linear-gradient(
+    color-mix(in srgb, var(--lo) calc(80% * var(--art-a)), transparent),
+    color-mix(in srgb, var(--hi) calc(90% * var(--art-a)), transparent)
+  );
+  pointer-events: none;
+  transition: --art-a 0.45s var(--sig-ease);
+}
+
+#about .st-via::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: rotateY(90deg);
+  background: inherit;
+}
+
+#about .st-via[data-gap='1'] { --z: 1; --lo: var(--sig-azure); --hi: var(--sig-violet); }
+#about .st-via[data-gap='2'] { --z: 2; --lo: var(--sig-violet); --hi: var(--sig-magenta); }
+#about .st-via.is-below { --art-a: 0.45; }
+#about .st-via.is-above { --art-a: 0; }
+#about .v1 { left: 28.5%; top: 30%; }
+#about .v2 { left: 71.5%; top: 36.6%; }
+#about .v3 { left: 47.6%; top: 73.3%; }
+
+#about .st-pulse {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: var(--sig-white);
+  box-shadow: 0 0 8px var(--hi);
+  opacity: calc((0.55 + 0.45 * var(--m2c-charge, 0)) * var(--art-a));
+}
+
+/* ---------- billboard tags: hidden until the visitor engages, then only on the selected plane ---------- */
+
+#about .st-tag {
+  --z: 1;
+  position: absolute;
+  transform-origin: 0 0;
+  transform: translateZ(calc(min(var(--z), var(--open)) * var(--gap) + 16px)) rotateZ(calc(var(--yaw) * -1))
+    rotateX(-60deg) translate(-50%, -100%);
+  padding: 2px 4px;
+  font: 500 12px/1 var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--sig-white);
+  font-weight: 600;
+  text-shadow: 0 0 6px var(--bg), 0 0 3px var(--bg), 0 0 1px var(--bg);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s var(--sig-ease);
+}
+
+#about.is-engaged .st-tag.is-active { opacity: 1; }
+#about .t-owner { left: 43.6%; top: 16%; }
+#about .t-mut { left: 80%; top: 20%; }
+#about .t-ml { left: 33.8%; top: 25%; }
+#about .t-slh { left: 33.8%; top: 64%; }
+
+/* ---------- motif states. Without [data-phase] each plane holds its most explanatory still frame. ---------- */
+
+/* 02 Rust ownership: owner, shared readers, one writer, drop. */
+#about .m-shared { opacity: 0.55; }
+#about .m-breach { opacity: 0; }
+#about .m-reach { stroke-dasharray: 1; stroke-dashoffset: 0.34; }
+#about [data-phase='0'] :is(.m-shared, .m-mut),
+#about [data-phase='1'] .m-mut,
+#about [data-phase='2'] .m-shared,
+#about [data-phase='3'] :is(.m-owner, .m-shared, .m-mut) { opacity: 0.1; }
+#about [data-phase='1'] .m-shared { opacity: 1; }
+#about [data-phase='2'] .m-val { fill: var(--sig-white); }
+#about [data-phase='3'] .m-val { opacity: 0; }
+#about [data-phase='3'] .m-cell { opacity: 0.4; }
+#about [data-breach] .m-shared { opacity: 0.1; }
+#about [data-breach] .m-breach { opacity: 1; }
+
+/* 03 packet inspection: in, parse (header segments light in turn), check, forward. */
+#about .m-pkt { transform: translate(111px, 0); }
+#about [data-phase='0'] .m-pkt { transform: none; transition: none; }
+#about [data-phase='1'] .m-pkt { transform: translate(60px, 0); }
+#about [data-phase='3'] .m-pkt { transform: translate(236px, 0); }
+#about :is([data-phase='0'], [data-breach]) :is(.m-h1, .m-h2) { opacity: 0.18; }
+#about [data-phase='1'] .m-h2 { transition-delay: 0.7s; }
+#about :is([data-phase='0'], [data-phase='1'], [data-breach]) .m-tick { opacity: 0; }
+#about [data-breach] .m-div { opacity: 1; stroke: var(--sig-white); }
+
+/* 04 Maya2C: sign twice, both verify, the AND joins, a DAG orders it, the last vertex is final. */
+#about .m-and { fill: color-mix(in srgb, var(--st-h) 55%, transparent); }
+#about .m-dag { opacity: 0.7; }
+#about [data-phase='0'] :is(.m-t1, .m-t2, .m-final),
+#about [data-phase='1'] .m-final,
+#about [data-phase='2'] .m-final { opacity: 0; }
+#about :is([data-phase='0'], [data-phase='1']) :is(.m-out, .m-dag) { opacity: 0.22; }
+#about :is([data-phase='0'], [data-phase='1'], [data-breach]) .m-and { fill: none; }
+#about [data-phase='1'] .m-t2 { transition-delay: 0.35s; }
+#about [data-breach] :is(.m-t2, .m-final) { opacity: 0; }
+#about [data-breach] :is(.m-v2, .m-out, .m-dag, .m-and) { opacity: 0.2; }
+#about [data-breach] .m-tx { opacity: 0; }
+
+/* The refusal reads on the whole layer: its rim turns alert for the length of the shot, the layers above go
+   quiet. The rim ink is set on ::before only, so the motif keeps its own hue. */
+#about .st-plane[data-breach] {
+  --rim-a: 1;
+  box-shadow: 0 0 52px color-mix(in srgb, var(--sig-alert) 40%, transparent);
+}
+#about .st-plane[data-breach]::before {
+  --st-rim: var(--sig-alert);
+  --st-h: var(--sig-alert);
+}
+#about .st-world:has(.st-plane[data-breach]) :is(.st-plane, .st-via).is-above { --rim-a: 0.12; --art-a: 0; }
+
+/* ---------- motion: only the selected plane animates, nothing runs while paused ---------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  #about.is-live .st-plane.is-active .m-ripple {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: st-ripple 4.8s var(--sig-ease) infinite;
+  }
+  #about.is-live .st-plane.is-active .m-ripple:nth-child(3) { animation-delay: -1.6s; }
+  #about.is-live .st-plane.is-active .m-ripple:nth-child(4) { animation-delay: -3.2s; }
+  #about.is-live .st-plane.is-active .m-rim { animation: st-march 6s linear infinite; }
+  #about.is-live .st-via:not(.is-above) .st-pulse { animation: st-rise 2.6s linear infinite; }
+  #about.is-live .st-via.v2 .st-pulse { animation-delay: -0.9s; }
+  #about.is-live .st-via.v3 .st-pulse { animation-delay: -1.7s; }
+  #about [data-phase='0'] .m-pkt { animation: st-fade-in 0.5s var(--sig-ease) both; }
+  #about [data-phase='3'] .m-pkt { animation: st-fade-out 1.5s var(--sig-ease) both; }
+  #about [data-phase='0'] .m-sig { stroke-dasharray: 1; animation: st-draw 1.2s var(--sig-ease) both; }
+  #about [data-phase='2'] .m-val { animation: st-flash 0.7s var(--sig-ease); }
+  #about [data-phase='3'] .m-final { transform-box: fill-box; transform-origin: center; animation: st-pop 0.6s var(--sig-ease) both; }
+  #about [data-breach] .m-reach { animation: st-reach 1.8s var(--sig-ease) both; }
+  #about [data-breach] .m-breach { animation: st-dim 1.8s var(--sig-ease) both; }
+  #about [data-breach] .m-pkt { animation: st-divert 1.8s var(--sig-ease) both; }
+  #about [data-breach] .m-tx { transform-box: fill-box; transform-origin: center; animation: st-dissolve 1.8s var(--sig-ease) both; }
+}
+
+#about.is-paused .st-world * { animation-play-state: paused !important; }
+
+#about .m-ripple { opacity: 0.4; }
+#about .m-rim { stroke-dasharray: 6 8; opacity: 0.85; }
+#about .m-sig { stroke-dasharray: none; }
+
+@keyframes st-ripple { from { transform: scale(0.5); opacity: 0.85; } to { transform: scale(1.5); opacity: 0; } }
+@keyframes st-march { to { stroke-dashoffset: -56; } }
+@keyframes st-rise { from { translate: 0 0; } to { translate: 0 var(--gap); } }
+@keyframes st-fade-in { from { opacity: 0; } }
+@keyframes st-fade-out { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes st-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes st-flash { 40% { fill: var(--sig-white); opacity: 1; } }
+@keyframes st-pop { from { transform: scale(0.2); } }
+@keyframes st-reach { from { stroke-dashoffset: 1; } 55%, to { stroke-dashoffset: 0.34; } }
+@keyframes st-dim { 0%, 60% { opacity: 1; } to { opacity: 0.3; } }
+@keyframes st-divert {
+  0% { transform: translate(40px, 0); opacity: 1; }
+  40% { transform: translate(111px, 0); }
+  80% { transform: translate(226px, 92px); opacity: 0.8; }
+  100% { transform: translate(236px, 96px); opacity: 0; }
+}
+@keyframes st-dissolve { 0%, 30% { opacity: 1; transform: none; } to { opacity: 0; transform: scale(0.4); } }
+
+/* ---------- light: white glass planes, deep-ink rims at .75+, a cast shadow instead of a glow ---------- */
+
+:root[data-theme='light'] #about .st-plane {
+  background: rgb(255 255 255 / calc(0.34 * var(--rim-a)));
+  box-shadow: 18px 22px 40px rgb(20 40 90 / calc(0.16 * var(--rim-a)));
+}
+:root[data-theme='light'] #about .st-plane::before {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--st-h) calc(100% * var(--rim-a)), transparent),
+    color-mix(in srgb, var(--st-h) calc(88% * var(--rim-a)), transparent) 50%,
+    color-mix(in srgb, var(--st-h) calc(95% * var(--rim-a)), transparent)
+  );
+}
+:root[data-theme='light'] #about .st-plane.is-below { --rim-a: 1; --art-a: 0.8; }
+:root[data-theme='light'] #about .st-plane.is-above { --rim-a: 0.35; }
+:root[data-theme='light'] #about .st-ghost { background: none; box-shadow: none; }
+:root[data-theme='light'] #about .st-art .d { opacity: 0.6; }
+:root[data-theme='light'] #about .st-via.is-below { --art-a: 0.8; }
+:root[data-theme='light'] #about .st-pulse { box-shadow: none; }
+:root[data-theme='light'] #about .st-tag { text-shadow: 0 0 4px #fff, 0 0 2px #fff; }
+/* Raw alert is 3.0:1 on white; a 30% ink mix holds the refused rim above 5:1. */
+:root[data-theme='light'] #about .st-plane[data-breach]::before {
+  --st-h: color-mix(in srgb, var(--sig-alert) 70%, var(--sig-void));
+}
+
+/* Phones: the stage scale (.62 and below) shrinks the 12px tags under 8px; the phase line already names the term. */
+@media (max-width: 599px) {
+  #about .st-tag { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #about .st-stage,
+  #about .st-plane,
+  #about .st-art * {
+    transition: none;
+  }
+}

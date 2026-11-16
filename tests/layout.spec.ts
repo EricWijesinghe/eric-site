@@ -142,6 +142,42 @@ for (const width of [320, 360]) {
   });
 }
 
+// Eric: no fixed headers. The nav is part of the page and scrolls away with it.
+for (const vp of [
+  { width: 1440, height: 900, mobile: false },
+  { width: 390, height: 844, mobile: true },
+]) {
+  test(`nav scrolls away at ${vp.width}px: not fixed or sticky, out of the viewport after 1200 px`, async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, isMobile: vp.mobile, hasTouch: vp.mobile });
+    const page = await ctx.newPage();
+    await offlineRpc(page);
+    await page.goto('/');
+    const nav = page.locator('.nav');
+    await expect(nav).toBeVisible();
+    expect(await nav.evaluate((e) => getComputedStyle(e).position), 'nav position').toBe('absolute');
+    await page.evaluate(() => window.scrollTo({ top: 1200, behavior: 'instant' }));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThanOrEqual(1200);
+    expect(await nav.evaluate((e) => e.getBoundingClientRect().bottom), 'nav bottom edge in the viewport').toBeLessThanOrEqual(0);
+    // Nothing header-like stays pinned at the top either (the old progress hairline was one). Full-screen
+    // decorative layers (grain, energy overlay) are fixed by design and are not bars, so they are skipped.
+    const pinned = await page.evaluate(() => [...document.querySelectorAll('body *')].filter((e) => {
+      const pos = getComputedStyle(e).position;
+      const r = e.getBoundingClientRect();
+      return (pos === 'fixed' || pos === 'sticky') && r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < 120
+        && r.height < window.innerHeight / 2;
+    }).map((e) => `${e.tagName.toLowerCase()}.${[...e.classList].join('.')}`));
+    expect(pinned, 'fixed or sticky bars at the top of the viewport').toEqual([]);
+    // The bar is part of the hero's composition: the EW mark starts on the name's left edge.
+    const textLeft = (sel: string) => page.locator(sel).first().evaluate((e) => {
+      const r = document.createRange();
+      r.selectNodeContents(e);
+      return r.getClientRects()[0].left;
+    });
+    expect(Math.abs((await textLeft('.logo span')) - (await textLeft('.m2c-name'))), 'EW aligned with the name').toBeLessThanOrEqual(2);
+    await ctx.close();
+  });
+}
+
 // The hero geometry needs the engine to run, so these tests turn WebGL2 on (the file default blocks it)
 // and read his figure box from the engine's m2c:layout event (relative to the stage).
 type Box = { x: number; y: number; w: number; h: number };

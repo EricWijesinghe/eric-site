@@ -1,44 +1,21 @@
-// Drawing for the page field (flow-field.ts): nebula clouds, depth motes, pointer glow and click
-// ripples. Everything is drawn in CSS pixels; the caller sets the device transform once per frame.
-// Colours walk the Signal spectrum, so scrolling moves the whole page through one colour wheel.
-
-export type Rgb = readonly [number, number, number];
+// Drawing for the page field (flow-field.ts): nebula clouds, depth motes, the pointer glow and the pool washes.
+// Everything is drawn in CSS pixels; the caller sets the device transform once per frame. Colours come from the
+// section chords (flow-palette.ts) at each element's page y, so the page changes colour where its sections do.
+import { rgba, rgbStyle, type Chord, type Rgb } from './flow-palette';
 
 export interface Mote {
   x: number;
   y: number;
   /** Depth: 0.2 far .. 1 near. Near motes move faster, parallax more and draw larger. */
   z: number;
-  /** Spectrum index. */
-  hue: number;
+  /** Which ink of the chord this mote takes (a or b). */
+  ink: 'a' | 'b';
   vx: number;
   vy: number;
 }
 
-export interface Ripple {
-  x: number;
-  y: number;
-  t0: number;
-  /** Spectrum position (0..1 wheel), taken from the scroll colour at the click. */
-  hue: number;
-}
-
-export const SPECTRUM: readonly Rgb[] = [
-  [56, 225, 255], // cyan
-  [31, 111, 209], // azure
-  [75, 60, 255], // indigo
-  [139, 92, 246], // violet
-  [224, 76, 255], // magenta
-  [45, 245, 160], // emerald
-  [25, 211, 197], // teal
-];
-
-export const RIPPLE_LIFE_MS = 1600;
-const FALLBACK: Rgb = [56, 225, 255];
-const TAU = Math.PI * 2;
 const WRAP_SPAN = 1.3;
 const WRAP_LEAD = 0.15;
-const LIGHT_TONE: readonly [number, number, number] = [0.72, 0.82, 0.94];
 const SPRITE_PX = 32;
 const MOTE_DRIFT = 0.04;
 const MOTE_RISE = 0.02;
@@ -46,19 +23,30 @@ const MOTE_MIN_PX = 4;
 const MOTE_SPAN_PX = 16;
 const MOTE_PARALLAX_MIN = 0.1;
 const MOTE_PARALLAX_SPAN = 0.4;
-const RIPPLE_MAX_PX = 420;
-const RIPPLE_LAG = 0.18;
-// Nebula clouds: home position (fraction of the viewport), radius, spectrum offset, drift phase.
-const NEBULA: readonly { x: number; y: number; r: number; hue: number; phase: number }[] = [
-  { x: 0.18, y: 0.28, r: 0.42, hue: 0.0, phase: 0 },
-  { x: 0.82, y: 0.18, r: 0.36, hue: 0.45, phase: 1.7 },
-  { x: 0.72, y: 0.72, r: 0.44, hue: 0.7, phase: 3.1 },
-  { x: 0.12, y: 0.86, r: 0.4, hue: 0.3, phase: 4.6 },
+const MOTE_ALPHA = 0.7;
+// Light: soft halos read as grey dirt on a clean page, so motes are small crisp dots of the chord inks, half as many.
+const LIGHT_DOT_MIN_PX = 1.1;
+const LIGHT_DOT_SPAN_PX = 0.8;
+const LIGHT_DOT_ALPHA = 0.5;
+const LIGHT_DOT_ALPHA_SPAN = 0.2;
+const LIGHT_DOT_EVERY = 2;
+// Nebula clouds: home position (fraction of the viewport), radius, drift phase; even clouds take ink a, odd b.
+const NEBULA: readonly { x: number; y: number; r: number; phase: number }[] = [
+  { x: 0.18, y: 0.28, r: 0.42, phase: 0 },
+  { x: 0.82, y: 0.18, r: 0.36, phase: 1.7 },
+  { x: 0.72, y: 0.72, r: 0.44, phase: 3.1 },
+  { x: 0.12, y: 0.86, r: 0.4, phase: 4.6 },
 ];
 const NEBULA_ALPHA = 0.16;
 const NEBULA_ALPHA_LIGHT = 0.22;
 const NEBULA_DRIFT_PX = 90;
 const NEBULA_SCROLL = 0.04;
+const WASH_ALPHA = 0.2;
+const WASH_ALPHA_LIGHT = 0.5;
+const WASH_FLASH = 0.35;
+// Sprite colours are quantised to 4 bits per channel: 4096 possible sprites at most, a few dozen in practice.
+const SPRITE_QUANT = 16;
+const MAX_SPRITES = 256;
 const mod = (a: number, b: number): number => ((a % b) + b) % b;
 
 /** mulberry32: a tiny seeded PRNG, so the field composes the same way on every load. */
@@ -73,38 +61,18 @@ export function mulberry32(seed: number): () => number {
   };
 }
 
-/** Colour at a position on the spectrum wheel; t wraps, so 1 is one full cycle. */
-export function colorAt(t: number): Rgb {
-  const n = SPECTRUM.length;
-  const x = mod(t, 1) * n;
-  const i = Math.floor(x);
-  const f = x - i;
-  const a = SPECTRUM[i % n] ?? FALLBACK;
-  const b = SPECTRUM[(i + 1) % n] ?? FALLBACK;
-  return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
-}
-
-/** Light theme: the same hues, deepened so they hold on a pale page. */
-export function tone(c: Rgb, light: boolean): Rgb {
-  return light ? [c[0] * LIGHT_TONE[0], c[1] * LIGHT_TONE[1], c[2] * LIGHT_TONE[2]] : c;
-}
-
-export function rgba(c: Rgb, a: number): string {
-  return `rgba(${c[0].toFixed(0)},${c[1].toFixed(0)},${c[2].toFixed(0)},${a.toFixed(3)})`;
-}
-
 export function makeMotes(count: number, rnd: () => number): Mote[] {
   return Array.from({ length: count }, () => ({
     x: rnd(),
     y: rnd(),
     z: 0.2 + rnd() * 0.8,
-    hue: Math.floor(rnd() * SPECTRUM.length),
+    ink: rnd() < 0.5 ? 'a' : 'b',
     vx: (rnd() - 0.5) * MOTE_DRIFT,
     vy: -(0.3 + rnd() * 0.7) * MOTE_RISE,
   }));
 }
 
-/** Advances motes in place: a per-frame copy of ~150 objects would be wasted allocation. */
+/** Advances motes in place: a per-frame copy of ~90 objects would be wasted allocation. */
 export function stepMotes(motes: Mote[], dt: number): void {
   for (const m of motes) {
     m.x = mod(m.x + m.vx * m.z * dt, 1);
@@ -112,44 +80,49 @@ export function stepMotes(motes: Mote[], dt: number): void {
   }
 }
 
-/** Soft nebula clouds that breathe and drift slowly; they carry the page colour as a wide, edgeless wash. */
+/** Soft nebula clouds that breathe and drift slowly; each takes the chord of the section under it. */
 export function paintNebula(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
   t: number,
   scroll: number,
-  shift: number,
+  chordAt: (pageY: number) => Chord,
   light: boolean,
 ): void {
   const span = Math.max(w, h);
   ctx.globalAlpha = light ? NEBULA_ALPHA_LIGHT : NEBULA_ALPHA;
-  for (const n of NEBULA) {
+  NEBULA.forEach((n, i) => {
     const cx = n.x * w + Math.sin(t * 0.05 + n.phase) * NEBULA_DRIFT_PX;
     const cy = mod(n.y * h - scroll * NEBULA_SCROLL, h * WRAP_SPAN) - h * WRAP_LEAD;
     const r = n.r * span;
-    const c = tone(colorAt(n.hue + shift), light);
+    const chord = chordAt(scroll + cy);
+    // Light: the pastel wash, never a deep ink spread over the page.
+    const c = light ? chord.w : i % 2 === 0 ? chord.a : chord.b;
     const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
     g.addColorStop(0, rgba(c, 1));
     g.addColorStop(1, rgba(c, 0));
     ctx.fillStyle = g;
     ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-  }
+  });
 }
 
-const sprites = new Map<string, HTMLCanvasElement>();
+const sprites = new Map<number, HTMLCanvasElement>();
 
-/** One soft dot per spectrum colour and theme, drawn once and then stamped: far cheaper than a gradient per mote. */
-function spriteFor(hue: number, light: boolean): HTMLCanvasElement {
-  const key = `${hue}-${light ? 1 : 0}`;
+/** One soft dot per quantised colour, drawn once and then stamped: far cheaper than a gradient per mote. */
+function spriteFor(c: Rgb): HTMLCanvasElement {
+  const q = (v: number): number => Math.min(SPRITE_QUANT - 1, Math.round((v / 255) * (SPRITE_QUANT - 1)));
+  const key = (q(c[0]) << 8) | (q(c[1]) << 4) | q(c[2]);
   const hit = sprites.get(key);
   if (hit) return hit;
-  const c = document.createElement('canvas');
-  c.width = SPRITE_PX;
-  c.height = SPRITE_PX;
-  const g = c.getContext('2d');
+  if (sprites.size >= MAX_SPRITES) sprites.clear();
+  const el = document.createElement('canvas');
+  el.width = SPRITE_PX;
+  el.height = SPRITE_PX;
+  const g = el.getContext('2d');
   if (g) {
-    const rgb = tone(SPECTRUM[hue] ?? FALLBACK, light);
+    const scale = 255 / (SPRITE_QUANT - 1);
+    const rgb: Rgb = [q(c[0]) * scale, q(c[1]) * scale, q(c[2]) * scale];
     const mid = SPRITE_PX / 2;
     const grad = g.createRadialGradient(mid, mid, 0, mid, mid, mid);
     grad.addColorStop(0, rgba(rgb, 1));
@@ -158,8 +131,8 @@ function spriteFor(hue: number, light: boolean): HTMLCanvasElement {
     g.fillStyle = grad;
     g.fillRect(0, 0, SPRITE_PX, SPRITE_PX);
   }
-  sprites.set(key, c);
-  return c;
+  sprites.set(key, el);
+  return el;
 }
 
 /** Depth motes: far ones are small, slow and barely parallax; near ones are larger and sweep past on scroll. */
@@ -169,15 +142,26 @@ export function paintMotes(
   h: number,
   scroll: number,
   motes: readonly Mote[],
+  chordAt: (pageY: number) => Chord,
   light: boolean,
 ): void {
-  for (const m of motes) {
+  motes.forEach((m, i) => {
     const px = m.x * w;
     const py = mod(m.y * h - scroll * (MOTE_PARALLAX_MIN + MOTE_PARALLAX_SPAN * m.z), h);
+    const c = chordAt(scroll + py)[m.ink];
+    if (light) {
+      if (i % LIGHT_DOT_EVERY) return;
+      ctx.globalAlpha = LIGHT_DOT_ALPHA + LIGHT_DOT_ALPHA_SPAN * m.z;
+      ctx.fillStyle = rgbStyle(c);
+      ctx.beginPath();
+      ctx.arc(px, py, LIGHT_DOT_MIN_PX + LIGHT_DOT_SPAN_PX * m.z, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
     const size = MOTE_MIN_PX + m.z * MOTE_SPAN_PX;
-    ctx.globalAlpha = (light ? 0.5 : 0.7) * (0.3 + 0.7 * m.z);
-    ctx.drawImage(spriteFor(m.hue, light), px - size / 2, py - size / 2, size, size);
-  }
+    ctx.globalAlpha = MOTE_ALPHA * (0.3 + 0.7 * m.z);
+    ctx.drawImage(spriteFor(c), px - size / 2, py - size / 2, size, size);
+  });
 }
 
 export function paintGlow(ctx: CanvasRenderingContext2D, x: number, y: number, c: Rgb, radius: number, alpha: number): void {
@@ -189,22 +173,8 @@ export function paintGlow(ctx: CanvasRenderingContext2D, x: number, y: number, c
   ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
 }
 
-/** Click ripples: two rings, the second lagging, both spreading and fading over RIPPLE_LIFE_MS. */
-export function paintRipples(ctx: CanvasRenderingContext2D, now: number, ripples: readonly Ripple[], light: boolean): void {
-  ctx.globalAlpha = 1;
-  ctx.lineWidth = 1.5;
-  for (const rp of ripples) {
-    const age = (now - rp.t0) / RIPPLE_LIFE_MS;
-    if (age < 0 || age > 1) continue;
-    const fade = (1 - age) * (1 - age);
-    const c = tone(colorAt(rp.hue), light);
-    for (const lag of [0, RIPPLE_LAG]) {
-      const a = age - lag;
-      if (a <= 0) continue;
-      ctx.strokeStyle = rgba(c, fade * (1 - lag) * (light ? 0.9 : 0.6));
-      ctx.beginPath();
-      ctx.arc(rp.x, rp.y, RIPPLE_MAX_PX * a, 0, TAU);
-      ctx.stroke();
-    }
-  }
+/** The pool wash: a page-anchored radial light at a gap, mixing the two sections' washes; a flash brightens it. */
+export function paintWash(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, c: Rgb, flash: number, light: boolean): void {
+  const base = light ? WASH_ALPHA_LIGHT : WASH_ALPHA;
+  paintGlow(ctx, x, y, c, r, Math.min(1, base + WASH_FLASH * flash));
 }

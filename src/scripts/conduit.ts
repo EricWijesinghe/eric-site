@@ -1,359 +1,250 @@
-// The conduit: one line of light from the singularity down the whole page (Conduit.astro).
-// It draws itself to the reading line as you scroll, lights a node at each section heading (and
-// reveals that section as the front arrives), and sends a packet train down its full length when
-// Eric releases a charge. Path maths: conduit-geometry.ts. Reduced motion: drawn, lit, still.
-import { revealGroup } from './reveal';
-import { buildConduit, pointAt, sAtY, type Anchor, type Conduit } from './conduit-geometry';
-import { f, makeNode, setFades, svgEl } from './conduit-svg';
+// The current's layout: where the river of glyphs runs on the page. A pure reader of the DOM (it writes nothing):
+// the source under his figure (desktop) or under the hero copy (stacked), one waypoint per gap between sections on
+// alternating sides, extra waypoints in tall sections, and the end at the globe in Contact. Rebuilt whenever main
+// resizes, fonts land, or the hero reports a new layout. Geometry maths: conduit-geometry.ts.
+import { bump, sampleSpine, smoothstep, spineX, type Anchor, type Spine } from './conduit-geometry';
+import { collectKeep, restingBox, type Box, type Disc } from './flow-keep';
+
+export interface Gap {
+  /** Centre of the empty space between two sections, page px. */
+  y: number;
+  /** Half-width of the pool envelope: inside the empty space, clear of both sections' copy. */
+  hw: number;
+  /** Index of the section below the gap. */
+  below: number;
+}
+
+export interface Layout {
+  w: number;
+  stacked: boolean;
+  lanes: number;
+  base: number;
+  ghost: number;
+  source: Anchor;
+  end: Anchor;
+  /** Page y where the river has faded out (the globe's top edge). */
+  endTop: number;
+  spine: Spine;
+  gaps: Gap[];
+  ids: string[];
+  /** Copy and frames the glyphs keep clear of (flow-keep.ts). */
+  keep: Box[];
+  /** The globe's circle: no glyph is drawn inside it. */
+  disc: Disc | null;
+}
 
 // Same breakpoint as the hero's stacked layout (hero.css): copy sits under the figure there.
 const STACKED_QUERY = '(max-width: 1023px), (orientation: portrait)';
-const PHONE_X = 6;
-const GUTTER_OFFSET_PX = 44;
-const MIN_GUTTER_X_PX = 10;
-// A cubic S with handles this far off the gutter swings about 0.29 of it: ~25px on desktop.
-const BULGE_PX = 86;
-// Stacked layouts: no swing at all. Any bulge would bend the line into the 16px copy column, so it runs
-// straight down the gutter from under the copy.
-const PHONE_BULGE_PX = 0;
-const TAIL_PX = 200;
-const TAIL_INSET_PX = 24;
-const START_DROP_PX = 2;
+const WIDE_PX = 1280;
+const TABLET_PX = 720;
+const LANES = { wide: 9, tablet: 7, phone: 6 } as const;
+// Eel gate (spec step 3): at 110/84/64 px with .18 swing the current read as a dense diagonal tube, so it runs
+// wider (x1.5), straighter and sparser.
+// Phone keeps a narrow pool (~140 px) so nothing reaches the screen edge.
+const BASE_PX = { wide: 165, tablet: 126, phone: 72 } as const;
+const AMP = { desktop: 0.1, stacked: 0.12 } as const;
+// Inside sections the current is a ghost: at .22 it competed with the copy it crossed (measured on screenshots).
+const GHOST = { desktop: 0.1, stacked: 0.05 } as const;
 const DEFAULT_FIG_X = 0.7;
-const READ_LINE = 0.55;
-// A short seed of light always shows leaving the figure, so the line visibly starts at the hero.
-const SEED_DRAW = 0.035;
-const DRAW_EASE = 0.16;
-const DRAW_EPSILON = 0.0005;
-const END_SLACK_PX = 4;
-const MAX_STEP_S = 0.05;
-const IDLE_SPEED_PX = 320;
-const TRAIN_SPEED_PX = 1100;
-const TRAIN_SIZE = 18;
-const TRAIN_GAP_MS = 70;
-const TRICKLE_MIN_MS = 2800;
-const TRICKLE_SPAN_MS = 1800;
-const MAX_PACKETS = 60;
-const FLASH_MS = 900;
-const RELEASE_MS = 1600;
-// Breathing room around a section eyebrow that the line stops short of.
-const CUT_PAD_PX = 10;
-const CUT_RADIUS_PX = 4;
-// The line is only animated while main is near the viewport; the margin starts it just before it arrives.
-const VISIBLE_MARGIN_PX = 200;
+const COPY_DROP_PX = 24;
+// The pool fills the real void between one section's last copy and the next section's label, never reaching
+// into either: its envelope stops this far short of both (padding maths put the core on the Support disclosure).
+const POOL_INSET_PX = 12;
+const TALL_SECTION_PX = 1400;
+const EXTRA_EVERY_PX = 1100;
+const EXTRA_END_GUARD_PX = 400;
+const END_GUARD_PX = 40;
+const END_FALLBACK_PX = 24;
+const POOL_GROW = 0.9;
+const FAN_GROW = 1.6;
+const FAN_PX = 420;
+const SOURCE_RAMP_PX = 160;
+const END_RAMP_PX = 220;
+// Colour hand-off across a gap: the chord changes over this fraction of the pool's half-width.
+const CHORD_SPAN = 0.6;
 
-interface Parts {
-  host: HTMLElement;
-  root: HTMLElement;
-  svg: SVGSVGElement;
-  glow: SVGPathElement;
-  core: SVGPathElement;
-  nodes: SVGGElement;
-  packets: SVGGElement;
-  cut: SVGGElement;
-  fade: SVGGElement;
-  head: SVGCircleElement;
-  headGlow: SVGCircleElement;
+let current: Layout | null = null;
+const subscribers: ((l: Layout) => void)[] = [];
+
+const pageRect = (el: Element): DOMRect => {
+  const r = el.getBoundingClientRect();
+  return new DOMRect(r.left + window.scrollX, r.top + window.scrollY, r.width, r.height);
+};
+const px = (v: string): number => parseFloat(v) || 0;
+
+function sourceOf(stacked: boolean, w: number): Anchor {
+  const stage = document.querySelector<HTMLElement>('.m2c-stage');
+  if (!stage) return { x: w * DEFAULT_FIG_X, y: 0 };
+  const sr = pageRect(stage);
+  const copy = stage.querySelector('.m2c-copy');
+  if (stacked && copy) return { x: w / 2, y: pageRect(copy).bottom + COPY_DROP_PX };
+  const sing = stage.querySelector<HTMLElement>('.m2c-sing') ?? stage;
+  const raw = parseFloat(getComputedStyle(sing).getPropertyValue('--fig-x'));
+  const box = pageRect(sing);
+  return { x: box.left + (Number.isFinite(raw) ? raw : DEFAULT_FIG_X) * box.width, y: sr.bottom };
 }
 
-type NodeAnchor = Anchor;
-
-interface NodeState {
-  s: number;
-  group: SVGElement;
-  section: Element;
-  lit: boolean;
-  revealed: boolean;
-  flashUntil: number;
+/** Bottom of a section's last visible copy (its .wrap children), or its padding edge when it has none. */
+function contentBottom(s: HTMLElement): number {
+  let lo = -Infinity;
+  for (const el of s.querySelectorAll(':scope > .wrap > *')) {
+    const b = restingBox(el);
+    if (b.b > b.t) lo = Math.max(lo, b.b);
+  }
+  return Number.isFinite(lo) ? lo : pageRect(s).bottom - px(getComputedStyle(s).paddingBottom);
 }
 
-interface Packet {
-  s: number;
-  v: number;
-  el: SVGElement;
+/** Top of a section's label (its first line of copy), or its padding edge. */
+function contentTop(s: HTMLElement): number {
+  const label = s.querySelector('.section-label');
+  return label ? restingBox(label).t : pageRect(s).top + px(getComputedStyle(s).paddingTop);
 }
 
-function readParts(): Parts | null {
-  const host = document.getElementById('main');
-  const root = host?.querySelector<HTMLElement>('.conduit');
-  const svg = root?.querySelector<SVGSVGElement>('svg');
-  const glow = svg?.querySelector<SVGPathElement>('.cd-glow');
-  const core = svg?.querySelector<SVGPathElement>('.cd-core');
-  const nodes = svg?.querySelector<SVGGElement>('.cd-nodes');
-  const packets = svg?.querySelector<SVGGElement>('.cd-packets');
-  const cut = svg?.querySelector<SVGGElement>('.cd-cut');
-  const fade = svg?.querySelector<SVGGElement>('.cd-fade');
-  const head = svg?.querySelector<SVGCircleElement>('.cd-head');
-  const headGlow = svg?.querySelector<SVGCircleElement>('.cd-head-glow');
-  if (!host || !root || !svg || !glow || !core || !nodes || !packets || !cut || !fade || !head || !headGlow) return null;
-  return { host, root, svg, glow, core, nodes, packets, cut, fade, head, headGlow };
+function gapsOf(sections: readonly HTMLElement[]): Gap[] {
+  const gaps: Gap[] = [];
+  for (let i = 0; i < sections.length - 1; i++) {
+    const a = sections[i];
+    const b = sections[i + 1];
+    if (!a || !b) continue;
+    const lo = contentBottom(a);
+    const hi = contentTop(b);
+    // hw >= 1: a zero width would make the bump divide by zero.
+    gaps.push({ y: (lo + hi) / 2, hw: Math.max(1, (hi - lo) / 2 - POOL_INSET_PX), below: i + 1 });
+  }
+  return gaps;
 }
 
-// The figure's body axis (--fig-x) sets where the line leaves the hero; phone centres it.
-function startAnchor(stage: HTMLElement | null, hr: DOMRect, width: number): Anchor {
-  if (!stage) return { x: width * DEFAULT_FIG_X, y: 0 };
-  const sr = stage.getBoundingClientRect();
-  const raw = parseFloat(getComputedStyle(stage).getPropertyValue('--fig-x'));
-  const fx = Number.isFinite(raw) ? raw : DEFAULT_FIG_X;
-  return { x: sr.left - hr.left + fx * sr.width, y: sr.bottom - hr.top - START_DROP_PX };
+/** Waypoints after the source: every gap but the first (the source is that pool), plus one every ~1100 px in tall sections. */
+function waypoints(sections: readonly HTMLElement[], gaps: readonly Gap[], w: number, amp: number, endY: number): Anchor[] {
+  const ys: number[] = [];
+  sections.forEach((s, i) => {
+    if (i === 0) return;
+    const r = pageRect(s);
+    if (r.height > TALL_SECTION_PX) {
+      for (let y = r.top + EXTRA_EVERY_PX; y < r.bottom - EXTRA_END_GUARD_PX; y += EXTRA_EVERY_PX) ys.push(y);
+    }
+    const gap = gaps[i];
+    if (gap) ys.push(gap.y);
+  });
+  // The first waypoint sits opposite the source, then the sides alternate.
+  return ys
+    .filter((y) => y < endY - END_GUARD_PX)
+    .sort((a, b) => a - b)
+    .map((y, k) => ({ x: w * (0.5 + (k % 2 === 0 ? -amp : amp)), y }));
 }
 
-// Nodes ride the gutter GUTTER_OFFSET_PX left of each heading. Narrow screens, where the heading
-// sits too close to the edge for that, use the thin phone gutter instead.
-function nodeAnchor(h: HTMLElement, hr: DOMRect, gutter: boolean): NodeAnchor {
-  const r = h.getBoundingClientRect();
-  const left = r.left - hr.left;
-  const roomy = left >= GUTTER_OFFSET_PX + MIN_GUTTER_X_PX;
-  const x = gutter || !roomy ? PHONE_X : left - GUTTER_OFFSET_PX;
-  return { x, y: r.top - hr.top + r.height / 2 };
+function build(): Layout | null {
+  const main = document.getElementById('main');
+  if (!main) return null;
+  const sections = [...main.querySelectorAll<HTMLElement>(':scope > section')];
+  const w = document.documentElement.clientWidth;
+  const stacked = window.matchMedia(STACKED_QUERY).matches;
+  const size = w >= WIDE_PX ? 'wide' : w >= TABLET_PX ? 'tablet' : 'phone';
+  const amp = stacked ? AMP.stacked : AMP.desktop;
+  const source = sourceOf(stacked, w);
+  // The globe's hit button is exactly its circle's box (finale lane).
+  const globe = document.querySelector('#contact .globe-hit');
+  const last = sections[sections.length - 1];
+  const gr = globe ? pageRect(globe) : null;
+  const end = gr
+    ? { x: gr.left + gr.width / 2, y: gr.top + gr.height / 2 }
+    : { x: w / 2, y: (last ? pageRect(last).bottom : source.y + 1) - END_FALLBACK_PX };
+  const gaps = gapsOf(sections);
+  const pts = [source, ...waypoints(sections, gaps, w, amp, end.y), end].filter((p, i, all) => i === 0 || p.y > (all[i - 1]?.y ?? -Infinity));
+  return {
+    w,
+    stacked,
+    lanes: LANES[size],
+    base: BASE_PX[size],
+    ghost: stacked ? GHOST.stacked : GHOST.desktop,
+    source,
+    end,
+    endTop: gr ? gr.top : end.y,
+    spine: sampleSpine(pts),
+    gaps,
+    ids: sections.map((s) => s.id),
+    keep: collectKeep(sections),
+    disc: gr ? { x: end.x, y: end.y, r: gr.width / 2 } : null,
+  };
 }
 
-function mount(p: Parts): void {
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let geo: Conduit | null = null;
-  let nodes: NodeState[] = [];
-  const packets: Packet[] = [];
-  let target = 0;
-  let cur = 0;
-  let raf = 0;
-  let last = 0;
-  let queued = false;
-  let visible = true;
+export const layout = (): Layout | null => current;
 
-  const request = (): void => {
-    if (!raf && visible) raf = requestAnimationFrame(tick);
-  };
-
-  const light = (n: NodeState): void => {
-    n.lit = true;
-    n.group.classList.add('is-lit');
-    if (!n.revealed) {
-      n.revealed = true;
-      revealGroup(n.section);
-    }
-  };
-
-  const paint = (now: number): void => {
-    if (!geo) return;
-    const s = cur * geo.total;
-    const dash = String(1 - cur);
-    p.glow.setAttribute('stroke-dashoffset', dash);
-    p.core.setAttribute('stroke-dashoffset', dash);
-    const hp = pointAt(geo.pts, s);
-    for (const el of [p.head, p.headGlow]) {
-      el.setAttribute('cx', f(hp.x));
-      el.setAttribute('cy', f(hp.y));
-      el.setAttribute('opacity', cur > 0 ? '1' : '0');
-    }
-    for (const n of nodes) {
-      if (!n.lit && s >= n.s) light(n);
-      n.group.classList.toggle('is-flash', n.flashUntil > now);
-    }
-  };
-
-  const spawn = (v: number, train: boolean): void => {
-    if (packets.length >= MAX_PACKETS) return;
-    const el = svgEl('circle', { class: train ? 'cd-pk cd-pk--train' : 'cd-pk', r: train ? 3 : 1.8, opacity: 0 });
-    p.packets.append(el);
-    packets.push({ s: 0, v, el });
-  };
-
-  const stepPackets = (dt: number, now: number): void => {
-    if (!geo) return;
-    const drawn = cur * geo.total;
-    for (let i = packets.length - 1; i >= 0; i--) {
-      const pk = packets[i];
-      if (!pk) continue;
-      const prev = pk.s;
-      pk.s += pk.v * dt;
-      if (pk.s >= geo.total) {
-        pk.el.remove();
-        packets.splice(i, 1);
-        continue;
-      }
-      const at = pointAt(geo.pts, pk.s);
-      const seen = pk.s <= drawn;
-      pk.el.setAttribute('cx', f(at.x));
-      pk.el.setAttribute('cy', f(at.y));
-      pk.el.setAttribute('opacity', seen ? '1' : '0');
-      if (seen) {
-        for (const n of nodes) if (prev < n.s && pk.s >= n.s) n.flashUntil = now + FLASH_MS;
-      }
-    }
-  };
-
-  const tick = (now: number): void => {
-    raf = 0;
-    if (!geo) return;
-    const dt = last ? Math.min(MAX_STEP_S, (now - last) / 1000) : 0;
-    last = now;
-    cur += (target - cur) * DRAW_EASE;
-    if (Math.abs(target - cur) < DRAW_EPSILON) cur = target;
-    stepPackets(dt, now);
-    paint(now);
-    if (cur !== target || packets.length > 0 || nodes.some((n) => n.flashUntil > now)) request();
-    else last = 0;
-  };
-
-  const updateTarget = (): void => {
-    if (!geo) return;
-    const atEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - END_SLACK_PX;
-    if (reduce || atEnd) {
-      target = 1;
-      return;
-    }
-    if (geo.total <= 0) return;
-    const readY = window.innerHeight * READ_LINE - p.host.getBoundingClientRect().top;
-    target = Math.max(SEED_DRAW, sAtY(geo.pts, readY) / geo.total);
-  };
-
-  const setNodes = (heads: HTMLElement[], anchors: NodeAnchor[], g: Conduit): void => {
-    p.nodes.replaceChildren();
-    nodes = anchors.map((a, i) => {
-      const group = makeNode(a);
-      p.nodes.append(group);
-      return {
-        s: g.nodeS[i] ?? g.total,
-        group,
-        section: heads[i]?.closest('section') ?? p.host,
-        lit: false,
-        revealed: false,
-        flashUntil: 0,
-      };
-    });
-  };
-
-  const build = (): void => {
-    const hr = p.host.getBoundingClientRect();
-    const w = p.host.offsetWidth;
-    const h = p.host.offsetHeight;
-    p.svg.setAttribute('width', String(w));
-    p.svg.setAttribute('height', String(h));
-    p.svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-    const stacked = window.matchMedia(STACKED_QUERY).matches;
-    p.root.classList.toggle('is-stacked', stacked);
-    // Stacked layouts put the name and lede under the figure, so the line would cut through them. CSS masks
-    // it above the copy block; it then leaves from underneath the copy. Desktop leaves from the stage bottom.
-    const stage = document.querySelector<HTMLElement>('.m2c-stage');
-    const copy = document.querySelector<HTMLElement>('.m2c-copy');
-    const cutEl = stacked ? (copy ?? stage) : stage;
-    const cutY = cutEl ? cutEl.getBoundingClientRect().bottom - hr.top : 0;
-    p.root.style.setProperty('--cd-skip', `${cutY}px`);
-    // Eyebrows are cut out of the line so the stroke stops short of their text.
-    p.cut.replaceChildren(
-      ...Array.from(p.host.querySelectorAll<HTMLElement>('.section-label')).map((el) => {
-        // The label is a block; the knockout follows its text, not its full-width box.
-        const range = document.createRange();
-        range.selectNodeContents(el);
-        const r = range.getBoundingClientRect();
-        return svgEl('rect', {
-          x: f(r.left - hr.left - CUT_PAD_PX),
-          y: f(r.top - hr.top - CUT_PAD_PX),
-          width: f(r.width + 2 * CUT_PAD_PX),
-          height: f(r.height + 2 * CUT_PAD_PX),
-          rx: CUT_RADIUS_PX,
-          fill: '#000',
-        });
-      }),
-    );
-    const heads = Array.from(p.host.querySelectorAll<HTMLElement>(':scope > section h2.section-title'));
-    const anchors = heads.map((hd) => nodeAnchor(hd, hr, stacked));
-    const lastA = anchors[anchors.length - 1];
-    if (!lastA) {
-      geo = null;
-      return;
-    }
-    const lastSection = heads[heads.length - 1]?.closest('section');
-    const bottom = lastSection ? lastSection.getBoundingClientRect().bottom - hr.top : h;
-    const tailY = Math.max(lastA.y + 1, Math.min(bottom - TAIL_INSET_PX, lastA.y + TAIL_PX));
-    const figStart = startAnchor(document.querySelector<HTMLElement>('.m2c-sing'), hr, w);
-    // Stacked: the whole line runs down the gutter from just under the copy block. A diagonal lead-in from the
-    // figure's axis would sweep across the section eyebrows and headings (measured at 768 wide), so it is dropped.
-    const low = stacked ? cutY + START_DROP_PX : figStart.y;
-    const start = stacked ? { x: PHONE_X, y: low } : { x: figStart.x, y: low };
-    const sectionTops = heads.map((hd) => (hd.closest('section')?.getBoundingClientRect().top ?? hr.top) - hr.top);
-    setFades(p.fade, sectionTops, start, lastA, w);
-    geo = buildConduit(start, anchors, { x: lastA.x, y: tailY }, stacked ? PHONE_BULGE_PX : BULGE_PX);
-    p.glow.setAttribute('d', geo.d);
-    p.core.setAttribute('d', geo.d);
-    setNodes(heads, anchors, geo);
-    updateTarget();
-    cur = target;
-    paint(performance.now());
-  };
-
-  const scheduleBuild = (): void => {
-    if (queued) return;
-    queued = true;
-    requestAnimationFrame(() => {
-      queued = false;
-      build();
-      request();
-    });
-  };
-
-  const scheduleTrickle = (): void => {
-    const wait = TRICKLE_MIN_MS + Math.random() * TRICKLE_SPAN_MS;
-    window.setTimeout(() => {
-      if (!document.hidden && visible) {
-        spawn(IDLE_SPEED_PX, false);
-        request();
-      }
-      scheduleTrickle();
-    }, wait);
-  };
-
-  const onRelease = (): void => {
-    if (reduce) return;
-    p.root.classList.add('is-release');
-    window.setTimeout(() => p.root.classList.remove('is-release'), RELEASE_MS);
-    for (let i = 0; i < TRAIN_SIZE; i++) {
-      window.setTimeout(() => {
-        spawn(TRAIN_SPEED_PX, true);
-        request();
-      }, i * TRAIN_GAP_MS);
-    }
-  };
-
-  const onCharge = (e: Event): void => {
-    const level = (e as CustomEvent<{ level?: number }>).detail?.level;
-    if (typeof level !== 'number' || !Number.isFinite(level)) return;
-    p.root.style.setProperty('--charge', String(Math.min(1, Math.max(0, level))));
-  };
-
-  p.glow.setAttribute('pathLength', '1');
-  p.core.setAttribute('pathLength', '1');
-  p.glow.setAttribute('stroke-dasharray', '1 1');
-  p.core.setAttribute('stroke-dasharray', '1 1');
-  window.addEventListener(
-    'scroll',
-    () => {
-      if (!visible) return;
-      updateTarget();
-      request();
-    },
-    { passive: true },
-  );
-  window.addEventListener('m2c:charge', onCharge);
-  window.addEventListener('m2c:release', onRelease);
-  new ResizeObserver(scheduleBuild).observe(p.host);
-  // Off-screen (past the contact section, or before the hero ends and main has not arrived) the line
-  // stops ticking; returning re-targets the draw front and resumes the loop.
-  new IntersectionObserver(
-    (entries) => {
-      visible = entries.some((e) => e.isIntersecting);
-      if (visible) {
-        updateTarget();
-        request();
-      }
-    },
-    { rootMargin: `${VISIBLE_MARGIN_PX}px 0px` },
-  ).observe(p.host);
-  void document.fonts?.ready.then(scheduleBuild);
-  if (!reduce) scheduleTrickle();
-  build();
-  request();
+/** The pool envelope G(y): 1 at a gap centre, falling to 0 inside the sections. */
+/** Index of the gap whose pool covers page y most, or -1. */
+export function poolIndexAt(y: number, l: Layout): number {
+  let best = -1;
+  let g = 0;
+  l.gaps.forEach((gap, i) => {
+    const v = bump((y - gap.y) / gap.hw);
+    if (v > g) [g, best] = [v, i];
+  });
+  return best;
 }
 
-const parts = readParts();
-if (parts) mount(parts);
+export function poolAt(y: number, l = current): number {
+  if (!l) return 0;
+  let g = 0;
+  for (const gap of l.gaps) g = Math.max(g, bump((y - gap.y) / gap.hw));
+  return g;
+}
+
+/** River brightness at page y: a ghost inside sections, full in the pools. */
+export const envAt = (y: number, l = current): number => (l ? l.ghost + (1 - l.ghost) * poolAt(y, l) : 0);
+
+/** River width at page y: wider in the pools, and a wide sparse fan right under his figure. */
+export function widthAt(y: number, g: number, l: Layout): number {
+  const fan = 1 + FAN_GROW * (1 - smoothstep(0, FAN_PX, y - l.source.y));
+  return l.base * (1 + POOL_GROW * g) * fan;
+}
+
+/** 0 at the stage bottom rising over 160 px (never on his figure), and 0 again at the globe's edge (never over it). */
+export const rampAt = (y: number, l: Layout): number =>
+  smoothstep(l.source.y, l.source.y + SOURCE_RAMP_PX, y) * (1 - smoothstep(l.endTop - END_RAMP_PX, l.endTop, y));
+
+export function spineAt(y: number): Anchor {
+  return { x: current ? spineX(current.spine, y) : window.innerWidth / 2, y };
+}
+
+/** The pool a section is entered from (the gap above it), or null for the stage and unknown ids. */
+export function poolCentre(sectionId: string): Anchor | null {
+  const l = current;
+  const i = l ? l.ids.indexOf(sectionId) : -1;
+  const gap = l && i > 0 ? l.gaps[i - 1] : undefined;
+  return gap ? spineAt(gap.y) : null;
+}
+
+/** Continuous section position at page y (0 = top .. n-1 = contact); `shift` moves the hand-off (the prism). */
+export function chordPos(y: number, shift = 0, l = current): number {
+  if (!l) return 0;
+  let p = 0;
+  for (const gap of l.gaps) p += smoothstep(gap.y - gap.hw * CHORD_SPAN, gap.y + gap.hw * CHORD_SPAN, y - shift);
+  return p;
+}
+
+export function onLayout(fn: (l: Layout) => void): void {
+  subscribers.push(fn);
+  if (current) fn(current);
+}
+
+let queued = false;
+function rebuild(): void {
+  if (queued) return;
+  queued = true;
+  requestAnimationFrame(() => {
+    queued = false;
+    const next = build();
+    if (!next) return;
+    current = next;
+    subscribers.forEach((fn) => fn(next));
+  });
+}
+
+const main = document.getElementById('main');
+if (main) {
+  current = build();
+  new ResizeObserver(rebuild).observe(main);
+  window.addEventListener('resize', rebuild, { passive: true });
+  window.addEventListener('m2c:layout', rebuild);
+  void document.fonts?.ready.then(rebuild);
+}

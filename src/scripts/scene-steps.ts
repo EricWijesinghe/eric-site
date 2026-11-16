@@ -14,13 +14,10 @@ export interface Box {
 const NAME_MIN_W = 84;
 const STATION_R = 4;
 const TOKEN_R = 3.2;
-// Label baselines under the rail. Narrow rails show three-letter tags, then the active name on its own line,
-// so no label lands on the chip rows below (scene-core chipY). Wide rails keep the full names on one line.
+// Label baseline under the rail: every name when wide, only the active name ("3 / 5 · NAME") when narrow,
+// so no label lands on the chip rows below (scene-core chipY).
 const NAME_Y = 22;
-const TAG_Y = 22;
-const ACTIVE_Y = 42;
-const TAG_LEN = 3;
-const TAG_HALF = 11; // half a three-letter mono tag, to centre it under its station
+const ACTIVE_Y = 22; // narrow: the active name in full, on the line the names use when wide
 
 /**
  * Draws the rail at `box.y`. Stations up to the token are lit; the active name is drawn under the
@@ -55,8 +52,8 @@ export function drawRail(g: CanvasRenderingContext2D, box: Box, labels: readonly
     g.beginPath();
     g.arc(x, box.y, STATION_R, 0, Math.PI * 2);
     g.fill();
-    if (showAll) caption(g, name, x - name.length * 3.6, box.y + NAME_Y, ink(lit ? 0.85 : 0.45));
-    else caption(g, name.slice(0, TAG_LEN), x - TAG_HALF, box.y + TAG_Y, ink(lit ? 0.85 : 0.45));
+    // Narrow rails keep only their dots: three-letter tags read as noise, the active name follows in full.
+    if (showAll) caption(g, name, x - name.length * 3.6, box.y + NAME_Y, ink(lit ? 1 : 0.75)); // unreached names still clear 4.5:1
   });
 
   g.fillStyle = P.ice;

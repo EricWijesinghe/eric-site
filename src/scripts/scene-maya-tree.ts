@@ -2,7 +2,7 @@
 // sibling node at each level). A verifier hashes the leaf with its siblings, level by level, and
 // compares the result with the public root. SLH-DSA stacks such trees in layers (a hypertree) and
 // uses few-time trees at its base; this drawing shows one layer, which is the same mechanism.
-import { caption, chip, chipY, clamp01, ink, PALETTE as P, stroke, tint, txt, type Pt } from './scene-core';
+import { CHIP_ZONE, chip, chipY, clamp01, ink, PALETTE as P, stroke, tint, txt, type Pt, type Spot } from './scene-core';
 import { lineW } from './scene-core';
 import { hex } from './scene-glyphs';
 import type { Region, Ui } from './scene-maya-types';
@@ -19,12 +19,14 @@ export const ROOT_AT = HASH_START + DEPTH * LEVEL_DELAY;
 const MATCH_AT = ROOT_AT + 0.3; // the root is compared with the public key
 const HOVER_R = 14; // px: how near the pointer must be to pick a node
 const PAD = 26;
-const NODE_R = 3;
-const ROOT_R = 4.5;
+const NODE_R = 4;
+const ROOT_R = 5.5;
 const ROUND_S = 0.9; // seconds a hashing node streams its digest
 const ROUND_TICKS = 12;
 const ROUND_DIGITS = 6;
-const ROUND_FONT = '10px "JetBrains Mono", ui-monospace, monospace';
+const ROUND_FONT = '12px "JetBrains Mono", ui-monospace, monospace';
+const TOP_GAP = 18; // px between the chip rows and the root, room for the root's match ring
+const BOTTOM_GAP = 12;
 const LABEL_Y = chipY(1); // the step chip sits under the title chip, with its 8px gap
 
 interface Hot {
@@ -85,16 +87,24 @@ function stepText(c: number): string {
   return 'root matches the public key';
 }
 
+/** The inspect line for a node. */
+function nodeText(n: Hot): string {
+  if (n.lvl === DEPTH) return "Root: the verifier's hash chain must end here, at the public key's root.";
+  if (n.lvl > 0) return `Level ${n.lvl} node: H(left ‖ right) of the two nodes under it. Its path to the root is lit.`;
+  const which = n.j === PATH_LEAF ? 'the leaf this signature reveals' : 'the hash of a one-time key';
+  return `Leaf ${n.j + 1} of ${LEAVES}: ${which}. Its path to the root is lit.`;
+}
+
 /** SLH-DSA: a revealed leaf and its authentication path hash up to the public root. */
 export function makeTree(label: string): Region {
   return {
     draw(g, r, c, _t, ui: Ui) {
+      // Leaves at the bottom of the band, the root just under the chip rows: no node sits on a label.
+      const top = r.y + CHIP_ZONE + TOP_GAP;
+      const bottom = Math.max(top, r.y + r.h - BOTTOM_GAP);
       const pos = (lvl: number, j: number): Pt => {
         const span = (r.w - PAD * 2) / (LEAVES >> lvl);
-        return {
-          x: r.x + PAD + span * (j + 0.5),
-          y: r.y + r.h * (0.86 - (0.6 * lvl) / DEPTH),
-        };
+        return { x: r.x + PAD + span * (j + 0.5), y: bottom - ((bottom - top) * lvl) / DEPTH };
       };
       const hot = nearestNode(pos, ui.hover);
 
@@ -107,7 +117,7 @@ export function makeTree(label: string): Region {
             const child = pos(lvl - 1, ch);
             const onPath = ch === pathAt(lvl - 1);
             const lit = c >= hashedAt(lvl - 1, ch);
-            g.strokeStyle = onPath && c >= AUTH_AT ? P.ice : tint('cyan', lit ? 0.4 : 0.12);
+            g.strokeStyle = onPath && c >= AUTH_AT ? P.ice : tint('cyan', lit ? 0.5 : 0.3);
             g.beginPath();
             g.moveTo(child.x, child.y);
             g.lineTo(parent.x, parent.y);
@@ -135,7 +145,7 @@ export function makeTree(label: string): Region {
           const flash = known ? clamp01(1 - (c - at) / 0.5) : 0;
           const isAuth = j === siblingAt(lvl) || j === pathAt(lvl);
           const size = lvl === DEPTH ? ROOT_R : NODE_R;
-          g.fillStyle = known ? P.teal : tint('cyan', 0.18);
+          g.fillStyle = known ? P.teal : tint('cyan', 0.38); // an unhashed node is still drawn, never a blank band
           g.beginPath();
           g.arc(q.x, q.y, size, 0, Math.PI * 2);
           g.fill();
@@ -178,13 +188,16 @@ export function makeTree(label: string): Region {
         g.lineWidth = lineW(1);
       }
 
-      if (hot) {
-        const where = hot.lvl === 0 ? `leaf ${hot.j + 1} of ${LEAVES}` : `node ${hot.j + 1}`;
-        caption(g, `${where} · path to root`, r.x + 16, r.y + LABEL_Y + 16, P.ice);
-      }
       chip(g, label, r.x + 16, r.y + chipY(0), ink(0.9));
       chip(g, stepText(c), r.x + 16, r.y + LABEL_Y, ink(0.95));
-      return root;
+      const spots: Spot[] = [];
+      for (let lvl = DEPTH; lvl >= 0; lvl--) {
+        for (let j = 0; j < LEAVES >> lvl; j++) {
+          const name = lvl === DEPTH ? 'hash tree root' : lvl === 0 ? `hash tree leaf ${j + 1}` : `hash tree node, level ${lvl}`;
+          spots.push({ ...pos(lvl, j), label: name });
+        }
+      }
+      return { anchor: root, spots, hot: hot ? nodeText(hot) : null };
     },
   };
 }

@@ -2,9 +2,9 @@
 // a challenge c, and returns z = y + c·s with its secret short vector s. z is released only when it
 // lies inside the norm bound; otherwise the signer aborts and retries with a fresh y. The drawing
 // runs that same test on the same numbers, so the accepted z is the one the bound let through.
-import { chip, chipY, clamp01, easeOut, ink, PALETTE as P, rng, stroke, tint, type Pt } from './scene-core';
+import { CHIP_ZONE, chip, chipY, clamp01, easeOut, ink, isLight, PALETTE as P, rgbOf, rng, stroke, tint, type Pt } from './scene-core';
 import { lineW } from './scene-core';
-import type { Region } from './scene-maya-types';
+import { within, type Region } from './scene-maya-types';
 
 interface Vec3 {
   x: number;
@@ -38,7 +38,18 @@ const STAGE_END = [0.5, 1.0, 1.6, 2.0] as const;
 const ARROW_FROM = 1.0;
 const ARROW_S = 0.6;
 const NOISE_COUNT = 70;
-const FOV = 4;
+const CAM_K = 5; // camera distance in lattice radii: mild perspective, and no point ever behind the camera
+const FIT = 0.5; // the visible lattice (radius R_OUT) stays within this share of the band's smaller side
+// The lattice is a window: points fade out between R_IN and R_OUT (lattice radii), so the cloud fills the band
+// at any rotation and nothing is cut by its edge. Radius is rotation-invariant, so the weights are computed once.
+const R_IN = 2.3;
+const R_OUT = 3;
+const FADE_FLOOR = 0.35; // before the first attempt starts the lattice is already drawn, never a blank band
+const EDGE_BUCKETS = 4; // edges are stroked in a few alpha groups, not one by one
+const BAND_PAD = 8; // px under the drawing band
+const PEARL_EDGE_A = 0.16; // pearl: edges are faint hairlines, the points carry the shape
+const HOT_TEXT =
+  'ML-DSA: z = y + c·s is released only inside the norm bound; otherwise the signer aborts and retries. Drag to turn it.';
 const TILT_X = -0.42;
 const TILT_SPEED = 0.2;
 const TILT_LIMIT = 0.9; // radians: a drag may not flip the lattice over
@@ -67,8 +78,8 @@ function rotate(p: Vec3, ry: number, rx: number): Vec3 {
   return { x: x1, y: y2, z: z2 };
 }
 
-function project(p: Vec3, cx: number, cy: number, s: number): { x: number; y: number; d: number } {
-  const k = FOV / (FOV + p.z);
+function project(p: Vec3, cx: number, cy: number, s: number, cam: number): { x: number; y: number; d: number } {
+  const k = cam / (cam + p.z);
   return { x: cx + p.x * s * k, y: cy + p.y * s * k, d: p.z };
 }
 
@@ -152,38 +163,59 @@ export function makeLattice(label: string): Region {
   // Noise: the other lattice points a signer could have hit, a shell of cloud around the lattice.
   const noise: Vec3[] = Array.from({ length: NOISE_COUNT }, () => sampleShell(rand));
   const last = att[att.length - 1];
+  const weight = (p: Vec3): number => clamp01((R_OUT - norm(p)) / (R_OUT - R_IN));
+  const ptW = pts.map(weight);
+  const buckets: [number, number][][] = Array.from({ length: EDGE_BUCKETS }, () => []);
+  for (const e of edges) {
+    const k = Math.ceil(Math.min(ptW[e[0]], ptW[e[1]]) * EDGE_BUCKETS) - 1;
+    if (k >= 0) buckets[k].push(e);
+  }
+  const cam = R_OUT * CAM_K;
+  const nearK = cam / (cam - R_OUT);
 
   return {
     draw(g, r, c, t, ui) {
-      const cx = r.x + r.w / 2;
-      const cy = r.y + r.h * 0.56;
-      const s = Math.min(r.w, r.h) * 0.2;
+      // The drawing band sits under the two chip rows and is clipped to itself: nothing reaches a label or the rim.
+      const band = { x: r.x, y: r.y + CHIP_ZONE, w: r.w, h: Math.max(0, r.h - CHIP_ZONE - BAND_PAD) };
+      const cx = band.x + band.w / 2;
+      const cy = band.y + band.h / 2;
+      const s = (FIT * Math.min(band.w, band.h)) / (R_OUT * nearK);
       const ry = t * TILT_SPEED + ui.spin;
       const rx = TILT_X + 0.06 * Math.sin(t * 0.3) + Math.min(TILT_LIMIT, Math.max(-TILT_LIMIT, ui.tilt));
       const at = (p: Vec3): Pt => {
-        const q = project(rotate(p, ry, rx), cx, cy, s);
+        const q = project(rotate(p, ry, rx), cx, cy, s, cam);
         return { x: q.x, y: q.y };
       };
       const idx = Math.min(att.length - 1, Math.floor(c / ATTEMPT_S));
       const a = att[idx];
       const local = Math.min(ATTEMPT_S, c - idx * ATTEMPT_S);
       const shown = local >= STAGE_END[3];
-      const fade = easeOut(c / 1.5);
+      const fade = FADE_FLOOR + (1 - FADE_FLOOR) * easeOut(c / 1.5);
 
-      g.lineWidth = lineW(1);
-      g.strokeStyle = stroke('indigo', 0.16 * fade);
+      g.save();
       g.beginPath();
-      for (const [p, q] of edges) {
-        const pa = at(pts[p]);
-        const pb = at(pts[q]);
-        g.moveTo(pa.x, pa.y);
-        g.lineTo(pb.x, pb.y);
-      }
-      g.stroke();
+      g.rect(band.x, band.y, band.w, band.h);
+      g.clip();
+      g.lineWidth = isLight() ? 1 : lineW(1);
+      buckets.forEach((group, k) => {
+        const w = (k + 1) / EDGE_BUCKETS;
+        g.strokeStyle = isLight() ? rgbOf('indigo', PEARL_EDGE_A * fade * w) : stroke('indigo', 0.2 * fade * w);
+        g.beginPath();
+        for (const [p, q] of group) {
+          const pa = at(pts[p]);
+          const pb = at(pts[q]);
+          g.moveTo(pa.x, pa.y);
+          g.lineTo(pb.x, pb.y);
+        }
+        g.stroke();
+      });
+      g.lineWidth = lineW(1);
 
       // The norm bound: brighter while the test runs, a faint shell otherwise.
       const testing = local >= STAGE_END[2] && !shown;
-      g.strokeStyle = stroke('cyan', testing ? 0.5 : 0.18 * fade);
+      // Pearl: thin rings at a set alpha; the floored line ink made the bound a dark scribble over the points.
+      g.strokeStyle = isLight() ? rgbOf('cyan', testing ? 0.75 : 0.35) : stroke('cyan', testing ? 0.5 : 0.18 * fade);
+      if (isLight()) g.lineWidth = 1;
       for (const ring of rings) {
         g.beginPath();
         ring.forEach((p, i) => {
@@ -200,14 +232,15 @@ export function makeLattice(label: string): Region {
         g.fillStyle = tint('magenta', (0.06 + 0.12 * flick) * fade);
         g.fillRect(q.x, q.y, 1.5, 1.5);
       }
-      for (const p of pts) {
+      pts.forEach((p, i) => {
+        if (ptW[i] <= 0) return;
         const q = at(p);
         const near = clamp01(1 - (rotate(p, ry, rx).z + 2) / 4);
-        g.fillStyle = ink((0.2 + 0.55 * near) * fade);
+        g.fillStyle = ink((0.2 + 0.55 * near) * fade * ptW[i]);
         g.beginPath();
-        g.arc(q.x, q.y, 1.2 + 0.8 * near, 0, Math.PI * 2);
+        g.arc(q.x, q.y, 1.6 + 1.2 * near, 0, Math.PI * 2);
         g.fill();
-      }
+      });
 
       // The secret short vector, from the origin: the signer knows it, the bound is what keeps it hidden.
       const origin = at({ x: 0, y: 0, z: 0 });
@@ -258,10 +291,15 @@ export function makeLattice(label: string): Region {
         g.arc(lastZ.x, lastZ.y, 3.5, 0, Math.PI * 2);
         g.fill();
       }
+      g.restore();
 
       chip(g, label, r.x + 16, r.y + chipY(0), ink(0.9));
       chip(g, stageText(local, a.accept), r.x + 16, r.y + LABEL_Y, hit && !a.accept ? tint('magenta', 0.95) : ink(0.95));
-      return lastZ;
+      return {
+        anchor: lastZ,
+        spots: [{ x: cx, y: cy, label: 'ML-DSA lattice: signing with aborts' }],
+        hot: within(ui.hover, band) ? HOT_TEXT : null,
+      };
     },
   };
 }

@@ -1,28 +1,28 @@
 // UNICRON, as an illustration of an assessment pipeline over an attack-surface graph: recon, enumeration,
-// vulnerability scan, validation, report. A radar sweeps the surface; the rail names the stage; hosts
-// gain ports, then severity marks; validation walks one attack path named by MITRE ATT&CK tactics; a
-// scan terminal scrolls an illustrative log. The target lock follows the pointer (or cycles alone), and a
-// press runs the pipeline again. This is the idea of the pipeline, not UNICRON output: UNICRON is a private
-// repository, described and never linked.
+// vulnerability scan, validation, report. A radar sweeps the surface at the centre of the stage; the rail
+// names the stage; hosts gain service ticks, then severity marks; validation walks one attack path whose
+// hops are named by the MITRE ATT&CK tactics set round the radar; a log names each stage in words. The
+// target lock follows the pointer (or cycles alone), and a press runs the pipeline again. This is the idea
+// of the pipeline, not UNICRON output: UNICRON is a private repository, described and never linked, and the
+// drawing carries no address, port or count.
 import {
   caption,
   clamp01,
   easeOut,
-  glass,
   ink,
+  isLight,
   mountScene,
-  MONO,
   PALETTE as P,
+  rgbOf,
   rng,
-  rrect,
   STILL_T,
   stroke, tint,
   type Painter,
   type PointerKind,
   type Pt,
+  type Spot,
 } from './scene-core';
 import { lineW } from './scene-core';
-import { dumpLine, hex } from './scene-glyphs';
 import {
   buildGraph,
   drawHosts,
@@ -30,9 +30,16 @@ import {
   drawLinks,
   drawPath,
   drawTacticList,
-  hostCaption,
+  drawTacticRing,
+  hostSpots,
+  hostText,
   HOSTS,
+  LIST_ROW,
+  listCols,
+  tacticAt,
+  TACTICS,
   type Host,
+  type TacticHit,
 } from './scene-unicron-graph';
 import { drawRail, railPos } from './scene-steps';
 
@@ -43,10 +50,13 @@ const RAIL_Y = 12;
 const LEGEND_Y = 58;
 const TACTIC_Y = 96;
 const WIDE_RATIO = 1.15;
-const WIDE_RADAR_X = 0.7; // on wide scenes the radar sits right, clear of the terminal and tactic list
-const WIDE_RADAR_R = 0.27; // radar radius as a share of the width (wide) ...
-const WIDE_RADAR_H = 0.34; // ... or of the height, whichever is smaller
-const NARROW_RADAR_R = 0.42;
+const WIDE_TOP = 84; // wide: the top tactic name sits below the legend
+const WIDE_RING = 30; // px from the radar's rim to the tactic names (scene-unicron-graph RING_GAP)
+const WIDE_BOTTOM = 16;
+const LOG_CLEAR = 12; // px between the lowest side tactic name and the log
+const LABEL_DROP = 1.5; // 1 + sin(30°): the side names' depth below the radar's top, in ring radii
+const NARROW_RADAR_R = 0.4; // leaves room for the tactic numbers round the rim
+const PEARL_RING_A = 0.35;
 const SWEEP_RATE = 0.8; // radians per second
 const SWEEP_TRAIL = 1.1; // radians of fading trail behind the sweep
 const SWEEP_GLOW = 0.2; // peak alpha of the trail at the beam
@@ -65,43 +75,28 @@ const SCAN_S = 2.2; // a press spins the sweep up over this long
 const SCAN_TURNS = 2; // extra turns the sweep makes during a scan
 const PACKETS = 4;
 const PACKET_SPEED = 0.16; // edge lengths per second
-const PACKET_HOP_TICKS = 6; // how often a packet's bytes re-read along its edge
+const PEARL_GLOW = 0.3; // pearl: the violet glow is a hint, not a lavender wash
 const HOVER_R = 16; // px: a host this near the pointer is hovered
 const TERM_LINE_S = 0.85;
 const TERM_ROWS = 6;
-const TERM_LH = 16;
+const TERM_LH = 18;
 const TERM_H = 130;
-const TERM_W = 0.46; // the terminal's share of the width on wide scenes
-const TERM_PAD = 12;
-const TERM_HEADER = 'ILLUSTRATIVE SCAN LOG';
-const TERM_LOG = [
-  '$ scan surface 198.51.100.0/24',
-  '[+] 198.51.100.14  443/tcp open',
-  '[+] 198.51.100.14  https',
-  '[.] 198.51.100.31  ports filtered',
-  '[+] 198.51.100.52  22/tcp open',
-  '[!] 198.51.100.52  weak kex',
-  '[+] 198.51.100.77  5432/tcp postgres',
-  '[.] 198.51.100.90  no open ports',
-  '[+] 198.51.100.103 8080/tcp http',
-  '[.] 198.51.100.118 host down',
-  '[+] 198.51.100.141 53/udp dns',
-  '[+] 198.51.100.160 25/tcp smtp',
-  `[.] scan complete: ${HOSTS} hosts probed`,
-];
-// Every log line is followed by a hexdump of its (illustrative) packet, so the panel reads as a capture.
-const TERM_LINES: readonly string[] = TERM_LOG.flatMap((line, i) => [line, dumpLine(0x3c0 + i * 131, i * 16)]);
-const CAPTION_DUMP = /^[0-9a-f]{4} {2}/;
+const TERM_HEADER = 'ILLUSTRATIVE LOG';
+// Stage wording only: no address, port, protocol or count, because UNICRON's output is private.
+const TERM_LINES = [
+  '$ recon',
+  '[+] surface mapped',
+  '$ enumerate',
+  '[+] services listed',
+  '$ scan',
+  '[!] weak setting found',
+  '[.] findings ranked',
+  '$ validate',
+  '[+] finding confirmed',
+  '$ report',
+  '[.] report written',
+] as const;
 
-interface Pad {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
-/** A packet's bytes: decorative, re-read every few hops along its edge. */
-const hopBytes = (seed: number, u: number): string => `0x${hex(seed + Math.floor(u * PACKET_HOP_TICKS), 4)}`;
 
 /** How long ago the sweep last crossed a host, in radians. */
 function angleGap(sweep: number, a: number): number {
@@ -126,8 +121,10 @@ function makeScene(_host: HTMLElement, reduce: boolean): Painter {
   let lockKey = -1;
   let lockAt = 0;
 
+  let ring: TacticHit[] = []; // the tactic names (round the radar, or listed under it), from the last frame
+  // Narrow: the tactic list under the radar, one 44 px row per line of names.
+  const listH = (): number => LIST_ROW * Math.ceil(TACTICS.length / listCols(w));
   const pos = (p: Host): Pt => ({ x: cx + p.x * radius, y: cy + p.y * radius });
-  const termPad = (): Pad => ({ x: 0, y: h - TERM_H, w: wide ? w * TERM_W : w, h: TERM_H });
 
   /** The host nearest a point, with its distance. */
   const nearestTo = (p: Pt): { i: number; d: number } => {
@@ -164,8 +161,9 @@ function makeScene(_host: HTMLElement, reduce: boolean): Painter {
   const drawGlow = (g: CanvasRenderingContext2D): void => {
     const span = radius * GLOW_R;
     const glow = g.createRadialGradient(cx, cy, 0, cx, cy, span);
-    glow.addColorStop(0, tint('violet', GLOW_A));
-    glow.addColorStop(0.6, tint('violet', GLOW_A * 0.35));
+    const a = GLOW_A * (isLight() ? PEARL_GLOW : 1);
+    glow.addColorStop(0, tint('violet', a));
+    glow.addColorStop(0.6, tint('violet', a * 0.35));
     glow.addColorStop(1, tint('violet', 0));
     g.fillStyle = glow;
     g.fillRect(cx - span, cy - span, span * 2, span * 2);
@@ -229,37 +227,19 @@ function makeScene(_host: HTMLElement, reduce: boolean): Painter {
       g.moveTo(a.x + (b.x - a.x) * tail, a.y + (b.y - a.y) * tail);
       g.lineTo(head.x, head.y);
       g.stroke();
-      caption(g, hopBytes(pk.edge * 101, u), head.x + 8, head.y - 8, ink(0.6));
     }
   };
 
-  /** The scan terminal: an illustrative log, scrolled by the clock, in a panel that never clips a line. */
+  /** The log: stage wording scrolled by the clock, straight on the surface (no card), bottom left. */
   const drawTerm = (g: CanvasRenderingContext2D, t: number): void => {
-    const p = termPad();
-    g.fillStyle = `rgb(${glass()} / ${wide ? 0.72 : 0.8})`;
-    rrect(g, p.x, p.y, p.w, p.h, 14);
-    g.fill();
-    g.save();
-    rrect(g, p.x, p.y, p.w, p.h, 14);
-    g.clip();
-    caption(g, TERM_HEADER, p.x + TERM_PAD, p.y + 20, ink(0.6));
+    const top = h - TERM_H;
+    caption(g, TERM_HEADER, 0, top + 14, ink(0.6));
     const idx = Math.floor(t / TERM_LINE_S);
     for (let k = 0; k < TERM_ROWS; k++) {
       const line = TERM_LINES[(idx - TERM_ROWS + 1 + k + TERM_LINES.length * TERM_ROWS) % TERM_LINES.length];
-      const colour = line.startsWith('$') ? tint('cyan', 0.95) : line.startsWith('[!]') ? P.alert : CAPTION_DUMP.test(line) ? ink(0.5) : ink(0.9);
-      caption(g, line, p.x + TERM_PAD, p.y + 40 + k * TERM_LH, colour);
+      const colour = line.startsWith('$') ? tint('cyan', 0.95) : line.startsWith('[!]') ? P.alert : ink(0.9);
+      caption(g, line, 0, top + 36 + k * TERM_LH, colour);
     }
-    g.restore();
-  };
-
-  const drawHover = (g: CanvasRenderingContext2D, hover: number): void => {
-    if (hover < 0) return;
-    const p = pos(hosts[hover]);
-    const text = hostCaption(hosts[hover]);
-    g.font = MONO;
-    const tw = g.measureText(text).width;
-    const x = p.x + 14 + tw > w ? p.x - 14 - tw : p.x + 14;
-    caption(g, text, x, p.y - 14, ink(0.95));
   };
 
   return {
@@ -268,12 +248,15 @@ function makeScene(_host: HTMLElement, reduce: boolean): Painter {
       h = nh;
       wide = w >= h * WIDE_RATIO;
       if (wide) {
-        cx = w * WIDE_RADAR_X;
-        cy = h * 0.56;
-        radius = Math.min(w * WIDE_RADAR_R, h * WIDE_RADAR_H);
+        // The radar at the centre of the stage, the tactic names round it, the log in the lower-left corner.
+        // The lower-left tactic name sits sin(30°) of the ring below the centre: it must clear the log's top.
+        const rl = Math.min((h - WIDE_TOP - WIDE_BOTTOM) / 2, (h - TERM_H - LOG_CLEAR - WIDE_TOP) / LABEL_DROP);
+        cx = w / 2;
+        cy = WIDE_TOP + rl;
+        radius = Math.max(0, rl - WIDE_RING);
       } else {
         const top = TACTIC_Y;
-        const bottom = h - TERM_H - 14;
+        const bottom = h - TERM_H - listH() - 14;
         cx = w / 2;
         cy = (top + bottom) / 2;
         radius = Math.min(w * NARROW_RADAR_R, ((bottom - top) / 2) * 0.92);
@@ -287,6 +270,15 @@ function makeScene(_host: HTMLElement, reduce: boolean): Painter {
       scanAt = t;
       pipeStart = t;
     },
+    spots(): Spot[] {
+      return [...ring.map((r) => r.spot), ...hostSpots(hosts, pos)];
+    },
+    inspect() {
+      const e = tacticAt(ring, pointer);
+      if (e >= 0) return `${TACTICS[e]}: an ATT&CK tactic, one hop of the illustrative attack path.`;
+      const k = hoverHost();
+      return k >= 0 ? hostText(hosts[k], k + 1) : null;
+    },
     draw(g, _cw, _ch, t) {
       const stage = railPos(t - pipeStart, STAGES.length, STAGE_S);
       const sweep = t * SWEEP_RATE + scanSpin(t);
@@ -299,11 +291,12 @@ function makeScene(_host: HTMLElement, reduce: boolean): Painter {
 
       drawRail(g, { x: 0, y: RAIL_Y, w }, STAGES, stage);
       drawLegend(g, 16, LEGEND_Y);
-      if (wide) drawTacticList(g, 16, TACTIC_Y, stage);
+      const list = { x: 0, y: h - TERM_H - listH() - 6, w, h: listH() };
+      ring = wide ? drawTacticRing(g, cx, cy, radius, stage) : drawTacticList(g, cx, cy, radius, list, stage);
       drawGlow(g);
-      g.lineWidth = lineW(1);
+      g.lineWidth = isLight() ? 1 : lineW(1);
       for (const [k, a] of RINGS) {
-        g.strokeStyle = stroke('cyan', a);
+        g.strokeStyle = isLight() ? rgbOf('cyan', PEARL_RING_A) : stroke('cyan', a);
         g.beginPath();
         g.arc(cx, cy, radius * k, 0, Math.PI * 2);
         g.stroke();
@@ -316,13 +309,24 @@ function makeScene(_host: HTMLElement, reduce: boolean): Painter {
       const hover = hoverHost();
       drawLinks(g, hosts, pos, cx, cy);
       drawHosts(g, hosts, pos, stage, ping, hover, t);
-      drawPath(g, hosts, pos, path, stage);
+      drawPath(g, hosts, pos, path, stage, !wide);
+      const picked = tacticAt(ring, pointer);
+      if (picked >= 0) {
+        // The picked tactic lights its own hop of the path, whatever stage the pipeline is in.
+        const [ha, hb] = [pos(hosts[path[picked]]), pos(hosts[path[picked + 1]])];
+        g.strokeStyle = P.cyan;
+        g.lineWidth = 3;
+        g.beginPath();
+        g.moveTo(ha.x, ha.y);
+        g.lineTo(hb.x, hb.y);
+        g.stroke();
+        g.lineWidth = lineW(1);
+      }
       g.fillStyle = P.ice;
       g.beginPath();
       g.arc(cx, cy, 3, 0, Math.PI * 2);
       g.fill();
       drawLock(g, target, lock);
-      drawHover(g, hover);
       drawPackets(g, t);
       drawTerm(g, t);
     },

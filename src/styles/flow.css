@@ -1,5 +1,6 @@
-/* Flow: one continuous field under every section, the conduit overlay, and the reveal choreography.
-   Owned by the flow lane. Colours come from the Signal tokens (global.css) with literal fallbacks. */
+/* Flow: one continuous field under every section (the fixed .flow-field canvas) and the reveal choreography.
+   Owned by the flow lane. The canvas reads its colours from the tokens below (flow-palette.ts), so a theme
+   switch recolours it from CSS, the single source of truth (round 6, K2). */
 
 @property --scan {
   syntax: '<percentage>';
@@ -24,9 +25,36 @@ main#main > .m2c-stage::after {
   display: none;
 }
 
+/* Sections are no longer boxes: no backgrounds, no dividers; rhythm comes from the padding. */
+main#main > section:not(.m2c-sing) {
+  background: none;
+  /* 120 at 1440 (was 168): each pool between sections is a beat, not a screen of the same glyph cloud. */
+  padding: clamp(96px, 8.4vw, 120px) 0;
+}
+
 /* ---------- the page field canvas (flow-field.ts paints it) ---------- */
 
+/* Chord per section, in page order: top, about, projects, skills, support, contact. -a and -b are the glyph
+   inks (contrast checked against the brightest gap background), -w is the soft wash of the pool. */
 .flow-field {
+  --flow-a-0: #38e1ff;
+  --flow-b-0: #5aa2ff;
+  --flow-w-0: #1f6fd1;
+  --flow-a-1: #5aa2ff;
+  --flow-b-1: #a78bfa;
+  --flow-w-1: #4b3cff;
+  --flow-a-2: #19d3c5;
+  --flow-b-2: #2df5a0;
+  --flow-w-2: #1f6fd1;
+  --flow-a-3: #a78bfa;
+  --flow-b-3: #38e1ff;
+  --flow-w-3: #4b3cff;
+  --flow-a-4: #2df5a0;
+  --flow-b-4: #19d3c5;
+  --flow-w-4: #1f6fd1;
+  --flow-a-5: #38e1ff;
+  --flow-b-5: #e04cff;
+  --flow-w-5: #4b3cff;
   position: fixed;
   inset: 0;
   width: 100%;
@@ -40,7 +68,27 @@ main#main > .m2c-stage::after {
     var(--sig-void, #02050b);
 }
 
+/* Light: deep inks of its own (never the neon of dark on white), drawn with normal alpha; washes are pastel. */
 :root[data-theme='light'] .flow-field {
+  --flow-a-0: #0a3f86;
+  --flow-b-0: #0a4fa8;
+  --flow-w-0: #c9dcff;
+  --flow-a-1: #0a4fa8;
+  --flow-b-1: #3326c7;
+  --flow-w-1: #d9d3ff;
+  --flow-a-2: #005a55;
+  --flow-b-2: #005a36;
+  --flow-w-2: #c4ece6;
+  --flow-a-3: #5b2bc4;
+  --flow-b-3: #0a3f86;
+  --flow-w-3: #e0d4ff;
+  --flow-a-4: #005a36;
+  --flow-b-4: #005a55;
+  --flow-w-4: #c6eedb;
+  --flow-a-5: #0a3f86;
+  /* Deepened from #8a0f86: at peak alpha .7 over the Contact pool's wash it measured under 3:1. */
+  --flow-b-5: #6d0a6a;
+  --flow-w-5: #f0d2ee;
   background:
     radial-gradient(70% 50% at 82% 12%, rgb(56 225 255 / 0.3), transparent 70%),
     radial-gradient(60% 50% at 8% 58%, rgb(139 92 246 / 0.14), transparent 70%),
@@ -48,275 +96,54 @@ main#main > .m2c-stage::after {
     var(--sig-white, #f3fbff);
 }
 
-/* A faint perspective grid that breathes in and out, well below the hero. Its mask is radial, so the rules
-   dissolve on every side: a grid with hard edges reads as the horizontal lines Eric asked to lose. It starts
-   far down the page so no grid row shows in the first screens (round 4: no horizontal bands at the top). */
-main#main::after {
-  content: '';
-  position: absolute;
-  left: -10%;
-  right: -10%;
-  top: 46%;
-  height: 90vh;
-  z-index: -1;
-  pointer-events: none;
-  background-image:
-    linear-gradient(var(--grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  background-size: 72px 72px;
-  transform: perspective(700px) rotateX(64deg);
-  transform-origin: 50% 0;
-  -webkit-mask-image: radial-gradient(closest-side at 50% 50%, #000 10%, transparent 100%);
-  mask-image: radial-gradient(closest-side at 50% 50%, #000 10%, transparent 100%);
-  animation: flow-breathe 16s ease-in-out infinite alternate;
-}
+/* ---------- reveal choreography (reveal.ts sets --d per element and adds .is-in) ---------- */
 
-main#main {
-  --grid-line: rgb(120 220 255 / 0.07);
-}
-
-:root[data-theme='light'] main#main {
-  --grid-line: rgb(31 111 209 / 0.08);
-}
-
-@keyframes flow-breathe {
-  from {
-    opacity: 0.04;
-  }
-  to {
-    opacity: 0.5;
-  }
-}
-
-/* Sections are no longer boxes: no backgrounds, no dividers; rhythm comes from the padding. */
-main#main > section:not(.m2c-sing) {
-  background: none;
-  padding: clamp(96px, 11vw, 168px) 0;
-}
-
-/* ---------- the conduit overlay ---------- */
-
-.conduit {
-  --cd-hi: var(--sig-cyan, #38e1ff);
-  --cd-core: var(--sig-ice, #bff4ff);
-  --cd-void: var(--sig-void, #02050b);
-  --cd-lead-start: #5a5a5a;
-  --cd-lead-peak: #fff;
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
-}
-
-/* Stacked layouts (tablet and phone): nothing of the line shows above the copy block (conduit.ts sets --cd-skip). */
-.conduit.is-stacked {
-  -webkit-mask-image: linear-gradient(to bottom, transparent var(--cd-skip, 0px), #000 calc(var(--cd-skip, 0px) + 1px));
-  mask-image: linear-gradient(to bottom, transparent var(--cd-skip, 0px), #000 calc(var(--cd-skip, 0px) + 1px));
-}
-
-.conduit svg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  overflow: visible;
-}
-
-/* A meander, not a rule: a soft bloom under a 1px core, both faded in by the mask at section tops. */
-.cd-glow {
-  stroke: var(--cd-hi);
-  stroke-width: 5;
-  stroke-linecap: round;
-  opacity: calc(0.14 + var(--charge, 0) * 0.4);
-  transition:
-    opacity 0.6s var(--ease),
-    stroke 0.35s var(--ease),
-    stroke-width 0.35s var(--ease);
-}
-
-.cd-core {
-  stroke: var(--cd-core);
-  stroke-width: 1;
-  stroke-linecap: round;
-  opacity: 0.5;
-  transition:
-    stroke 0.35s var(--ease),
-    stroke-width 0.35s var(--ease);
-}
-
-/* Phone: the bloom is dropped so its blur cannot spread from the gutter into the 16px copy column. */
-.conduit.is-stacked .cd-glow {
-  stroke-width: 2.5;
-  filter: none;
-}
-
-.conduit.is-release .cd-glow {
-  opacity: 0.85;
-}
-
-/* The lead-in fade (conduit.ts setFades): its stops read the per-theme tokens, so a theme switch recolours it. */
-.cd-lead-0 {
-  stop-color: var(--cd-lead-start);
-  transition: stop-color 0.35s var(--ease);
-}
-
-.cd-lead-1 {
-  stop-color: var(--cd-lead-peak);
-  transition: stop-color 0.35s var(--ease);
-}
-
-/* Nodes: a 2px luminous dot inside a soft radial halo. */
-.cd-halo-0 {
-  stop-color: var(--cd-hi);
-  stop-opacity: 0.9;
-}
-
-.cd-halo-1 {
-  stop-color: var(--cd-hi);
-  stop-opacity: 0;
-}
-
-.cd-halo {
-  fill: url(#cd-halo-fill);
-  opacity: 0.35;
-  transform-box: fill-box;
-  transform-origin: center;
-  transition:
-    transform 0.6s var(--ease),
-    opacity 0.6s var(--ease);
-}
-
-.cd-dot {
-  fill: var(--cd-hi);
-  opacity: 0.6;
-  transition: opacity 0.5s;
-}
-
-.cd-node.is-lit .cd-halo {
-  opacity: 1;
-  transform: scale(1.3);
-}
-
-.cd-node.is-lit .cd-dot {
-  fill: var(--cd-core);
-  opacity: 1;
-}
-
-.cd-node.is-flash .cd-halo {
-  transform: scale(2.2);
-}
-
-.cd-pk {
-  fill: var(--cd-core);
-}
-
-.cd-pk--train {
-  fill: #fff;
-}
-
-.cd-head {
-  fill: #fff;
-}
-
-.cd-head-glow {
-  fill: var(--cd-hi);
-  opacity: 0.8;
-}
-
-/* Light theme: a deep ink-azure core at full alpha, 2px wide, with a soft halo, so the thread holds 3:1 on pale paper.
-   The lead-in stops feed a luminance mask (conduit.ts setFades), so a light peak of white keeps the fade at full strength. */
-:root[data-theme='light'] .conduit {
-  --cd-hi: #1f6fd1;
-  --cd-core: #0a5fbf;
-  /* The lead and section fades are luminance masks, so a dark stop hides the line: the light stops stay near white. */
-  --cd-lead-start: #dcebff;
-  --cd-lead-peak: #ffffff;
-  --cd-fade-start: #d4e4fb;
-}
-
-/* Section tops: dark keeps its soft 43% start; light starts near white so the thread holds contrast there too. */
-.cd-fade-0 {
-  stop-color: #6e6e6e;
-  transition: stop-color 0.35s var(--ease);
-}
-
-:root[data-theme='light'] .cd-fade-0 {
-  stop-color: var(--cd-fade-start);
-}
-
-:root[data-theme='light'] .conduit:not(.is-stacked) .cd-glow {
-  stroke-width: 9;
-  opacity: calc(0.2 + var(--charge, 0) * 0.3);
-}
-
-:root[data-theme='light'] .conduit.is-release .cd-glow {
-  opacity: 0.6;
-}
-
-:root[data-theme='light'] .cd-core {
-  opacity: 1;
-  stroke-width: 2;
-}
-
-:root[data-theme='light'] .cd-dot {
-  opacity: 0.9;
-}
-
-:root[data-theme='light'] .cd-node.is-lit .cd-dot,
-:root[data-theme='light'] .cd-head {
-  fill: #0a3f86;
-}
-
-:root[data-theme='light'] .cd-pk--train {
-  fill: #0a3f86;
-}
-
-/* ---------- reveal choreography ---------- */
-
-/* Body copy rises on a stagger; the --d delay is set per group by reveal.ts. */
+/* Rise: translate and opacity only. The global 6deg tilt is dropped here: a rotated layer over the live canvases
+   costs a compositing pass and read as a wobble. */
 .js-reveal main#main [data-reveal] {
-  transition-delay: calc(var(--d, 0) * 1ms);
+  opacity: 0;
+  translate: 0 20px;
+  rotate: none;
+  transition:
+    opacity 0.9s var(--sig-ease) calc(var(--d, 0) * 1ms),
+    translate 1.1s var(--sig-ease) calc(var(--d, 0) * 1ms);
 }
 
-/* Headings are scanned in by a soft mask edge that sweeps left to right. The mask clips to the box, so the
-   box carries the descenders (g, y, p) below the line; the margin keeps the layout where it was. */
-.js-reveal main#main .section-title[data-reveal] {
-  --scan: 0%;
+/* Canvases and frames fade in place: a moving canvas would smear its own animation. */
+.js-reveal main#main [data-reveal='fade'] {
+  translate: none;
+}
+
+/* Only the .is-in hook: the element animates itself (or not at all). */
+.js-reveal main#main [data-reveal='none'] {
   opacity: 1;
   translate: none;
-  rotate: none;
+  transition: none;
+}
+
+.js-reveal main#main [data-reveal]:focus-within,
+.js-reveal main#main [data-reveal].is-in {
+  opacity: 1;
+  translate: none;
+}
+
+/* Headings are scanned in by a soft mask edge that sweeps left to right, over the decrypting row the canvas
+   draws behind them (flow-cipher.ts). The mask clips to the box, so the box carries the descenders (g, y, p)
+   below the line; the margin keeps the layout where it was. */
+.js-reveal main#main .section-title[data-reveal] {
+  /* Minus the soft edge's width, so no letter shows before the sweep starts. */
+  --scan: -14%;
+  opacity: 1;
+  translate: none;
   padding-bottom: 0.22em;
   margin-bottom: calc(clamp(28px, 4vw, 48px) - 0.22em);
   -webkit-mask-image: linear-gradient(90deg, #000 var(--scan), transparent calc(var(--scan) + 14%));
   mask-image: linear-gradient(90deg, #000 var(--scan), transparent calc(var(--scan) + 14%));
-  transition: --scan 1.1s var(--ease) calc(var(--d, 0) * 1ms);
+  /* An even sweep (not the page's fast-out ease) so the decrypting row ahead of it can be seen. */
+  transition: --scan 1.1s cubic-bezier(0.4, 0, 0.2, 1) calc(var(--d, 0) * 1ms);
 }
 
-.js-reveal main#main .section-title[data-reveal].is-in {
+.js-reveal main#main .section-title[data-reveal].is-in,
+.js-reveal main#main .section-title[data-reveal]:focus-within {
   --scan: 120%;
-}
-
-/* Phone: the 1px core along the left edge read as a border (round 3 review). The stroke is dropped; what is
-   left is a soft trail with the node halos and the packets, so the energy reads as flow, not as a divider. */
-.conduit.is-stacked .cd-glow,
-:root[data-theme='light'] .conduit.is-stacked .cd-glow {
-  opacity: 0.22;
-  stroke-width: 3;
-}
-
-.conduit.is-stacked .cd-core,
-:root[data-theme='light'] .conduit.is-stacked .cd-core {
-  opacity: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  main#main::after {
-    animation: none;
-  }
-
-  .cd-glow,
-  .cd-core,
-  .cd-halo,
-  .cd-dot {
-    transition: none;
-  }
 }

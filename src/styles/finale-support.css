@@ -1,0 +1,311 @@
+/* Finale, support: "the address, bit by bit". Six strands of the address's UTF-8 bytes run into one point and
+   become the address below it; when the tape scrolls in a light travels down every strand and then across the
+   address (finale-tape.ts sets --d and --i). No frame, no box: the strands fade out at the page edges. The
+   address is always shown in full; without JS or with reduced motion nothing moves. */
+
+main#main > section#support {
+  padding-block: clamp(72px, 6vw, 96px);
+}
+
+#support .fin-lead {
+  max-width: 52ch;
+  margin: 0;
+  color: var(--text);
+}
+
+#support .fin-signal {
+  --ink-a: color-mix(in srgb, var(--sig-cyan) 70%, transparent);
+  --ink-b: color-mix(in srgb, var(--sig-violet) 80%, var(--sig-ice));
+  --strand: 0.34;
+  --hot: var(--sig-white);
+  --glow: color-mix(in srgb, var(--sig-cyan) 60%, transparent);
+  position: relative;
+  margin-top: 24px;
+}
+
+:root[data-theme='light'] #support .fin-signal {
+  --ink-a: #05485c;
+  --ink-b: #3b2bd6;
+  --strand: 0.4;
+  --hot: #0b1a3a;
+  --glow: rgb(25 120 160 / 0.35);
+}
+
+/* ---------- the strands ---------- */
+
+#support .fin-tape {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+}
+
+/* Support.astro's HEAD (20) and FOOT (40) viewBox units of head-room, taken back so the layout is unchanged:
+   a % margin is of the container width, which is the svg's width (1180 units). */
+#support .fin-tape-d {
+  margin: calc(-20 / 1180 * 100%) 0 calc(-40 / 1180 * 100%);
+}
+
+#support .fin-tape-p {
+  display: none;
+}
+
+#support .fin-tape text {
+  font: 600 16px var(--font-mono);
+  letter-spacing: 0;
+}
+
+#support .strand {
+  fill: none;
+  stroke: var(--ink-a);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  opacity: var(--strand);
+}
+
+#support .strand.lane-b {
+  stroke: var(--ink-b);
+}
+
+#support .apex-0 {
+  stop-color: var(--sig-cyan);
+  stop-opacity: 0.55;
+}
+
+#support .apex-1 {
+  stop-color: var(--sig-cyan);
+  stop-opacity: 0;
+}
+
+:root[data-theme='light'] #support .apex-0 {
+  stop-color: #1f6fd1;
+  stop-opacity: 0.3;
+}
+
+:root[data-theme='light'] #support .apex-1 {
+  stop-color: #1f6fd1;
+}
+
+#support .by {
+  --ink: var(--ink-a);
+  fill: var(--ink);
+  cursor: default;
+  transition: fill 0.24s var(--sig-ease);
+}
+
+#support .lane-b .by {
+  --ink: var(--ink-b);
+}
+
+#support .by.is-hot {
+  animation: none;
+  fill: var(--hot);
+  font-weight: 800;
+}
+
+/* ---------- the address, its readout and its actions ---------- */
+
+#support .fin-dock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* Shown only while a byte or character is pointed at; its row is kept so nothing jumps. */
+#support .fin-readout {
+  min-height: 20px;
+  margin: 4px 0 0;
+  color: var(--text-dim);
+  font: 500 12px / 20px var(--font-mono);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+#support .fin-addr {
+  --c: var(--sig-white);
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 48px;
+  color: var(--c);
+  font: 600 clamp(0.85rem, 4.1vw, 2rem) / 1.2 var(--font-mono);
+  letter-spacing: 0;
+  white-space: nowrap;
+  text-decoration: underline 1px color-mix(in srgb, var(--sig-cyan) 35%, transparent);
+  text-underline-offset: 10px;
+  transition: text-decoration-color 0.3s var(--sig-ease);
+}
+
+:root[data-theme='light'] #support .fin-addr {
+  --c: var(--text);
+  text-decoration-color: rgb(5 72 92 / 0.35);
+}
+
+#support .fin-addr .ch {
+  display: inline-block;
+  color: var(--c);
+  transition: color 0.24s var(--sig-ease), text-shadow 0.24s var(--sig-ease);
+}
+
+#support .fin-addr .p {
+  --c: var(--sig-cyan);
+}
+
+:root[data-theme='light'] #support .fin-addr .p {
+  --c: #0a6b84;
+}
+
+#support .fin-addr:hover,
+#support .fin-addr:focus-visible {
+  text-decoration-color: var(--accent);
+}
+
+#support .fin-addr .ch.is-hot {
+  color: var(--accent);
+  text-shadow: 0 0 14px var(--glow);
+}
+
+/* Each row: the action, then what it does. */
+#support .fin-routes {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 16px;
+  margin: 16px 0 0;
+  text-align: left;
+}
+
+#support .fin-route {
+  display: contents;
+}
+
+#support .fin-cap {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 15px;
+}
+
+#support .fin-route a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  min-height: 44px;
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline 1px transparent;
+  text-underline-offset: 6px;
+  transition: text-decoration-color 0.3s var(--sig-ease);
+}
+
+#support .fin-route a:hover,
+#support .fin-route a:focus-visible {
+  text-decoration-color: currentColor;
+}
+
+/* One treatment for the Maya2C disclosure wherever it appears: Inter 13/20, dim ink, a readable measure. */
+#support .fin-status {
+  max-width: 62ch;
+  margin: 40px auto 0; /* centred under the centred address and routes; phones align it left with them */
+  text-align: center;
+  color: var(--text-dim);
+  font: 400 13px / 20px var(--font-body);
+}
+
+/* ---------- the light (only once the tape is in view, never with reduced motion) ---------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  #support .tape-ready.is-run .by:not(.is-hot) {
+    animation:
+      fin-by-a 700ms var(--sig-ease) calc(var(--d, 0) * 90ms) both,
+      fin-carrier 9s linear calc(var(--d, 0) * 90ms + 3s) infinite;
+    animation-play-state: running, paused;
+  }
+
+  #support .tape-ready.is-run.alt .by:not(.is-hot) {
+    animation-name: fin-by-b, fin-carrier;
+  }
+
+  #support .tape-ready.is-run.is-live .by:not(.is-hot) {
+    animation-play-state: running, running;
+  }
+
+  /* The light reaches the apex after six steps, then runs across the address in under a second. */
+  #support .tape-ready.is-run .ch:not(.is-hot) {
+    animation: fin-ch-a 600ms var(--sig-ease) calc(540ms + var(--i, 0) * 24ms) both;
+  }
+
+  #support .tape-ready.is-run.alt .ch:not(.is-hot) {
+    animation-name: fin-ch-b;
+  }
+
+  #support .tape-ready.is-run .fin-apex {
+    animation: fin-apex 1.2s var(--sig-ease) 380ms both;
+  }
+
+  #support .tape-ready.is-run.alt .fin-apex {
+    animation-name: fin-apex-b;
+  }
+}
+
+@keyframes fin-by-a { 0%, 100% { fill: var(--ink); } 30% { fill: var(--hot); } }
+@keyframes fin-by-b { 0%, 100% { fill: var(--ink); } 30% { fill: var(--hot); } }
+@keyframes fin-ch-a { 0%, 100% { color: var(--c); text-shadow: none; } 35% { color: var(--accent); text-shadow: 0 0 16px var(--glow); } }
+@keyframes fin-ch-b { 0%, 100% { color: var(--c); text-shadow: none; } 35% { color: var(--accent); text-shadow: 0 0 16px var(--glow); } }
+@keyframes fin-apex { 0%, 100% { scale: 1; } 40% { scale: 1.6; } }
+@keyframes fin-apex-b { 0%, 100% { scale: 1; } 40% { scale: 1.6; } }
+
+/* A slow carrier: a soft brightening runs down the strands once every 9 s. */
+@keyframes fin-carrier {
+  0%, 7%, 100% { fill: var(--ink); }
+  3.5% { fill: color-mix(in srgb, var(--hot) 65%, var(--ink)); }
+}
+
+#support .fin-apex {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* ---------- phone and tablet: three waves, the address on one line, stacked routes ---------- */
+
+@media (max-width: 899px) {
+  #support .fin-tape-d {
+    display: none;
+  }
+
+  #support .fin-tape-p {
+    display: block;
+    margin-top: 8px;
+  }
+
+  #support .fin-tape-p text {
+    font-size: 12px;
+  }
+
+  #support .fin-dock {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  #support .fin-routes {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  #support .fin-route {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+  }
+
+  #support .fin-route a {
+    min-height: 44px;
+  }
+
+  #support .fin-status {
+    margin: 32px 0 0;
+    text-align: left;
+  }
+}

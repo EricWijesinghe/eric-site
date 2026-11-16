@@ -8,9 +8,14 @@ import { codeRain } from './scene-glyphs';
 // scene-chain.ts sends.
 
 export const MAX_DPR = 2;
+const WIDE_CANVAS = 900; // px: a stage this wide fills many pixels, so it takes a lower DPR cap
+const WIDE_DPR = 1.5;
 export const STILL_T = 10; // seconds: a settled frame (every proof finished, the seal locked)
 /** Px kept clear between the box edge and every drawn detail: the crisp rim never cuts a label. */
 export const SAFE = 22;
+const SAFE_NARROW = 16; // a phone stage keeps more of its width for the drawing
+const NARROW_BOX = 640; // px: below this box width the inset is SAFE_NARROW
+const SPOT_EVERY = 20; // frames between hotspot refreshes (the DAG slides; everything else holds still)
 const MAX_DT = 0.05; // after a stalled tab, resume without a jump
 const POKE_MS = 2500; // reduced motion: how long one interaction may animate
 const VIEW_MARGIN = '160px 0px'; // start a little before the scene scrolls into view
@@ -25,8 +30,10 @@ const ARROWS: ReadonlyMap<string, Pt> = new Map([
   ['ArrowDown', { x: 0, y: 1 }],
 ]);
 
-import { glass, hair, hairline, isLight, lineW, MONO, onThemeChange, PALETTE, rgbOf, stroke, txt, type Pt, type RgbKey } from './scene-palette';
+import { glass, hair, isLight, lineW, MONO, onThemeChange, PALETTE, rgbOf, stroke, txt, type Pt, type RgbKey } from './scene-palette';
+import { makeSpots, type Spot, type SpotPool } from './scene-spots';
 export * from './scene-palette';
+export type { Spot } from './scene-spots';
 
 export type PointerKind = 'down' | 'move' | 'up' | 'leave';
 
@@ -41,6 +48,10 @@ export interface Painter {
   pointer?(kind: PointerKind, x: number, y: number, t: number): void;
   /** The scene's keyboard control (its "interact" button) was activated. */
   act?(t: number): void;
+  /** Hotspots that get a focusable button each (stages only; see scene-spots). */
+  spots?(): readonly Spot[];
+  /** One line about what the pointer or focus is on, shown under the stage; null = the stage's hint. */
+  inspect?(): string | null;
 }
 
 /** `reduce` tells the scene to skip its big motion (a burst may still run, see POKE_MS). */
@@ -91,6 +102,16 @@ export function mountScene(host: HTMLElement, make: MakeFn): void {
   let clock = reduce ? STILL_T : 0;
   // Keyboard probe, in the inner box's frame: the arrow keys move it, and it acts as a pointer does.
   let probe: Pt | null = null;
+  let safe = SAFE;
+  let frames = 0;
+  let pool: SpotPool | null = null;
+  // The inspect line under a stage: fed by hover, focus and tap; its data-hint is the resting text.
+  const line = host.closest('.stage')?.querySelector<HTMLElement>('.stage-inspect') ?? null;
+  const say = (): void => {
+    if (!line || !painter?.inspect) return;
+    const text = painter.inspect() ?? line.dataset.hint ?? '';
+    if (line.textContent !== text) line.textContent = text;
+  };
 
   const running = (): boolean => visible && !document.hidden && (!reduce || performance.now() < pokeUntil);
   const paint = (): void => {
@@ -98,10 +119,12 @@ export function mountScene(host: HTMLElement, make: MakeFn): void {
     g.clearRect(0, 0, w, h);
     backdrop(g, w, h, GRID_STEP, clock);
     g.save();
-    g.translate(SAFE, SAFE);
-    painter.draw(g, w - SAFE * 2, h - SAFE * 2, clock);
+    g.translate(safe, safe);
+    painter.draw(g, w - safe * 2, h - safe * 2, clock);
     drawProbe(g, probe);
     g.restore();
+    if (pool && painter.spots && frames++ % SPOT_EVERY === 0) pool.sync(painter.spots(), safe);
+    say();
   };
   const frame = (now: number): void => {
     clock += Math.min(MAX_DT, (now - last) / 1000);
@@ -129,11 +152,13 @@ export function mountScene(host: HTMLElement, make: MakeFn): void {
     const r = host.getBoundingClientRect();
     w = r.width;
     h = r.height;
-    const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+    safe = w < NARROW_BOX ? SAFE_NARROW : SAFE;
+    frames = 0; // re-place the hotspots on the next paint
+    const dpr = Math.min(window.devicePixelRatio || 1, w > WIDE_CANVAS ? WIDE_DPR : MAX_DPR);
     canvas.width = Math.max(1, Math.round(w * dpr));
     canvas.height = Math.max(1, Math.round(h * dpr));
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    painter?.resize?.(Math.max(0, w - SAFE * 2), Math.max(0, h - SAFE * 2));
+    painter?.resize?.(Math.max(0, w - safe * 2), Math.max(0, h - safe * 2));
     paint();
   };
 
@@ -141,7 +166,7 @@ export function mountScene(host: HTMLElement, make: MakeFn): void {
   const forward = (kind: PointerKind) => (e: PointerEvent): void => {
     if (!painter) return;
     const r = host.getBoundingClientRect();
-    painter.pointer?.(kind, e.clientX - r.left - SAFE, e.clientY - r.top - SAFE, clock);
+    painter.pointer?.(kind, e.clientX - r.left - safe, e.clientY - r.top - safe, clock);
     if (kind === 'down') poke();
     if (!running()) paint();
   };
@@ -152,13 +177,16 @@ export function mountScene(host: HTMLElement, make: MakeFn): void {
   });
   host.addEventListener('pointerup', forward('up'));
   host.addEventListener('pointercancel', forward('up'));
-  host.addEventListener('pointerleave', forward('leave'));
+  // A finger lifting fires pointerleave, so a tap's reading holds until a touch lands outside the scene.
+  host.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') forward('leave')(e); });
+  document.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch' && !host.contains(e.target as Node)) forward('leave')(e); });
 
   // The scene's keyboard control sits beside the viewport, never inside it (a role=img has no
   // interactive children), and works the same way as a pointer press. Enter or Space runs the action;
   // the arrow keys move the probe over the scene (hover to inspect); Shift with an arrow also presses,
   // drags one step and releases, which is how a drag turns an object.
-  const control = host.closest('figure')?.querySelector<HTMLButtonElement>('.scene-act');
+  // A bench scene's control is in its figure; a stage's control sits in the explainer of its act.
+  const control = host.closest('figure, .act')?.querySelector<HTMLButtonElement>('.scene-act');
   control?.addEventListener('click', () => {
     if (!painter) return;
     painter.act?.(clock);
@@ -169,7 +197,7 @@ export function mountScene(host: HTMLElement, make: MakeFn): void {
     const dir = ARROWS.get(e.key);
     if (!dir || !painter) return;
     e.preventDefault();
-    const inner = { w: Math.max(0, w - SAFE * 2), h: Math.max(0, h - SAFE * 2) };
+    const inner = { w: Math.max(0, w - safe * 2), h: Math.max(0, h - safe * 2) };
     const from = probe ?? { x: inner.w / 2, y: inner.h / 2 };
     probe = {
       x: Math.min(inner.w, Math.max(0, from.x + dir.x * PROBE_STEP)),
@@ -191,12 +219,32 @@ export function mountScene(host: HTMLElement, make: MakeFn): void {
     if (!running()) paint();
   });
 
+  // A focused hotspot acts as the pointer resting on it; Enter presses it, as a tap would.
+  const spotHandlers = {
+    focus(s: Spot): void {
+      painter?.pointer?.('move', s.x, s.y, clock);
+      if (!running()) paint();
+    },
+    blur(): void {
+      painter?.pointer?.('leave', 0, 0, clock);
+      if (!running()) paint();
+    },
+    press(s: Spot): void {
+      painter?.pointer?.('down', s.x, s.y, clock);
+      painter?.pointer?.('up', s.x, s.y, clock);
+      painter?.pointer?.('move', s.x, s.y, clock);
+      poke();
+      if (!running()) paint();
+    },
+  };
+
   new ResizeObserver(fit).observe(host);
   new IntersectionObserver(
     (entries) => {
       visible = entries.some((e) => e.isIntersecting);
       if (visible && !painter) {
         painter = make(host, reduce);
+        if (painter.spots) pool = makeSpots(host, `${host.closest('.stage')?.getAttribute('aria-label') ?? 'scene'}: inspect points`, spotHandlers);
         fit();
       }
       sync();
@@ -258,25 +306,31 @@ export const CHIP_H = 20;
 export const CHIP_GAP = 8;
 /** Baseline of stacked chip `row` (0 = first), measured from the top of its region. */
 export const chipY = (row: number): number => 26 + row * (CHIP_H + CHIP_GAP);
+/** Height of the two chip rows at the top of a region: nothing else is drawn in it. */
+export const CHIP_ZONE = chipY(1) + CHIP_H / 2 + 4;
 
 /**
- * A caption on a soft glass chip, so it stays legible over any graphic behind it in both themes. Used for
- * region titles and step labels, which sit on busy drawings. On pearl the backing is a soft pearl tint with
- * an indigo hairline, not a white slab.
+ * A caption that stays legible over any graphic behind it. Dark: on a soft glass chip. Pearl: ink straight on
+ * the surface with a soft page-colour halo, so no pill or box is drawn around the words.
  */
 export function chip(g: CanvasRenderingContext2D, text: string, x: number, y: number, color: string): void {
   g.font = MONO;
+  if (isLight()) {
+    g.strokeStyle = PEARL_HALO;
+    g.lineWidth = HALO_W;
+    g.lineJoin = 'round';
+    g.strokeText(text, x, y);
+    caption(g, text, x, y, color);
+    return;
+  }
   const w = g.measureText(text).width;
   rrect(g, x - 6, y - 14, w + 12, CHIP_H, 6);
-  g.fillStyle = isLight() ? 'rgb(246 250 253 / 0.7)' : `rgb(${glass()} / 0.6)`;
+  g.fillStyle = `rgb(${glass()} / 0.6)`;
   g.fill();
-  if (isLight()) {
-    g.strokeStyle = 'rgb(75 60 255 / 0.5)';
-    g.lineWidth = 1;
-    g.stroke();
-  }
   caption(g, text, x, y, color);
 }
+const PEARL_HALO = 'rgb(246 250 253 / 0.85)';
+const HALO_W = 4;
 
 /** A small mono caption in canvas (decorative label; the page carries the real text). */
 export function caption(g: CanvasRenderingContext2D, text: string, x: number, y: number, color: string): void {
@@ -304,7 +358,7 @@ export function aurora(g: CanvasRenderingContext2D, w: number, h: number, t: num
     const x = (b.x + DRIFT_X * Math.sin(t * 0.11 + b.ph)) * w;
     const y = (b.y + DRIFT_Y * Math.cos(t * 0.09 + b.ph)) * h;
     const grad = g.createRadialGradient(x, y, 0, x, y, b.r * span);
-    grad.addColorStop(0, rgbOf(b.c, b.a));
+    grad.addColorStop(0, rgbOf(b.c, isLight() ? b.a * PEARL_AURORA : b.a));
     grad.addColorStop(1, rgbOf(b.c, 0));
     g.fillStyle = grad;
     g.fillRect(0, 0, w, h);
@@ -324,22 +378,22 @@ function gridFade(g: CanvasRenderingContext2D, w: number, h: number): CanvasGrad
 /** Void ground, drifting aurora, code rain and a faint grid, over the whole box. */
 export function backdrop(g: CanvasRenderingContext2D, w: number, h: number, step: number, t: number): void {
   g.fillStyle = PALETTE.void;
-  g.globalAlpha = 0.7; // a veil, so the page's light shows through the scene
+  // A veil, so the page's light shows through the scene; pearl keeps it thin so the stage is no lavender card.
+  g.globalAlpha = isLight() ? PEARL_VEIL : 0.7;
   g.fillRect(0, 0, w, h);
   g.globalAlpha = 1;
   aurora(g, w, h, t);
   codeRain(g, w, h, t, txt());
-  // Pearl grid: half the ink of the old one, and faded out toward the edges so it never reads as a blueprint.
-  g.strokeStyle = isLight() ? gridFade(g, w, h) : hairline(0.045);
-  g.lineWidth = lineW(1);
+  // A faint dot lattice instead of graph paper: one point per grid crossing, so nothing reads as a blueprint.
+  // Pearl dots fade toward the edges, so the lattice never frames the scene.
+  g.fillStyle = isLight() ? gridFade(g, w, h) : `rgb(${txt()} / ${DOT_A})`;
   g.beginPath();
   for (let x = step / 2; x < w; x += step) {
-    g.moveTo(x, 0);
-    g.lineTo(x, h);
+    for (let y = step / 2; y < h; y += step) g.rect(x - DOT / 2, y - DOT / 2, DOT, DOT);
   }
-  for (let y = step / 2; y < h; y += step) {
-    g.moveTo(0, y);
-    g.lineTo(w, y);
-  }
-  g.stroke();
+  g.fill();
 }
+const DOT = 1.5; // px side of a lattice dot
+const PEARL_VEIL = 0.3;
+const PEARL_AURORA = 0.35; // pearl: the aurora is a hint of colour, not a lavender wash
+const DOT_A = 0.1; // dark: ice dots at a tenth, as quiet as the old grid lines

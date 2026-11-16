@@ -1,73 +1,262 @@
 ---
-// The About journey: the statement in display type, then a timeline whose nodes each open one
-// short line. Every line and number comes from content.ts through data/journey.ts.
-import { JOURNEY, STATEMENT } from '../data/journey';
+// About as "The Stack": five translucent layers of one engineer, bottom to top, each running the rule it
+// stands for. The left column holds his thesis and the inspector for the selected layer; the right column
+// holds the 3D stack (DOM + CSS 3D + SVG, so theming, hit-testing and reduced motion come from the
+// platform) and the tablist rail that drives it. The stack comes before the inspector in the DOM so the
+// tab order is rail -> turn -> the selected panel's actions (the grid keeps the inspector on the left).
+// Every line comes from data/journey.ts.
+import { DEFAULT_LAYER, LAYERS, STATEMENT, STATEMENT_KEY } from '../data/journey';
 import '../styles/sections-signal.css';
 import '../styles/sections-signal-about.css';
+import '../styles/sections-signal-about-rail.css';
+import '../styles/sections-signal-about-strata.css';
+
+const keyAt = STATEMENT.indexOf(STATEMENT_KEY);
+const statementParts =
+  keyAt < 0 ? null : [STATEMENT.slice(0, keyAt), STATEMENT.slice(keyAt + STATEMENT_KEY.length)];
+const COUNT = String(LAYERS.length).padStart(2, '0');
+const GAPS = [0, 1, 2];
+const VIAS = [1, 2, 3];
+// "term: text" phases set the term in mono so the rule reads like code.
+const splitPhase = (p: string) => {
+  const at = p.indexOf(': ');
+  return at < 0 ? { term: '', text: p } : { term: p.slice(0, at), text: p.slice(at + 2) };
+};
+// A fact's value is printed only when its label does not already say it: "BFT" adds nothing beside
+// "DAG-BFT finality", and "Maya2C" adds nothing on the Maya2C layer.
+const showValue = (title: string, f: { label: string; value: string }) =>
+  f.value !== title && !f.label.split(/[\s-]+/).includes(f.value);
 ---
 
-<section id="about" aria-labelledby="about-title">
+<section id="about" aria-labelledby="about-title" data-active={DEFAULT_LAYER} data-strata>
   <div class="wrap">
     <p class="section-label" data-reveal><span>01</span> about</p>
     <h2 class="section-title" id="about-title" data-reveal>Who I am</h2>
-    <p class="about-statement" data-reveal>{STATEMENT}</p>
-    <div class="j-scene sig-frame" data-reveal>
-      <ol class="journey" data-journey>
+    <div class="st-grid">
+      <p class="st-statement" data-reveal>
         {
-          JOURNEY.map((node, i) => (
-            <li class:list={['j-step', { 'is-open': i === 0, 'is-pending': node.pending }]} data-step data-reveal>
-              <button
-                class="j-node"
-                type="button"
-                aria-expanded={i === 0 ? 'true' : 'false'}
-                aria-controls={`j-line-${i}`}
-                data-node
-              >
-                <span class="j-orb" aria-hidden="true"></span>
-                <span class="j-kick">{node.kicker}</span>
-                <span class="j-title">{node.title}</span>
-              </button>
-              {node.stats.length > 0 && (
-                <ul class="j-readouts" aria-label={`${node.title} readouts`}>
-                  {node.stats.map((s) => (
-                    <li>
-                      <span class="j-val">{s.value}</span>
-                      <span class="j-lab">{s.label}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div class="j-line" id={`j-line-${i}`}>
-                <div class="j-body">
-                  <p>{node.line}</p>
-                  {node.note && <p class="j-note">{node.note}</p>}
-                </div>
-              </div>
-            </li>
-          ))
+          statementParts ? (
+            <>
+              {statementParts[0]}
+              <span class="st-key">{STATEMENT_KEY}</span>
+              {statementParts[1]}
+            </>
+          ) : (
+            STATEMENT
+          )
         }
-      </ol>
+      </p>
+
+      <div class="st-stagewrap" data-reveal>
+        <div class="st-stage">
+          <div class="st-world" aria-hidden="true">
+            <div class="st-plane" data-layer="1">
+              <svg viewBox="0 0 420 300" class="st-art">
+                <path class="d m-grid" d="M40 60H380M40 120H380M40 180H380M40 240H380M80 30V270M160 30V270M240 30V270M320 30V270" />
+                <circle class="m-ripple" cx="120" cy="90" r="34" />
+                <circle class="m-ripple" cx="300" cy="110" r="34" />
+                <circle class="m-ripple" cx="200" cy="220" r="34" />
+                <circle cx="120" cy="90" r="16" /><circle class="wf" cx="120" cy="90" r="5" />
+                <circle cx="300" cy="110" r="16" /><circle class="wf" cx="300" cy="110" r="5" />
+                <circle cx="200" cy="220" r="16" /><circle class="wf" cx="200" cy="220" r="5" />
+              </svg>
+            </div>
+            <div class="st-plane" data-layer="2">
+              <svg viewBox="0 0 420 300" class="st-art">
+                <g class="d m-cells">
+                  <rect x="52" y="128" width="46" height="44" rx="9" /><rect x="106" y="128" width="46" height="44" rx="9" />
+                  <rect x="214" y="128" width="46" height="44" rx="9" /><rect x="268" y="128" width="46" height="44" rx="9" />
+                  <rect x="322" y="128" width="46" height="44" rx="9" />
+                </g>
+                <rect class="w m-cell" x="160" y="128" width="46" height="44" rx="9" />
+                <rect class="f m-val" x="168" y="136" width="30" height="28" rx="5" />
+                <g class="m-owner"><path class="w" d="M183 128V78" /><path class="wf" d="M183 54l12 12-12 12-12-12z" /></g>
+                <g class="m-shared">
+                  <path d="M172 172L110 236M183 172V250M194 172L256 236" />
+                  <circle cx="104" cy="242" r="8" /><circle cx="183" cy="258" r="8" /><circle cx="262" cy="242" r="8" />
+                </g>
+                <g class="m-mut">
+                  <path class="w" d="M206 150C262 150 300 120 330 82" /><circle class="w" cx="336" cy="74" r="10" />
+                  <circle class="wf" cx="336" cy="74" r="4" />
+                </g>
+                <g class="m-breach">
+                  <path class="w m-reach" pathLength="1" d="M160 150C104 150 76 120 62 84" />
+                  <circle class="w" cx="58" cy="76" r="10" />
+                </g>
+              </svg>
+            </div>
+            <div class="st-plane" data-layer="3">
+              <svg viewBox="0 0 420 300" class="st-art">
+                <path class="d" d="M20 150H400" />
+                <path class="w" d="M210 96V128M210 172V204" />
+                <rect x="196" y="84" width="28" height="12" rx="4" /><rect x="196" y="204" width="28" height="12" rx="4" />
+                <path class="d dash m-div" d="M210 172C230 215 262 236 300 244" />
+                <path class="w m-tick" d="M228 114l6 6 12-13" />
+                <g class="m-pkt">
+                  <rect x="70" y="138" width="58" height="24" rx="6" />
+                  <rect class="f m-h1" x="73" y="141" width="9" height="18" rx="2" />
+                  <rect class="f m-h2" x="87" y="141" width="9" height="18" rx="2" />
+                  <path d="M84 138V162M98 138V162" />
+                </g>
+              </svg>
+            </div>
+            <div class="st-plane" data-layer="4">
+              <svg viewBox="0 0 420 300" class="st-art">
+                <rect class="w m-tx" x="34" y="138" width="30" height="24" rx="6" />
+                <path class="m-sig" d="M64 150C96 150 96 92 128 92M64 150C96 150 96 208 128 208" />
+                <circle class="m-v1" cx="142" cy="92" r="14" /><path class="w m-t1" d="M135 92l5 5 9-10" />
+                <circle class="m-v2" cx="142" cy="208" r="14" /><path class="w m-t2" d="M135 208l5 5 9-10" />
+                <path class="m-join" d="M156 92C190 92 190 150 214 150M156 208C190 208 190 150 214 150" />
+                <path class="w m-and" d="M214 134h10a16 16 0 0 1 0 32h-10z" />
+                <path class="m-out" d="M240 150H268" />
+                <path
+                  class="m-dag"
+                  d="M282 100L326 80M282 100L326 150M282 150L326 150M282 200L326 220M282 200L326 150M326 80L372 150M326 150L372 150M326 220L372 150"
+                />
+                <g class="m-verts">
+                  <circle cx="282" cy="100" r="7" /><circle cx="282" cy="150" r="7" /><circle cx="282" cy="200" r="7" />
+                  <circle cx="326" cy="80" r="7" /><circle cx="326" cy="150" r="7" /><circle cx="326" cy="220" r="7" />
+                </g>
+                <circle class="m-ring" cx="372" cy="150" r="16" /><circle class="wf m-final" cx="372" cy="150" r="9" />
+              </svg>
+            </div>
+            <div class="st-plane st-ghost" data-layer="5">
+              <svg viewBox="0 0 420 300" class="st-art">
+                <rect class="m-rim" x="1" y="1" width="418" height="298" rx="20" />
+                <circle cx="120" cy="90" r="3" /><circle cx="300" cy="110" r="3" /><circle cx="200" cy="220" r="3" />
+              </svg>
+            </div>
+            {
+              GAPS.map((g) =>
+                VIAS.map((v) => (
+                  <i class={`st-via v${v}`} data-gap={g} data-layer={g + 2}>
+                    <i class="st-pulse" />
+                  </i>
+                )),
+              )
+            }
+            <span class="st-tag t-owner" data-layer="2">owner</span>
+            <span class="st-tag t-mut" data-layer="2">&amp;mut</span>
+            <span class="st-tag t-ml" data-layer="4">ML-DSA</span>
+            <span class="st-tag t-slh" data-layer="4">SLH-DSA</span>
+          </div>
+        </div>
+        <div class="st-rail" role="tablist" aria-label="Layers of the stack" aria-orientation="vertical">
+          {
+            LAYERS.map((l, i) => {
+              const n = i + 1;
+              const on = n === DEFAULT_LAYER;
+              return (
+                <button
+                  type="button"
+                  role="tab"
+                  id={`st-tab-${n}`}
+                  class:list={['st-tab', { 'is-active': on, 'is-pending': l.pending }]}
+                  aria-controls={`st-panel-${n}`}
+                  aria-selected={on ? 'true' : 'false'}
+                  tabindex={on ? 0 : -1}
+                  data-layer={n}
+                >
+                  <span class="st-dot" aria-hidden="true" />
+                  <span class="st-num">{l.kicker}</span>
+                  <span class="st-name">{l.title}</span>
+                </button>
+              );
+            })
+          }
+        </div>
+        <p class="st-caption">
+          <span>The stack, bottom to top: each layer stands on the one beneath it. Drag to turn.</span>
+          <button class="st-turn" type="button" aria-label="Turn the stack">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3" />
+              <path d="M18 3v4h-4M6 21v-4h4" />
+            </svg>
+          </button>
+        </p>
+      </div>
+
+      <div class="st-inspector">
+        {
+          LAYERS.map((l, i) => {
+            const n = i + 1;
+            return (
+              <article
+                class:list={['st-panel', { 'is-active': n === DEFAULT_LAYER }]}
+                role="tabpanel"
+                id={`st-panel-${n}`}
+                aria-labelledby={`st-tab-${n}`}
+                data-layer={n}
+                tabindex={l.breach || l.link ? undefined : 0}
+              >
+                <p class="st-kicker">
+                  Layer {l.kicker} / {COUNT}
+                </p>
+                <h3 class="st-title">{l.title}</h3>
+                <p class="st-line">{l.line}</p>
+                {l.roles && (
+                  <ul class="st-roles">
+                    {l.roles.map((r) => (
+                      <li>{r}</li>
+                    ))}
+                  </ul>
+                )}
+                {l.facts.length > 0 && (
+                  <ul class="st-facts">
+                    {l.facts.map((f) => (
+                      <li>
+                        {showValue(l.title, f) && <span class="st-fv">{f.value}</span>}
+                        <span class="st-fl">{f.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {l.phases && (
+                  <div class="st-mech">
+                    <span class="st-ticks" aria-hidden="true">
+                      {l.phases.map(() => (
+                        <i />
+                      ))}
+                    </span>
+                    <ol class="st-phases">
+                      {l.phases.map((p) => {
+                        const { term, text } = splitPhase(p);
+                        return (
+                          <li>
+                            {term && <code>{term}</code>}
+                            {text}
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  </div>
+                )}
+                {l.breach && (
+                  <>
+                    <button class="st-break" type="button" data-verdict={JSON.stringify(l.breach.verdict)}>
+                      {l.breach.button}
+                    </button>
+                    <p class="st-verdict" role="status" />
+                  </>
+                )}
+                {l.link && (
+                  <a class="st-link" href={l.link.href}>
+                    {l.link.label}
+                    <span aria-hidden="true"> ↓</span>
+                  </a>
+                )}
+                {l.note && <p class="st-note">{l.note}</p>}
+              </article>
+            );
+          })
+        }
+      </div>
     </div>
   </div>
 </section>
 
 <script>
-  // One node opens at a time and the rest fold away. The class is added here, so without JS
-  // every line stays visible.
-  const root = document.querySelector<HTMLOListElement>('[data-journey]');
-  if (root) {
-    root.classList.add('js-journey');
-    const steps = Array.from(root.querySelectorAll<HTMLLIElement>('[data-step]'));
-    const buttons = steps.map((s) => s.querySelector<HTMLButtonElement>('[data-node]'));
-    steps.forEach((step, i) => {
-      buttons[i]?.addEventListener('click', () => {
-        const open = !step.classList.contains('is-open');
-        steps.forEach((s, j) => {
-          const on = open && j === i;
-          s.classList.toggle('is-open', on);
-          buttons[j]?.setAttribute('aria-expanded', String(on));
-        });
-      });
-    });
-  }
+  import { initStrata } from '../scripts/about-strata';
+
+  initStrata();
 </script>

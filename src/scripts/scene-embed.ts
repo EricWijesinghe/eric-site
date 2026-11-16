@@ -3,7 +3,7 @@
 // centroid: a point is flagged when it lies nearer the malicious centre, which is the same as lying on
 // that side of the perpendicular bisector of the two centres. Points are generated from a seed for the
 // drawing only; the probe is placed by the reader, or drifts on its own when nobody points.
-import { caption, clamp01, ink, PALETTE as P, rng, rrect, stroke, tint, glass, type Pt, type Rect } from './scene-core';
+import { caption, chip, clamp01, ink, isLight, PALETTE as P, rng, rrect, stroke, tint, glass, type Pt, type Rect } from './scene-core';
 import { lineW } from './scene-core';
 
 export interface Cloud {
@@ -21,6 +21,7 @@ const SPREAD_MALICIOUS = 0.09;
 const PAD = 14;
 const DOT_R = 2.6;
 const PROBE_R = 5;
+const ECHO_PX = 64; // px: a benign probe this near the benign centre hides the cluster's name
 const PROBE_SWING_S = 7; // the drifting probe crosses the boundary and back in this long
 const BOUNDARY_REACH = 2; // half-length of the boundary line, in box units: long enough to clip to the box
 const CHIP_PAD = 8;
@@ -109,12 +110,13 @@ export function drawEmbed(g: CanvasRenderingContext2D, box: Rect, t: number, pro
   }
   const bq = toBox(box, BENIGN);
   const mq = toBox(box, MALICIOUS);
-  caption(g, 'benign', bq.x - 24, bq.y + 26, ink(0.9));
-  caption(g, 'malicious', mq.x - 30, mq.y + 26, tint('magenta', 0.95));
-
   const at = probeAt(t, probe);
   const bad = isMalicious(at);
   const pq = toBox(box, at);
+  // A probe resting in the benign cluster already says 'benign': the cluster's own name would print twice.
+  const echo = !bad && Math.hypot(pq.x - bq.x, pq.y - bq.y) < ECHO_PX;
+  if (!echo) caption(g, 'benign', bq.x - 24, bq.y + 26, ink(0.9));
+  caption(g, 'malicious', mq.x - 30, mq.y + 26, tint('magenta', 0.95));
   g.strokeStyle = bad ? P.alert : P.ice;
   g.lineWidth = lineW(2);
   g.beginPath();
@@ -124,9 +126,13 @@ export function drawEmbed(g: CanvasRenderingContext2D, box: Rect, t: number, pro
   const label = bad ? 'flagged' : 'benign';
   const width = label.length * 7.2 + CHIP_PAD * 2;
   const lx = Math.min(pq.x + 12, box.x + box.w - width - 6);
-  g.fillStyle = `rgb(${glass()} / 0.75)`;
-  rrect(g, lx, pq.y - 24, width, 20, 6);
-  g.fill();
-  caption(g, label, lx + CHIP_PAD, pq.y - 10, bad ? P.alert : ink(0.95));
+  if (isLight()) {
+    chip(g, label, lx + CHIP_PAD, pq.y - 10, bad ? P.alert : ink(0.95)); // pearl: a halo, no white chip
+  } else {
+    g.fillStyle = `rgb(${glass()} / 0.75)`;
+    rrect(g, lx, pq.y - 24, width, 20, 6);
+    g.fill();
+    caption(g, label, lx + CHIP_PAD, pq.y - 10, bad ? P.alert : ink(0.95));
+  }
   return bad ? 'flagged' : 'benign';
 }
