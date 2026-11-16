@@ -18,7 +18,7 @@ test.use({
 });
 test.describe.configure({ mode: 'serial', timeout: 120_000 });
 
-type Dbg = { frames: number; fired: number; anchorHaloMax: number; headZoneHits: number; zoneColumn?: number[]; releaseGlyphs: number; glyphs: number; tier: string; p90: number; dpr: number; light: boolean };
+type Dbg = { frames: number; fired: number; anchorHaloMax: number; headZoneHits: number; zoneColumn?: number[]; releaseGlyphs: number; burstOffBody: number; shockInZone: number; absorb: number; glyphs: number; tier: string; p90: number; dpr: number; light: boolean };
 const dbg = (page: Page) => page.evaluate(() => (window as unknown as { __m2c?: Dbg }).__m2c ?? null);
 const frames = async (page: Page) => (await dbg(page))?.frames ?? 0;
 
@@ -100,6 +100,25 @@ test('a release bursts from his body as data, and no line ever leaves his head',
   const d = (await dbg(page))!;
   expect(d.headZoneHits, 'a line was emitted in the head zone or on his silhouette').toBe(0);
   expect(d.anchorHaloMax, 'an anchor sat inside the head halo').toBe(0);
+  // Eric round 10: "letters come when clicked are from no where". Every release glyph starts on his body, below his head.
+  expect(d.burstOffBody, 'a release glyph started off his body or inside his head halo').toBe(0);
+  // round 10 review: the shock's front drew a halo arc over his head. It is cut from his head and the column above it.
+  expect(d.shockInZone, 'the release shock drew on his head or above it').toBe(0);
+});
+
+// Eric round 10: he gets brighter with what he absorbed. The energy overlay reports it as m2c:absorb {k: 0..1}; the
+// engine clamps it and eases toward it, so his glow never pops.
+test('his glow follows m2c:absorb, clamped and eased', async ({ page }) => {
+  await open(page, '?debug');
+  await expect.poll(() => frames(page), { timeout: 15_000 }).toBeGreaterThan(5);
+  const absorb = async () => (await dbg(page))?.absorb ?? -1;
+  expect(await absorb(), 'idle').toBe(0);
+  const send = (k: number) => page.evaluate((v) => { window.dispatchEvent(new CustomEvent('m2c:absorb', { detail: { k: v } })); }, k);
+  await send(5);
+  await expect.poll(absorb, { message: 'rises toward the clamped target', timeout: 40_000 }).toBeGreaterThan(0.9);
+  expect(await absorb(), 'clamped to 1').toBeLessThanOrEqual(1);
+  await send(0);
+  await expect.poll(absorb, { message: 'eases back to rest', timeout: 40_000 }).toBeLessThan(0.05);
 });
 
 // The theme toggle recolours the hero live (Eric round 3: the scene follows dark and light).
@@ -161,6 +180,29 @@ test('nothing is emitted in the head zone, through idle, charge and release', as
     expect(await zoneHits(), `zone hits ${250 * (i + 1)} ms after release`).toBe(0);
   }
   expect((await dbg(page))!.fired, 'the pulses ran').toBeGreaterThan(0);
+});
+
+// Round 10 review: pressing on his face (the natural gesture) drew the cursor lens's thin circle round his jaw and
+// neck, and the hover lens swapped his face for a dot patch. Both rest while pressed and on his head.
+test('pressing on his face draws no lens or ring there', async ({ page }) => {
+  await open(page, '?debug');
+  await expect.poll(() => frames(page), { timeout: 15_000 }).toBeGreaterThan(5);
+  const fig = await page.evaluate(() => {
+    const st = document.querySelector<HTMLElement>('.m2c-sing')!.parentElement!;
+    const cs = getComputedStyle(st);
+    return [parseFloat(cs.getPropertyValue('--m2c-face-x')), parseFloat(cs.getPropertyValue('--m2c-face-y'))];
+  });
+  const stage = (await page.locator('.m2c-sing').evaluateHandle((el) => el.parentElement!)).asElement()!;
+  const sb = (await stage.boundingBox())!;
+  await page.mouse.move(sb.x + fig[0], sb.y + fig[1]);
+  await page.waitForTimeout(800);
+  await page.mouse.down();
+  await page.waitForTimeout(2000);
+  await page.mouse.up();
+  await page.waitForTimeout(600);
+  const d = (await dbg(page)) as (Dbg & { lensInZone: number }) | null;
+  expect(d!.lensInZone, 'the cursor lens drew while pressed or on his head').toBe(0);
+  expect(d!.shockInZone, 'the release shock drew on his head or above it').toBe(0);
 });
 
 // Eric, round 2 (the critic's blocker): a diagonal light trail once ran from the top edge down past his head. The

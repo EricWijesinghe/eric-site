@@ -8,8 +8,18 @@ import { HeadZone } from './singularity-zone';
 
 const VERTS_PER_SEG = 6;
 export type WidthFn = number | ((i: number, n: number) => number);
-/** A device-px rectangle that scales the brightness of whatever is drawn inside it (k 0..1). */
-export interface Gain { x0: number; y0: number; x1: number; y1: number; k: number }
+/** A device-px rectangle that scales the brightness of whatever is drawn inside it (k 0..1), eased back to 1 over `f` px outside it. */
+export interface Gain { x0: number; y0: number; x1: number; y1: number; k: number; f?: number }
+
+/**
+ * A release's travelling front through the computing behind him (G2 cascade, O6): device px centre, radius now,
+ * strength g (what the release earned, 0..1), the radius it dies at, and its speed (px/s) for the afterglow.
+ */
+export interface Wave { x: number; y: number; r: number; g: number; reach: number; v: number }
+
+const WAVE_W = 110; // device px per unit dpr: half the front's width
+const WAVE_CREST = 1.6, WAVE_COPY = 0.5; // brightness added at the crest, and behind the copy column
+const WAVE_AFTER = 0.25, WAVE_AFTER_S = 0.4; // the afterglow it leaves behind
 
 export class Ink {
   /** Ribbon vertices written this frame. */
@@ -22,6 +32,10 @@ export class Ink {
   zoneHits = 0;
   /** Set once per frame by the hero: the copy column and his face are dimmed so the text and the face stay readable. */
   gains: Gain[] = [];
+  /** Set by the hero after a person's release, null otherwise. */
+  wave: Wave | null = null;
+  /** Device px per CSS px, for the front's width. */
+  dpr = 1;
 
   constructor(
     private readonly rib: Float32Array,
@@ -47,7 +61,7 @@ export class Ink {
     for (let i = 0; i < n - 1 && this.count + VERTS_PER_SEG <= RIB_MAX; i++) {
       const [ax, ay] = pts[i], [bx, by] = pts[i + 1];
       const wa = wAt(i), wb = wAt(i + 1);
-      if (this.zone.segment(pts[i], pts[i + 1], Math.max(wa, wb))) continue;
+      if (this.zone.segment(pts[i], pts[i + 1], Math.max(wa, wb)) || this.zone.flank(pts[i], pts[i + 1])) continue;
       if (this.zone.hits(ax, ay) || this.zone.hits(bx, by)) { this.zoneHits++; continue; }
       const dx = bx - ax, dy = by - ay, l = Math.hypot(dx, dy) || 1;
       const nx = -dy / l, ny = dx / l;
@@ -79,8 +93,20 @@ export class Ink {
   /** The smallest gain of the rectangles that contain (x, y); 1 outside all of them. */
   gainAt(x: number, y: number): number {
     let k = 1;
-    for (const g of this.gains) if (x >= g.x0 && x <= g.x1 && y >= g.y0 && y <= g.y1 && g.k < k) k = g.k;
-    return k;
+    for (const g of this.gains) {
+      const d = Math.max(g.x0 - x, x - g.x1, g.y0 - y, y - g.y1, 0); // px outside the rectangle
+      const f = g.f ?? 0;
+      if (d > f) continue;
+      const gk = f > 0 ? g.k + (1 - g.k) * (d / f) : g.k;
+      if (gk < k) k = gk;
+    }
+    const w = this.wave;
+    if (!w || k === 0) return k;
+    const d = Math.hypot(x - w.x, y - w.y);
+    if (d > w.reach) return k;
+    const q = (d - w.r) / (WAVE_W * this.dpr), fade = 1 - d / w.reach;
+    const after = d < w.r ? WAVE_AFTER * Math.exp(-(w.r - d) / w.v / WAVE_AFTER_S) : 0;
+    return k * (1 + w.g * fade * ((k < 1 ? WAVE_COPY : WAVE_CREST) * Math.exp(-q * q) + after));
   }
 
   private vertex(x: number, y: number, side: number, I: number, rgb: Rgb): void {

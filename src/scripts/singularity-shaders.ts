@@ -1,5 +1,6 @@
-// GLSL for the Singularity hero. The figure, disk, vapour and post chain are ported from
-// design/eric-quantum-forge/v11 (source/main.js); the background, ribbons and colours are the Signal redesign's.
+// GLSL for the Singularity hero's scene. The figure, disk and vapour are ported from design/eric-quantum-forge/v11
+// (source/main.js); the background, ribbons and colours are the Signal redesign's. The post chain (bloom and the
+// composite, with the light theme) is in singularity-shaders-post.ts.
 import { glsl, SPECTRUM } from './singularity-palette';
 import { CODE_GLYPH_FIRST, CODE_GLYPH_N } from './singularity-config';
 
@@ -11,11 +12,22 @@ const CODE_FIRST = `${CODE_GLYPH_FIRST}.`, CODE_N = `${CODE_GLYPH_N}.`;
 export const COMMON = `#version 300 es
 precision highp float;
 uniform vec2 uRes; uniform float uTime; uniform float uDpr;
+uniform vec2 uShake; // device px: the charge tremor, applied to everything around him and never to him (Eric round 10, O5)
 vec4 toClip(vec2 p){ return vec4(p.x/uRes.x*2.-1., 1.-p.y/uRes.y*2., 0., 1.); }
 float hash(float n){ return fract(sin(n)*43758.5453123); }
 float h2(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
 float vnoise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
   return mix(mix(h2(i),h2(i+vec2(1,0)),f.x), mix(h2(i+vec2(0,1)),h2(i+vec2(1,1)),f.x), f.y); }
+`;
+// 0 on his head, the column above it and a margin at ear height; 1 well clear of them. Above the head's centre only
+// the sideways distance counts, so the column runs up to the canvas edge. uHead is halo.head (centre, radii; figure
+// px), passed from the engine so a new figure image keeps its face protected. Needs uFO and uS declared.
+export const HEAD_KEEP = `
+uniform vec4 uHead;
+float headKeep(vec2 fp){
+  vec2 q = (fp - uHead.xy)/uHead.zw;
+  return smoothstep(1.15, 1.8, q.y < 0. ? abs(q.x) : length(q));
+}
 `;
 export const VS_FS = `#version 300 es
 in vec2 aP; void main(){ gl_Position = vec4(aP,0.,1.); }`;
@@ -26,8 +38,12 @@ uniform sampler2D uAtlas;
 uniform vec2 uC; uniform vec2 uM; uniform float uMOn; uniform float uU; uniform float uCharge; uniform float uBoot;
 uniform float uFlash; uniform vec4 uShock; uniform float uShockW; // shock: centre xy, radius, strength
 uniform vec4 uZone; // the head zone's column: left, right, floor (device px)
-out vec4 o;
+// what he absorbed (m2c:absorb, 0..1) glows around his own outline: his blurred silhouette (singularity-figure.ts)
+uniform sampler2D uAura; uniform vec4 uAuraRect; uniform vec2 uFO; uniform float uS; uniform float uAbsorb;
+out vec4 o;${HEAD_KEEP}
 const vec3 PAL[7] = vec3[7](${PALETTE});
+const float AURA_K = 1.1; // his absorbed glow at full absorb: the growth lands round his body, where it cannot fog his face
+const float SHOCK_FRONT = .085; // the front's peak per unit of strength: about .12 at the strongest release
 vec3 pal(float x){ float y = mod(x, 7.); int i = int(floor(y)); float f = y - floor(y); float s = f*f*(3.-2.*f); return mix(PAL[i], PAL[(i+1)%7], s); }
 // vk: 1 normally, 0 in the column above his head, where the light trails, aurora rays and binary rain would stand on
 // his head like an antenna (Eric round 2: a diagonal streak above the head read as a line from it); the nebula and stars stay.
@@ -70,37 +86,43 @@ vec3 sky(vec2 q, float vk){
     float trail = pow(fract(-(y*.06) + hc*7.), 4.);
     c += vec3(.22,.68,.92)*g*trail*.42*vk;
   }
-  // spacetime grid (polar), only near him
-  vec2 d = q - uC; float r = length(d)/uU; float a = atan(d.y, d.x);
-  float rings = abs(fract(r*7.)-.5)/max(fwidth(r*7.), 1e-4);
-  float spokes = abs(fract(a/6.28318*36.)-.5)/max(fwidth(a/6.28318*36.), 1e-4);
-  float grid = (1.-min(rings,1.))*.7 + (1.-min(spokes,1.))*.35;
-  c += vec3(.10,.40,.60)*grid*.10*smoothstep(1.6, .3, r);
+  // no polar spacetime grid: its rings and spokes were circles and radial lines centred on his head (round 10 review)
   return c;
 }
 void main(){
-  vec2 fc = vec2(gl_FragCoord.x, uRes.y-gl_FragCoord.y);
-  // gravitational lensing around him, and a small lens at the cursor
+  vec2 fc = vec2(gl_FragCoord.x, uRes.y-gl_FragCoord.y) - uShake;
+  // gravitational lensing around him, and a small lens at the cursor. Both deflections are smooth in r: a min() or
+  // max() in them left a crease that drew a thin circle round his head and neck (round 10 review, O1: no ring)
   vec2 d = fc - uC; float r = length(d);
   float RE = .20*uU*(1. + .35*uCharge);
-  vec2 q = fc - d/max(r,1.) * min(RE*RE/max(r, 1.), RE*.9)*smoothstep(0., RE*.8, r);
-  vec2 dm = fc - uM; float rm = length(dm); float REm = .075*uU*uMOn;
-  q -= dm/max(rm,1.) * REm*REm/max(rm, REm*.5);
+  vec2 q = fc - d/max(r,1.) * RE*RE*r/(r*r + .6*RE*RE);
+  // the cursor lens is off while he is pressed or charging and whenever the pointer is on his head (uMOn, set by the
+  // engine, and headKeep here): pressing his face is the natural gesture and must not bend his face's surroundings
+  vec2 dm = fc - uM; float rm = length(dm); float REm = .075*uU*uMOn*headKeep((uM - uFO)/uS);
+  q -= dm/max(rm,1.) * REm*REm*rm/(rm*rm + .6*REm*REm);
   // the column above his head: the zone the ribbons are cut from (singularity-zone.ts)
   // the feather is tight, so the fade ends where the CPU cut ends (singularity-zone.ts), not inside the copy's side
   float inCol = smoothstep(uZone.x - 8., uZone.x + 8., fc.x) * smoothstep(uZone.y + 8., uZone.y - 8., fc.x) * smoothstep(uZone.z + 8., uZone.z - 8., fc.y);
   vec3 col = sky(q, 1. - inCol);
-  // Einstein ring: light piling up at the lens radius
-  col += vec3(.20,.65,.95)*exp(-pow((r-RE)/(RE*.10), 2.))*.10*(1. + 1.5*uCharge);
-  col += vec3(.25,.75,1.)*exp(-pow((rm-REm)/(REm*.12+1.), 2.))*.18*uMOn;
-  // his aura
+  // no Einstein ring and no cursor ring: each was a thin circle round his jaw and neck (Eric round 10, O1: no ring)
+  // his aura. Phone and portrait: the charge's glow thins with the canvas's bottom mask, as his figure does, so it
+  // never fills the lower stage as a slab with an edge (round 10 review); a quarter of it is left there
   float da = length(d/vec2(1., 1.25))/uU;
-  col += vec3(.05,.30,.52)*(.22 + .35*uCharge + .5*uFlash)*exp(-da*da*3.2);
-  // his shockwave: a spherical shell, bright at its limb, with a faint volume inside it
+  float lowStage = 1. - .75*step(uRes.x, uRes.y)*smoothstep(.5, .85, fc.y/uRes.y);
+  col += vec3(.05,.30,.52)*(.22 + (.35*uCharge + .5*uFlash)*lowStage)*exp(-da*da*3.2);
+  // the energy he absorbed: white-cyan along his outline (the blur is 0.5 there), deep cyan further out. A glow with
+  // his shape, never a line: the outline part is cut from his head and the column above it (round 10 review: a bright
+  // contour round his hair and ears read as a halo line), so it lands on his shoulders and torso
+  vec2 afp = (fc - uFO)/uS; float ahk = headKeep(afp);
+  vec3 au = texture(uAura, (afp - uAuraRect.xy)/uAuraRect.zw).rgb;
+  col += (vec3(.03,.28,.58)*au.b*(1. - .6*au.r)*mix(.4, 1., ahk) + vec3(.30,.80,1.)*au.r*(1. - au.r)*2.4*ahk)*uAbsorb*AURA_K*lowStage;
+  // his shockwave: a wide, faint pressure front with a fainter volume inside it, never a bright limb (a limb read as a
+  // halo arc over his head, Eric rounds 2 and 10). It is cut from his head and the column above it, so it leaves him
+  // sideways and downward only
   float sl = length(fc - uShock.xy), sr = sl/max(uShock.z, 1.);
-  float rq = (sl - uShock.z)/uShockW; float rim = exp(-rq*rq);
-  col += pal(.5 + sr*1.5 + uTime*.05) * rim * uShock.w * 1.0;
-  col += pal(1. + sr*2.) * exp(-sr*sr*2.2) * uShock.w * .09 * step(sr, 1.);
+  float rq = (sl - uShock.z)/uShockW, hk = headKeep((fc - uFO)/uS);
+  col += pal(.5 + sr*1.5 + uTime*.05) * exp(-rq*rq) * uShock.w * SHOCK_FRONT * hk;
+  col += pal(1. + sr*2.) * exp(-sr*sr*2.2) * uShock.w * .09 * smoothstep(1.1, .8, sr) * hk;
   o = vec4(col*uBoot, 1.);
 }`;
 
@@ -146,7 +168,7 @@ void main(){
   vec2 sp = uDC + vec2(p.x, p.y*sa - y*ca)*per*uU;
   bool front = zz > 0.;
   if ((uPass > .5) != front) { gl_Position = vec4(2.,2.,2.,1.); return; }
-  gl_Position = toClip(sp);
+  gl_Position = toClip(sp + uShake);
   float r = length(p), spd = length(v);
   float heat = smoothstep(1.5, .42, r);
   vec3 deep = vec3(.05,.22,.55), cyan = vec3(.25,.82,1.), white = vec3(.92,.98,1.);
@@ -155,6 +177,9 @@ void main(){
   float isG = step(.955, aK.z);
   float a = (.30 + .32*heat)*beam*(1. + .8*uCharge + 1.2*uFlash)*uBoot*smoothstep(4., 1.6, r);
   a *= mix(1., .85, float(front));
+  // charging, the disk hands over to the page's glyph horizon (energy-overlay.ts): gone by about 1 s of hold, and it
+  // stays out through the release flash, so it never flares into a collar or rings out as a circle (Eric round 10)
+  a *= 1. - smoothstep(.10, .55, max(uCharge, uFlash));
   float codeG = step(.5, fract(aK.z*997.));   // about half the glyph particles are code tokens, the rest 0 and 1
   vGlyph = isG > .5 ? mix(mod(floor(uTime*(3. + 8.*spd) + aK.y*91.), 2.), ${CODE_FIRST} + floor(fract(aK.y*53.)*${CODE_N}), codeG) : -1.;
   float sz = (isG > .5 ? mix(9.5, 13., codeG) : (1.3 + .9*heat))*uDpr*per*mix(1., 1.25, isG*heat);
@@ -188,19 +213,28 @@ in vec2 aUV; out vec2 vUV;
 void main(){ gl_Position = toClip(figScreen(aUV*uFigSize)); vUV = aUV; }`;
 export const FS_MESH = COMMON + FIGS + `
 uniform sampler2D uAtlas; uniform float uCell; uniform float uGlitch; uniform float uSurge;
-in vec2 vUV; out vec4 o;
+uniform float uAbsorb; // 0..1: what he has absorbed of the page's energy (m2c:absorb); he glows brighter with it
+in vec2 vUV; out vec4 o;${HEAD_KEEP}
+// He gets brighter by gain on his own shading, never by a flat fill (a fill turned his face into a cyan mask with
+// black holes, round 10 review). The rim's extra glow lands on his shoulders and torso outline only: on his head it
+// drew a halo line round his hair and ears (hard rule 3). Gains are per unit of absorb (or surge).
+// his head takes no gain here: the composite brightens his face after tone mapping, where a gain keeps its contrast
+const float ABSORB_RIM = 1.6, ABSORB_BODY = .12, ABSORB_GAIN = .12, SURGE_GAIN = .75;
+const float KNEE = .35;          // the gain's soft knee: highlights rise less than mid-tones, nothing clips flat
+const float BREATH_HZ = 1.2, BREATH = .12; // a full charge breathes on his rim
 float glyph(float g, vec2 f){ vec2 cell = vec2(mod(g,8.), floor(g/8.)); return texture(uAtlas, (cell + .1 + f*.8)/8.).a; }
 void main(){
   vec2 p = vUV*uFigSize;
   float row = floor(p.y/22.);
-  float gk = uGlitch*step(.78, h2(vec2(row, floor(uTime*24.))));
+  float isHead = smoothstep(.8,.95,texture(uTrace,vUV).b);
+  // the glitch bars never cross his face: nothing sits over it
+  float gk = uGlitch*step(.78, h2(vec2(row, floor(uTime*24.))))*(1. - isHead);
   vec2 uv = vUV; uv.x += gk*(h2(vec2(row,3.))-.5)*.03;
   vec4 tx = texture(uFig, uv);
   float bld = built(p, uTime), fl = frontLine(p, uTime);
   float cov = tx.a*smoothstep(110., 470., p.x)*smoothstep(uFigSize.x, uFigSize.x-50., p.x)*(1.-smoothstep(1040., 1195., p.y));
   float vis = cov*max(bld, fl*.9);
   if (vis < .004) discard;
-  float isHead = smoothstep(.8,.95,texture(uTrace,vUV).b);
   float l = dot(tx.rgb, vec3(.299,.587,.114));
   float lb = dot(textureLod(uFig, uv, 4.).rgb, vec3(.299,.587,.114));
   float I = pow(clamp(l + (l-lb)*1.5, 0., 1.), .85);
@@ -222,11 +256,16 @@ void main(){
   float body = I*(.5 + .5*scan);
   vec3 col = mix(deep, cyan, smoothstep(0., .65, body))*body*mix(.62, .80, isHead) + ice*pow(I, 4.)*.18;
   col += mix(cyan, ice, .35)*cont*(.70 + .10*isHead);
-  col += mix(cyan, ice, .3)*gB*(.07 + .32*cl + .7*strm*cl)*(1.-.5*isHead + uSurge);
-  col += ice*rim*(.65 + 1.8*uSurge) + ice*sweep*(.15 + .5*I)*.3 + ice*fl*1.8;
-  col *= flick*(1. + uSurge*.75);
+  col += mix(cyan, ice, .3)*gB*(.07 + .32*cl + .7*strm*cl)*(1.-.5*isHead + uSurge*(1. - .8*isHead)); // a surge's glyphs would fog his features
+  float hz = headKeep(p); // 0 on his head and the column above it, 1 from his shoulders down
+  float breath = 1. + BREATH*uAbsorb*uAbsorb*sin(uTime*6.2832*BREATH_HZ);
+  col += ice*rim*.65 + mix(cyan, ice, .5)*rim*(1.8*uSurge + ABSORB_RIM*uAbsorb*breath)*hz + ice*sweep*(.15 + .5*I)*.3 + ice*fl*1.8;
+  col += cyan*body*uAbsorb*ABSORB_BODY*(1. - isHead); // his body takes a little cyan; his face only gains (below)
+  float g = 1. + (SURGE_GAIN*uSurge + ABSORB_GAIN*uAbsorb)*(1. - isHead);
+  col = flick*col*g/(1. + KNEE*(g - 1.)*col);
   col += cyan*gk*.3;
-  float lens = uHover*smoothstep(170., 40., length(p - uMouseF));
+  // the hover lens never repaints his face (nothing sits over it), and the engine fades uHover out while pressed
+  float lens = uHover*smoothstep(170., 40., length(p - uMouseF))*(1. - isHead);
   col = mix(col, mix(cyan*.6, ice, cl)*gB*(.35 + 1.5*cl) + cyan*cont*.8, lens*.85);
   o = vec4(col*vis, vis*(.48 + .34*I));            // more solid than v10: the disk passes behind him
 }`;
@@ -255,7 +294,7 @@ void main(){
 export const VS_RIB = COMMON + `
 in vec2 aP; in vec2 aQ; in vec3 aC;   // position (px) | side, intensity | colour
 out float vSide; out float vI; out vec3 vC;
-void main(){ gl_Position = toClip(aP); vSide = aQ.x; vI = aQ.y; vC = aC; }`;
+void main(){ gl_Position = toClip(aP + uShake); vSide = aQ.x; vI = aQ.y; vC = aC; }`;
 // uHalo: 1 on his head, falling to 0 a margin outside it (built in singularity-gl.ts from the region
 // mask). uHaloRect maps figure px to the halo texture, which is padded so the margin also covers the
 // space above his hair. This is a hard guarantee: whatever path a ribbon takes, no pixel survives there.
@@ -277,7 +316,7 @@ void main(){
 export const VS_DOT = COMMON + `
 in vec2 aP; in vec4 aC; in float aS;   // position (px) | rgba | size (px)
 out vec4 vC;
-void main(){ gl_Position = toClip(aP); gl_PointSize = aS; vC = aC; }`;
+void main(){ gl_Position = toClip(aP + uShake); gl_PointSize = aS; vC = aC; }`;
 export const FS_DOT = `#version 300 es
 precision highp float; in vec4 vC; out vec4 o;
 void main(){
@@ -291,7 +330,7 @@ void main(){
 export const VS_GLYPH = COMMON + `
 in vec2 aP; in vec4 aC; in float aS; in float aG;   // position (px) | rgba | size (px) | atlas index
 out vec4 vC; out float vG;
-void main(){ gl_Position = toClip(aP); gl_PointSize = aS; vC = aC; vG = aG; }`;
+void main(){ gl_Position = toClip(aP + uShake); gl_PointSize = aS; vC = aC; vG = aG; }`;
 export const FS_GLYPH = `#version 300 es
 precision highp float;
 uniform sampler2D uAtlas;
@@ -301,105 +340,4 @@ void main(){
   float a = texture(uAtlas, (cell + gl_PointCoord)/8.).a*vC.a;
   if (a < .003) discard;
   o = vec4(vC.rgb*a, 0.);
-}`;
-
-/* ---------- post ---------- */
-export const FS_DOWN = `#version 300 es
-precision highp float; uniform sampler2D uSrc; uniform vec2 uTexel; uniform float uThresh; out vec4 o;
-void main(){
-  vec2 uv = gl_FragCoord.xy*uTexel*2.;
-  vec4 t0 = texture(uSrc, uv), t1 = texture(uSrc, uv + uTexel*vec2(-1.,-1.)), t2 = texture(uSrc, uv + uTexel*vec2(1.,-1.)),
-       t3 = texture(uSrc, uv + uTexel*vec2(-1.,1.)), t4 = texture(uSrc, uv + uTexel*vec2(1.,1.));
-  float m = uThresh > 0. ? 1. : 0.;
-  vec3 c = (t0.rgb*mix(1., t0.a, m)*4. + t1.rgb*mix(1., t1.a, m) + t2.rgb*mix(1., t2.a, m) + t3.rgb*mix(1., t3.a, m) + t4.rgb*mix(1., t4.a, m))/8.;
-  if (uThresh > 0.) { float b = max(c.r, max(c.g, c.b)); c *= smoothstep(uThresh, uThresh+.35, b); }
-  o = vec4(c, 1.);
-}`;
-export const FS_UP = `#version 300 es
-precision highp float; uniform sampler2D uSrc; uniform vec2 uTexel; out vec4 o;
-void main(){
-  vec2 uv = gl_FragCoord.xy*uTexel*.5;   // uTexel is the source texel; target is twice the size
-  vec2 h = uTexel;
-  vec3 c = texture(uSrc, uv + vec2(-h.x*2.,0.)).rgb + texture(uSrc, uv + vec2(h.x*2.,0.)).rgb
-         + texture(uSrc, uv + vec2(0.,-h.y*2.)).rgb + texture(uSrc, uv + vec2(0.,h.y*2.)).rgb;
-  c += (texture(uSrc, uv + vec2(-h.x,h.y)).rgb + texture(uSrc, uv + vec2(h.x,h.y)).rgb
-      + texture(uSrc, uv + vec2(-h.x,-h.y)).rgb + texture(uSrc, uv + vec2(h.x,-h.y)).rgb)*2.;
-  o = vec4(c/12., 1.);
-}`;
-
-export const FS_COMP = COMMON + `
-uniform sampler2D uScene; uniform sampler2D uBloom; uniform float uBloomK; uniform float uBoot;
-uniform vec4 uWave; uniform float uFlash;           // centre xy, radius, strength
-uniform float uLight; uniform vec3 uProj;           // light theme on/off; the projection field's centre xy and radius (device px)
-uniform float uExpo;                                // exposure: phones draw the scene a little darker so the face keeps its cyan
-uniform float uCharge;                              // light theme only: charging must not wash him into the field (Eric round 8)
-out vec4 o;
-void main(){
-  vec2 fc = vec2(gl_FragCoord.x, uRes.y-gl_FragCoord.y);
-  vec2 uv = gl_FragCoord.xy/uRes;
-  // the shockwave refracts the whole image as it passes
-  vec2 d = fc - uWave.xy; float r = length(d);
-  float ring = (r - uWave.z)/(40.*uDpr);
-  float k = uWave.w*exp(-ring*ring)*sin(ring*3.);
-  vec2 off = (r > 0. ? d/r : vec2(0.))*k*18.*uDpr;
-  vec2 cc = uv-.5;
-  // no shock-driven split: a per-channel offset across a bright shell turned its edge yellow-orange (Eric round 2)
-  float ca = dot(cc,cc)*.008;
-  vec2 u2 = (fc + off)/uRes; u2.y = 1.-u2.y;
-  vec3 col = vec3(texture(uScene, u2 - cc*ca).r, texture(uScene, u2).g, texture(uScene, u2 + cc*ca).b);
-  col += texture(uBloom, u2).rgb*uBloomK*mix(1., 1. - .7*uCharge, uLight); col *= uExpo; // light: charge adds no white bloom
-  col += vec3(.4,.85,1.)*abs(k)*.10;
-  col += vec3(.5,.9,1.)*uFlash*.10;
-  col = (col*(2.51*col+.03))/(col*(2.43*col+.59)+.14);
-  col *= 1.-dot(cc*vec2(1.,1.2), cc*vec2(1.,1.2))*.9;
-  // light theme: the scene's luminance becomes ink on a pearl page, with a deep-blue projection field behind him (never inverted, never true colour)
-  if (uLight > .5) {
-    // a pastel daylight sky (lavender, ice and mint nebula), the scene's luminance as cyan-blue ink, and the deep-blue
-    // projection field behind him: he reads as the glowing hologram, never as an inverted photo
-    // Signal round 7: a deep twilight field behind him (inside it the hologram is bright cyan on deep blue, so his
-    // face holds its tones); outside it the scene is azure ink on the pastel environment, which fades into the page
-    // charge and flash brighten the whole scene; on the light page that saturated him and the field alike into one
-    // bright wash and he vanished (Eric round 8), so the luminance is compressed by the same amount: his face keeps
-    // its tones against the field around him while charging
-    float lum = dot(col, vec3(.299,.587,.114));
-    float l = clamp(lum*1.3/(1. + 1.0*uCharge + 1.2*uFlash), 0., 1.); // charge keeps his tones: a dimmer hologram read as grey mud (M2)
-    vec3 paper = mix(vec3(.94,.98,1.), vec3(.87,.91,1.), uv.y);
-    // ice patches, not grey-mauve: the lavender term mixed with the azure ink read as smoke between his head and the copy (round 3 critic)
-    paper = mix(paper, vec3(.80,.88,1.), smoothstep(.55, 1., vnoise(uv*2.2 + vec2(uTime*.02, 0.)))*.45);
-    // upper-left, between his head and the copy: the field's falloff runs into deep blue-violet, the family of the right side
-    float ulT = (1. - smoothstep(0., .55, uv.x))*smoothstep(.45, 1., uv.y);
-    paper = mix(paper, vec3(.30,.34,.88), ulT*.5);
-    paper = mix(paper, vec3(.74,.94,1.), smoothstep(.5, 1., vnoise(uv*3.1 - vec2(0., uTime*.015) + 4.))*.45);
-    paper = mix(paper, vec3(.78,1.,.93), smoothstep(.6, 1., vnoise(uv*2.6 + 9.))*.28);
-    // centred lower than the disk, on his shoulders, so the body keeps the deep field the face has
-    vec2 pd = (fc - uProj.xy - vec2(0., uProj.z*.3))/(uProj.z*1.6);
-    // the field's core: wider than the disc and shifted left, so the navy covers his left cheek and shoulder as well as the right (round 9 audit)
-    vec2 pf = (fc - uProj.xy - vec2(-uProj.z*.25, uProj.z*.3))/(uProj.z*vec2(1.85, 1.6)); float rf = dot(pf, pf);
-    // a flat navy core (no pale paper leaking into it), dissolving over a long radius and before the canvas edges (no box on a phone)
-    float phone = step(uRes.x, 700.); // a phone canvas is narrow: its navy must dissolve across the gutters and the top too
-    float ew = mix(.12, .32, phone), eh = mix(.1, .2, phone);
-    float edge = smoothstep(0., ew, uv.x)*smoothstep(0., ew, 1. - uv.x)*smoothstep(0., eh, uv.y)*smoothstep(0., eh, 1. - uv.y);
-    // Eric (2026-11-17): the edge was too soft and the transition not smooth. The falloff ran on rf (distance squared)
-    // over 1.1..4.2, so it was long and lopsided, and the canvas-edge fade multiplied in a box shape. It now eases on
-    // the true distance over a tighter band, so the field is a clean ellipse whose edge is one smooth curve; the
-    // canvas-edge fade stays only as a guard for the phone.
-    float field = (1. - smoothstep(1.15, 1.75, sqrt(rf)))*mix(1., edge, phone);
-    vec3 ink = mix(vec3(.04,.40,.86), vec3(.02,.30,.66), smoothstep(.4, 1., l));
-    vec3 outside = mix(paper, ink, smoothstep(.03, .4, l)*.9);
-    // navy core lifted off near-black (a dark blob at 768), azure #1f6fd1 at the dissolve; charge still deepens it, by less
-    vec3 twilight = mix(vec3(.02,.07,.30), vec3(.12,.44,.82), smoothstep(.3, 2.2, rf))*(1. - .35*uCharge);
-    vec3 holo = mix(vec3(.06,.66,.98), vec3(.62,.95,1.), smoothstep(.7, 1., l)); // capped white: the highlights stay cyan on navy
-    holo = mix(holo, vec3(.02,.55,1.), uCharge*.45*(1. - smoothstep(.7, 1., l))); // charge: deeper, more saturated cyan, never white
-    // his silhouette (head, shoulders, torso): only inside it does scene light become hologram; the glow beside him stays field
-    float figM = 1. - smoothstep(.62, .82, length(vec2(pd.x/.26, (pd.y + .3)/.4))); // head and torso in disc units (U ~ 0.4 of the disc span)
-    holo *= 1. + .45*smoothstep(-.4, .1, pd.y); // lift the shoulders and lower body (they read against the field)
-    vec3 inside = mix(twilight, holo, smoothstep(.06, .7, l)*figM);
-    col = mix(outside, inside, field);
-    // deep-teal rim on his left silhouette: a dark pixel with a bright neighbour to its right is the outer edge
-    float rimL = clamp(dot(texture(uScene, u2 + vec2(6./uRes.x, 0.)).rgb - texture(uScene, u2).rgb, vec3(.299,.587,.114)), 0., 1.);
-    float leftSide = smoothstep(0., -.3, pd.x);
-    col = mix(col, vec3(.0,.42,.50), clamp(rimL*4., 0., 1.)*leftSide*.85);
-  }
-  col += (h2(fc+fract(uTime*7.)*91.)-.5)*.02;
-  o = vec4(col*uBoot, 1.);
 }`;

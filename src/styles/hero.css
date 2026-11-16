@@ -1,7 +1,8 @@
 /* Hero stage ("Singularity"). One continuous scene: the graphic, the layered field and the copy share the
-   page field. Dark theme: a deep void with aurora light. Light theme: pearl and ice with a deep-blue projection
-   behind the figure (overrides at the end of this file). The bottom edge is masked into the page, so there is no
-   seam in either theme. */
+   page field. Dark theme: a deep void with aurora light. Light theme: pearl and ice, with his own glow behind the
+   figure, drawn by the engine (hero-light.css, imported here). The bottom edge is masked into the page, so
+   there is no seam in either theme. */
+@import './hero-light.css';
 
 /* sections.css gives every `main > section` padding and a tint; the stage is a scene, not a section.
    flow.css makes the stage transparent; this id-level selector wins that tie, so the dark nebula stays. */
@@ -63,8 +64,10 @@ main#main > section.m2c-stage.m2c-stage {
   --fig-h: 0.9;
   position: relative;
   flex: none;
-  height: 60vh;
-  height: 60svh;
+  /* The engine bottom-anchors his figure, so the extra 120 px lifts his head's top clear of the nav row in both
+     themes (O8); the top 12% of the mask is empty field above his head. Desktop sets its own height. */
+  height: calc(60vh + 120px);
+  height: calc(60svh + 120px);
   min-height: 360px;
   max-height: 640px;
   overflow: hidden;
@@ -134,6 +137,22 @@ main#main > section.m2c-stage.m2c-stage {
   z-index: 1;
   pointer-events: none;
   mix-blend-mode: screen;
+  /* nothing sits over his face: the engine reports his head box (--m2c-face-*), the code rows fade out around it */
+  --m2c-face-mask: radial-gradient(
+    calc(var(--m2c-face-rx, 0px) * 1.3 + 1px) calc(var(--m2c-face-ry, 0px) * 1.3 + 1px) at var(--m2c-face-x, -999px) var(--m2c-face-y, -999px),
+    transparent 72%,
+    #000 100%
+  );
+  /* none above his head (G1/H2: a glyph row over his hair read as a label) or on the nav row (O8): open beside OR below */
+  --m2c-cx0: calc(var(--m2c-face-x, -999px) - var(--m2c-face-rx, 0px) * 1.6);
+  --m2c-cx1: calc(var(--m2c-face-x, -999px) + var(--m2c-face-rx, 0px) * 1.6);
+  --m2c-col-x: linear-gradient(90deg, #000 calc(var(--m2c-cx0) - 32px), transparent var(--m2c-cx0), transparent var(--m2c-cx1), #000 calc(var(--m2c-cx1) + 32px));
+  --m2c-col-y: linear-gradient(180deg, transparent calc(var(--m2c-face-y, -999px) - var(--m2c-face-ry, 0px) * 1.1), #000 calc(var(--m2c-face-y, -999px) - var(--m2c-face-ry, 0px) * 0.7));
+  --m2c-nav-row: linear-gradient(180deg, transparent 80px, #000 112px);
+  -webkit-mask-image: var(--m2c-nav-row), var(--m2c-face-mask), var(--m2c-col-x), var(--m2c-col-y);
+  -webkit-mask-composite: source-in, source-in, source-over, source-over;
+  mask-image: var(--m2c-nav-row), var(--m2c-face-mask), var(--m2c-col-x), var(--m2c-col-y);
+  mask-composite: intersect, intersect, add, add;
 }
 
 /* ---------- copy ---------- */
@@ -203,6 +222,17 @@ main#main > section.m2c-stage.m2c-stage {
   z-index: 1;
   pointer-events: none;
   mix-blend-mode: screen;
+}
+
+/* Charging and releasing, the name's canvas steps back: its strands drew a thin line across the name, which reads as
+   a scratch (round 10 review; hero-name.ts has no owner this round). The letters keep their glow (energy.css). */
+.m2c-name-fx {
+  opacity: clamp(0, 1 - var(--m2c-charge, 0) * 12, 1);
+  transition: opacity 0.3s ease;
+}
+
+.m2c-surge .m2c-name-fx {
+  opacity: 0;
 }
 
 .m2c-roles {
@@ -364,222 +394,6 @@ main#main > section.m2c-stage.m2c-stage {
         rgb(2 5 11 / 0.14) 46%,
         rgb(2 5 11 / 0.04) 50%,
         rgb(2 5 11 / 0) 54%
-      );
-  }
-}
-
-/* ---------- light theme: pearl and ice, a deep-blue projection behind him ----------
-   The stage keeps no solid base here: the page field (flow.css) shows through, so the hero and the next section
-   are the same surface. The engine paints an opaque dark still, so its canvas is masked into a soft projection
-   disc centred on his body axis (--fig-x), and the disc's edge dissolves into the pearl. */
-
-:root[data-theme='light'] main#main > section.m2c-stage.m2c-stage {
-  background:
-    radial-gradient(56% 58% at calc(var(--fig-x, 0.5) * 100%) 44%, rgb(18 56 106 / 0.18), transparent 72%),
-    radial-gradient(42% 40% at 12% 20%, rgb(139 92 246 / 0.1), transparent 70%),
-    radial-gradient(38% 34% at 60% 96%, rgb(45 245 160 / 0.08), transparent 70%);
-}
-
-/* Eric (2026-11-17): the edge was too soft and the transition banded. The old mask fell off in two straight
-   segments with kinks at 58% and 80%, which the eye reads as rings. Both the plate and the mask now follow one
-   smoothstep curve, sampled every 1/8, over a narrower band (80% to 100% here; on the phone the wide 20% to 100% ease stays, because the shader's edge fade is a box there),
-   so more of him stays solid and the edge has no kink to see. The shader's field (singularity-shaders.ts) sits
-   inside this circle, so the circle never cuts its corners. */
-:root[data-theme='light'] .m2c-sing {
-  background: radial-gradient(
-    closest-side at calc(var(--fig-x, 0.5) * 100%) 50%,
-    rgb(18 56 106 / 0.42) 0%,
-    rgb(22 70 140 / 0.4) 50%,
-    rgb(24 80 160 / 0.36) 70%,
-    rgb(26 88 172 / 0.345) 73.75%,
-    rgb(28 94 182 / 0.304) 77.5%,
-    rgb(29 100 192 / 0.246) 81.25%,
-    rgb(30 104 198 / 0.18) 85%,
-    rgb(31 108 204 / 0.114) 88.75%,
-    rgb(31 110 207 / 0.056) 92.5%,
-    rgb(31 111 209 / 0.015) 96.25%,
-    rgb(31 111 209 / 0) 100%
-  );
-}
-
-:root[data-theme='light'] .m2c-sing canvas {
-  -webkit-mask-image: radial-gradient(
-    closest-side at calc(var(--fig-x, 0.5) * 100%) 50%,
-    #000 80%,
-    rgb(0 0 0 / 0.957) 82.5%,
-    rgb(0 0 0 / 0.844) 85%,
-    rgb(0 0 0 / 0.684) 87.5%,
-    rgb(0 0 0 / 0.5) 90%,
-    rgb(0 0 0 / 0.316) 92.5%,
-    rgb(0 0 0 / 0.156) 95%,
-    rgb(0 0 0 / 0.043) 97.5%,
-    transparent 100%
-  );
-  mask-image: radial-gradient(
-    closest-side at calc(var(--fig-x, 0.5) * 100%) 50%,
-    #000 80%,
-    rgb(0 0 0 / 0.957) 82.5%,
-    rgb(0 0 0 / 0.844) 85%,
-    rgb(0 0 0 / 0.684) 87.5%,
-    rgb(0 0 0 / 0.5) 90%,
-    rgb(0 0 0 / 0.316) 92.5%,
-    rgb(0 0 0 / 0.156) 95%,
-    rgb(0 0 0 / 0.043) 97.5%,
-    transparent 100%
-  );
-}
-
-/* Phone and portrait, light only. The engine bottom-anchors the figure, so it cannot be moved down inside a canvas
-   that starts at the top of the stage: the canvas starts under the floating nav instead, and the extra 120 px of
-   height lifts the head's top (measured 103 px at 390 wide before, 110 px with this) clear of the 82 px nav and its
-   scrim. The top 12% of the canvas is empty space above the head, so its fade is invisible. A radial mask would
-   thin the top of the head out, so the mask is two linear fades instead. Dark keeps its approved placement. */
-@media (max-width: 1023px), (orientation: portrait) {
-  :root[data-theme='light'] .m2c-sing {
-    height: calc(60svh + 120px);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 12%, #000 78%, transparent 100%);
-    mask-image: linear-gradient(to bottom, transparent 0%, #000 12%, #000 78%, transparent 100%);
-    /* The projection plate is lighter here: a deep core only behind the head, pale azure beyond it. */
-    background: radial-gradient(
-      closest-side at calc(var(--fig-x, 0.5) * 100%) 47%,
-      rgb(18 56 106 / 0.3),
-      rgb(31 111 209 / 0.12) 55%,
-      transparent 100%
-    );
-  }
-
-  /* The engine's dark core and its halo spill past the head and shoulders into a rectangle. The elliptical layer
-     keeps the core where the figure is and dissolves the spill to the pale page, so no dark slab reads as a box. */
-  /* The ellipse used to fall from full to 20% within 22% of its radius, which drew a visible rim. It now eases
-     over the whole radius in long steps, so the dark core dissolves into the pearl with no edge to see. */
-  :root[data-theme='light'] .m2c-sing canvas {
-    -webkit-mask-image:
-      linear-gradient(to bottom, transparent 0%, #000 12%, #000 78%, transparent 100%),
-      linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%),
-      radial-gradient(ellipse 66% 62% at 50% 47%, #000 20%, rgb(0 0 0 / 0.957) 30%, rgb(0 0 0 / 0.844) 40%, rgb(0 0 0 / 0.684) 50%, rgb(0 0 0 / 0.5) 60%, rgb(0 0 0 / 0.316) 70%, rgb(0 0 0 / 0.156) 80%, rgb(0 0 0 / 0.043) 90%, transparent 100%);
-    -webkit-mask-composite: source-in, source-in;
-    mask-image:
-      linear-gradient(to bottom, transparent 0%, #000 12%, #000 78%, transparent 100%),
-      linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%),
-      radial-gradient(ellipse 66% 62% at 50% 47%, #000 20%, rgb(0 0 0 / 0.957) 30%, rgb(0 0 0 / 0.844) 40%, rgb(0 0 0 / 0.684) 50%, rgb(0 0 0 / 0.5) 60%, rgb(0 0 0 / 0.316) 70%, rgb(0 0 0 / 0.156) 80%, rgb(0 0 0 / 0.043) 90%, transparent 100%);
-    mask-composite: intersect;
-  }
-}
-
-:root[data-theme='light'] .m2c-field,
-:root[data-theme='light'] .m2c-name-fx {
-  mix-blend-mode: normal;
-}
-
-:root[data-theme='light'] .m2c-copy::before {
-  background: linear-gradient(to bottom, rgb(244 248 251 / 0) 0%, rgb(244 248 251 / 0.8) 18%, rgb(244 248 251 / 0.9) 100%);
-}
-
-/* Small labels: solid deep ink, no alpha. The azure stays on decorative accents only. */
-:root[data-theme='light'] .m2c-eyebrow {
-  color: #12386a;
-}
-
-/* The name: the energy canvas moves under the letters in light, so the navy glyphs are never painted over.
-   The current reads as a pale glow around and behind each letter and the ink stays one colour (WCAG 4.5:1). */
-:root[data-theme='light'] .m2c-name-wrap {
-  isolation: isolate;
-}
-
-:root[data-theme='light'] .m2c-name-fx {
-  z-index: -1;
-  mix-blend-mode: normal;
-}
-
-:root[data-theme='light'] .m2c-name {
-  color: #04285a;
-  text-shadow: 0 0 2px rgb(244 248 251 / 0.95), 0 0 10px rgb(244 248 251 / 0.85), 0 0 1px rgb(11 95 191 / 0.6);
-}
-
-/* Inset, like the dark ring: the graphic runs edge to edge, so an outset ring would fall off the viewport. */
-/* Light: an ink ring with a white halo on a pale inner ring, so it holds against the dark projection field
-   behind him as well as the pale page (WCAG 1.4.11). Drawn on a pseudo-element; the outline is switched off. */
-:root[data-theme='light'] .m2c-sing:focus-visible {
-  outline: none;
-}
-
-:root[data-theme='light'] .m2c-sing:focus-visible::after {
-  content: '';
-  position: absolute;
-  inset: 6px;
-  z-index: 5;
-  border: 3px solid #04285a;
-  border-radius: 20px;
-  box-shadow: 0 0 0 2px #ffffff, inset 0 0 0 2px #ffffff;
-  pointer-events: none;
-}
-
-:root[data-theme='light'] .m2c-roles {
-  color: #12386a;
-}
-
-:root[data-theme='light'] .m2c-bio {
-  color: #2a4058;
-}
-
-:root[data-theme='light'] .m2c-bio strong {
-  color: #0a1830;
-}
-
-/* Primary CTA in light: a luminous pearl-to-ice fill with an ink label (no solid azure slab, K1). The azure
-   lives on the border, so the button still reads as the primary action on the pale page. */
-:root[data-theme='light'] .m2c-stage .btn-primary {
-  background: linear-gradient(180deg, #ffffff 0%, #d7ebff 100%);
-  border-color: #0b5fbf;
-  color: #061428;
-}
-
-:root[data-theme='light'] .m2c-stage .btn-primary:hover {
-  background: linear-gradient(180deg, #ffffff 0%, #bfe0ff 100%);
-  border-color: #04285a;
-  color: #061428;
-}
-
-:root[data-theme='light'] .m2c-stage .btn-ghost {
-  background: rgb(255 255 255 / 0.6);
-  border-color: rgb(10 24 48 / 0.22);
-  color: #0a1830;
-}
-
-:root[data-theme='light'] .m2c-stage .btn-ghost:hover {
-  border-color: #0b5fbf;
-  color: #0b5fbf;
-}
-
-:root[data-theme='light'] .m2c-stage .btn:focus-visible {
-  outline-color: #0b5fbf;
-}
-
-:root[data-theme='light'] .m2c-chain {
-  background: radial-gradient(closest-side, rgb(244 248 251 / 0.85), rgb(244 248 251 / 0));
-  color: #12386a;
-}
-
-:root[data-theme='light'] .m2c-chain-label {
-  color: #12386a;
-}
-
-:root[data-theme='light'] .m2c-chain[data-live='true'] .m2c-chain-dot {
-  background: #0a7d78;
-  box-shadow: 0 0 8px rgb(10 125 120 / 0.6);
-}
-
-@media (min-width: 1024px) and (orientation: landscape) {
-  :root[data-theme='light'] .m2c-stage::before {
-    background:
-      radial-gradient(56% 74% at 24% 50%, rgb(244 248 251 / 0.8) 0%, rgb(244 248 251 / 0.55) 50%, rgb(244 248 251 / 0) 100%),
-      linear-gradient(
-        90deg,
-        rgb(244 248 251 / 0.55) 0%,
-        rgb(244 248 251 / 0.5) 30%,
-        rgb(244 248 251 / 0.3) 40%,
-        rgb(244 248 251 / 0.1) 46%,
-        rgb(244 248 251 / 0) 54%
       );
   }
 }

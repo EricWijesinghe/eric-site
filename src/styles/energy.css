@@ -1,0 +1,69 @@
+/* The page-wide answer to his charge and release: the glyph canvas (src/scripts/energy-overlay.ts), the tremor
+   around him (src/scripts/energy-shake.ts) and the surge of the headings. Mounted by EnergyOverlay.astro. */
+
+.energy-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 40;
+  pointer-events: none;
+}
+
+/* The tremor. energy-shake.ts puts .m2c-shake on what is on screen around him while he charges and writes the two
+   offsets; the hero's own canvas never gets the class, so he stays still. They are registered as non-inherited
+   lengths so a new offset restyles one element, not its whole subtree. `translate` (not `transform`) leaves any
+   transform the element already has alone. */
+@property --shk-x {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+@property --shk-y {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+.m2c-shake {
+  translate: var(--shk-x, 0px) var(--shk-y, 0px);
+  will-change: translate;
+}
+/* The field spans the hero edge to edge: while it moves it is 3 % larger, so the strongest jolt (12 px, 6 on a phone)
+   never bares its edge at the side of the screen. It swells in and out over a breath, which reads as the inhale. */
+.m2c-field {
+  transition: scale 0.3s var(--sig-ease, ease);
+}
+.m2c-field.m2c-shake {
+  scale: 1.03;
+}
+
+/* A release makes the page's headings and accents surge for a moment, in both themes. */
+.section-title,
+.section-label,
+#hero-title,
+.btn-primary {
+  transition: text-shadow 0.5s ease, box-shadow 0.5s ease, filter 0.5s ease;
+}
+.m2c-surge .section-title,
+.m2c-surge #hero-title {
+  text-shadow: 0 0 18px rgb(56 225 255 / 0.75), 0 0 42px rgb(139 92 246 / 0.45);
+}
+.m2c-surge .btn-primary {
+  box-shadow: 0 0 0 1px rgb(56 225 255 / 0.6), 0 0 28px rgb(56 225 255 / 0.55);
+}
+:root[data-theme='light'].m2c-surge .section-title,
+:root[data-theme='light'].m2c-surge #hero-title {
+  text-shadow: 0 0 14px rgb(11 95 191 / 0.45), 0 0 34px rgb(91 43 214 / 0.3);
+}
+:root[data-theme='light'].m2c-surge .btn-primary {
+  box-shadow: 0 0 0 1px rgb(11 95 191 / 0.5), 0 0 24px rgb(11 95 191 / 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .energy-overlay {
+    display: none;
+  }
+  .m2c-shake {
+    translate: none;
+  }
+}

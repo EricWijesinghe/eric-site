@@ -11,11 +11,32 @@ const HALO_HIT = 0.25; // only the inner part of the halo blocks points and stro
 const SOLID_HIT = 128; // figure alpha (0..255) that counts as his body
 const SAMPLE_PX = 8; // a segment is sampled this often (device px); the zone is wider than this, so none is skipped
 
+const KEEP_FROM = 1.15, KEEP_TO = 1.8; // in head radii, as HEAD_KEEP
+// The flanks (G1): from the canvas top down to his shoulder line, within one head width either side of his head, no
+// steep segment is drawn: a vertical trace beside his temple read as a line converging on his head (round 10 review).
+const FLANK_FLOOR = 0.25; // the shoulder line, in head heights below his chin
+const STEEP = 1; // a segment counts as vertical when it rises at least this much per unit sideways
+
+/**
+ * The release shock's keep factor at a figure-px point, the CPU mirror of HEAD_KEEP (singularity-shaders.ts): 0 on
+ * his head, the column above it and a margin at ear height. ?debug samples it to prove the shock is cut there.
+ */
+export function headKeep(h: HeadBox, x: number, y: number): number {
+  const rx = (h.x1 - h.x0) / 2, ry = (h.y1 - h.y0) / 2;
+  const qx = (x - (h.x0 + h.x1) / 2) / rx, qy = (y - (h.y0 + h.y1) / 2) / ry;
+  const d = qy < 0 ? Math.abs(qx) : Math.hypot(qx, qy);
+  const k = Math.max(0, Math.min(1, (d - KEEP_FROM) / (KEEP_TO - KEEP_FROM)));
+  return k * k * (3 - 2 * k);
+}
+
 export class HeadZone {
   // device px: the column's sides, and its floor (the top of his head); the column runs up to the canvas edge
   private cx0 = 0;
   private cx1 = 0;
   private cy1 = 0;
+  private fx0 = 0;
+  private fx1 = 0;
+  private fy1 = 0;
   private fo: Pt = [0, 0];
   private s = 1;
 
@@ -33,6 +54,17 @@ export class HeadZone {
     this.cx0 = fo[0] + (this.head.x0 - COLUMN_MARGIN) * s;
     this.cx1 = fo[0] + (this.head.x1 + COLUMN_MARGIN) * s;
     this.cy1 = fo[1] + this.head.y0 * s;
+    const hw = this.head.x1 - this.head.x0, hh = this.head.y1 - this.head.y0;
+    this.fx0 = fo[0] + (this.head.x0 - hw) * s;
+    this.fx1 = fo[0] + (this.head.x1 + hw) * s;
+    this.fy1 = fo[1] + (this.head.y1 + FLANK_FLOOR * hh) * s;
+  }
+
+  /** True when a→b is a steep segment in his head's flanks, above his shoulder line. */
+  flank(a: Pt, b: Pt): boolean {
+    const dx = Math.abs(b[0] - a[0]), dy = Math.abs(b[1] - a[1]);
+    if (dy < dx * STEEP || Math.min(a[1], b[1]) > this.fy1) return false;
+    return Math.max(a[0], b[0]) > this.fx0 && Math.min(a[0], b[0]) < this.fx1;
   }
 
   /** The column as the sky shader reads it: left, right and floor (device px), and a spare slot. */

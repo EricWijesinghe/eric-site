@@ -1,15 +1,16 @@
 // The hero's GPU resources, built once per context: the glyph atlas, the bit disk (transform feedback),
 // the figure mesh, the vapour, the ribbon and dot streams, and the programs for the post chain.
 import * as S from './singularity-shaders';
+import * as POST from './singularity-shaders-post';
 import { type glKit, type Halo, type Program } from './singularity-gl';
 import { DOT_MAX, DOT_STRIDE, FIG, GLYPH_MAX, GLYPH_STRIDE, GLYPHS, RIB_MAX, RIB_STRIDE } from './singularity-config';
-import type { Vapour } from './singularity-figure';
+import type { Aura, Vapour } from './singularity-figure';
 
 export type Kit = ReturnType<typeof glKit>;
 export interface Images { fig: HTMLImageElement; aux: HTMLImageElement; trace: HTMLImageElement }
 
 export interface Res {
-  tFig: WebGLTexture; tAux: WebGLTexture; tTr: WebGLTexture; tAtlas: WebGLTexture; tHalo: WebGLTexture;
+  tFig: WebGLTexture; tAux: WebGLTexture; tTr: WebGLTexture; tAtlas: WebGLTexture; tHalo: WebGLTexture; tAura: WebGLTexture;
   pBG: Program; pSim: Program; pDisk: Program; pMesh: Program; pVap: Program; pRib: Program; pDot: Program;
   pDown: Program; pUp: Program; pComp: Program;
   vFS: WebGLVertexArrayObject;
@@ -41,8 +42,8 @@ function glyphAtlas(): HTMLCanvasElement {
   return at;
 }
 
-export function createResources(gl: WebGL2RenderingContext, K: Kit, img: Images, halo: Halo, vapour: Vapour, maxN: number, rnd: () => number): Res {
-  const tFig = K.tex(img.fig), tAux = K.tex(img.aux), tTr = K.tex(img.trace), tAtlas = K.tex(glyphAtlas()), tHalo = K.texR8(halo.data, halo.w, halo.h);
+export function createResources(gl: WebGL2RenderingContext, K: Kit, img: Images, halo: Halo, aura: Aura, vapour: Vapour, maxN: number, rnd: () => number): Res {
+  const tFig = K.tex(img.fig), tAux = K.tex(img.aux), tTr = K.tex(img.trace), tAtlas = K.tex(glyphAtlas()), tHalo = K.texR8(halo.data, halo.w, halo.h), tAura = K.tex(aura.image);
   [tFig, tAtlas].forEach((t) => {
     gl.bindTexture(gl.TEXTURE_2D, t); gl.generateMipmap(gl.TEXTURE_2D);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
@@ -50,7 +51,7 @@ export function createResources(gl: WebGL2RenderingContext, K: Kit, img: Images,
 
   const pBG = K.prog(S.VS_FS, S.FS_BG), pSim = K.prog(S.VS_SIM, S.FS_NULL, ['oS']), pDisk = K.prog(S.VS_DISK, S.FS_POINT), pMesh = K.prog(S.VS_MESH, S.FS_MESH),
     pVap = K.prog(S.VS_VAPOR, S.FS_POINT), pRib = K.prog(S.VS_RIB, S.FS_RIB), pDot = K.prog(S.VS_DOT, S.FS_DOT), pGlyph = K.prog(S.VS_GLYPH, S.FS_GLYPH),
-    pDown = K.prog(S.VS_FS, S.FS_DOWN), pUp = K.prog(S.VS_FS, S.FS_UP), pComp = K.prog(S.VS_FS, S.FS_COMP);
+    pDown = K.prog(S.VS_FS, POST.FS_DOWN), pUp = K.prog(S.VS_FS, POST.FS_UP), pComp = K.prog(S.VS_FS, POST.FS_COMP);
   const vFS = gl.createVertexArray()!;
   const fsBuf = K.buffer(new Float32Array([-1, -1, 3, -1, -1, 3]));
   [pBG, pDown, pUp, pComp].forEach((P) => K.bindAttr(P, vFS, 'aP', fsBuf, 2));
@@ -125,7 +126,7 @@ export function createResources(gl: WebGL2RenderingContext, K: Kit, img: Images,
 
   return {
     pGlyph, vGlyph, glyphBuf, glyphData,
-    tFig, tAux, tTr, tAtlas, tHalo,
+    tFig, tAux, tTr, tAtlas, tHalo, tAura,
     pBG, pSim, pDisk, pMesh, pVap, pRib, pDot, pDown, pUp, pComp,
     vFS, vSim, vDisk, tfo, bS, vMesh, nIdx: mIdx.length, vVap, nVap: vapour.uv.length / 2,
     vRib, ribBuf, ribData, vDot, dotBuf, dotData,

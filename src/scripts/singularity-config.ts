@@ -14,7 +14,9 @@ export const CONFIG = {
   idleMs: 20000,
 } as const;
 
-export const FIG = { w: 1309, h: 1201, axisX: 790, discY: 760, headC: [800, 300] as const };
+// discY: the disk's centre sits on his chest, at the page orbit's centre (ORBIT.cy of his height, energy-orbit.ts);
+// at 760 it ringed his collar and read as his neck tightening (Eric round 10)
+export const FIG = { w: 1309, h: 1201, axisX: 790, discY: 841, headC: [800, 300] as const };
 export const FIG_HEAD_TOP = 40; // figure px from the top edge to the crown of his head
 export const FIG_BOTTOM = { land: 1.02, stacked: 0.84 }; // where his feet sit, as a fraction of canvas height
 // Glyph atlas cells, in order: binary and maths first, then short code tokens (Eric 2026-11-16: "I wanna codes,
@@ -74,3 +76,19 @@ export const GOV = {
   probeFrames: 30,
   probeSlowMs: 24,
 } as const;
+
+// A release's flash, surge and shock scale with how long he held (Eric round 10, O4/O6: "short tap = small burst, long
+// hold = huge burst"). A tap earns TAP_GAIN of them; a full charge (k from FULL_K[0] to FULL_K[1], about 0.35 to 1.1 s
+// of hold: k = 0.6 + 1.6 * charge) adds CHARGE_GAIN; the rest is earned only by what he absorbed, which takes seconds
+// of holding. The auto pulse at idle keeps its approved look.
+export const TAP_GAIN = 0.05;
+export const CHARGE_GAIN = 0.32;
+export const ABSORB_GAIN = 1 - TAP_GAIN - CHARGE_GAIN;
+export const FULL_K = [0.9, 1.6] as const;
+export const FLASH_DECAY = 3.2, FLASH_RING = 1.4; // per second; a full absorb rings longer (about 0.55 s instead of 0.31 s)
+export const SHOCK_FAST = 0.6; // a full absorb's shock travels this much faster
+export const HIT_HOLD_S = 0.08, HIT_FALL = 6.5; // a person's release: held for 80 ms, then gone within about 0.6 s
+export const GLITCH_QUIET_S = 1; // no hologram glitch this soon after a release: bars across his chest read as damage
+// A person's release sends a front through the computing behind him (G2): CSS px/s, and how far it carries (CSS px)
+// for a tap and for a full release, so a tap's front dies close to him and a full one reaches every edge
+export const WAVE_SPEED = 1650, WAVE_REACH_TAP = 300, WAVE_REACH_FULL = 2600, WAVE_LIFE_S = 2;

@@ -13,17 +13,22 @@ export interface Shot {
   dc: Pt; tilt: number; headC: Pt; // disk centre, disk tilt, head centre
   mouse: { x: number; y: number; on: number };
   charge: number; flash: number; boot: number; surge: number; hover: number; glitch: number; front: number;
-  bloomK: number;
+  bloomK: number; bloomRest: number; // the bloom now, and at rest (no charge, no absorb): his face keeps the rest level
   shock: [number, number, number, number]; shockW: number; // the shock shell: centre x, y, radius, strength; limb width (device px)
   ribN: number; ribBack: number; dotN: number; glyphN: number; // ribbon vertices drawn, and how many of them are behind him; dots; glyph particles
   haloRect: [number, number, number, number];
+  auraRect: [number, number, number, number]; // figure px to his glow texture (singularity-figure.ts)
+  absorb: number; // 0..1, eased: what he has absorbed of the page's energy; his hologram glows with it
+  hit: number; // 0..1: a person's release, held 80 ms then gone within about 0.6 s (the light theme's release)
   column: [number, number, number, number]; // the head zone's column for the sky: left, right, floor
   N: number; // disk bits drawn
+  shake: Pt; // device px: the charge tremor and the release jolt, for everything around him and never for him (O5)
+  head: [number, number, number, number]; // his head box, figure px: centre x, y, radii (halo.head); the shock is cut there
   light: number; // 1 in the light theme: the composite maps the scene's luminance onto a pearl page
   expo: number; // the composite's exposure: below 1 on phones, so the lit figure keeps its cyan face
 }
 
-
+const LIGHT_SURGE = 0.3; // the share of the figure's surge and absorbed glow the light theme draws on the figure itself
 
 /** One physics step of the disk on the GPU (transform feedback); the caller flips the ping-pong index. */
 export function stepDisk(gl: WebGL2RenderingContext, res: Res, cur: number, N: number, p: { dt: number; t: number; charge: number; pulseK: number; md: Pt; mOn: number }): void {
@@ -43,6 +48,8 @@ export function renderFrame(gl: WebGL2RenderingContext, res: Res, sc: Target, ch
     gl.uniform2f(P.u.uRes, W, H); gl.uniform1f(P.u.uTime, t);
     if (P.u.uDpr) gl.uniform1f(P.u.uDpr, DPR);
     if (P.u.uAtlas) gl.uniform1i(P.u.uAtlas, 2);
+    if (P.u.uShake) gl.uniform2f(P.u.uShake, sh.shake[0], sh.shake[1]);
+    if (P.u.uHead) gl.uniform4f(P.u.uHead, ...sh.head);
   };
   const uFig = (P: Program) => {
     const u = P.u;
@@ -63,6 +70,10 @@ export function renderFrame(gl: WebGL2RenderingContext, res: Res, sc: Target, ch
     gl.bindVertexArray(res.vDisk[cur]); gl.drawArrays(gl.POINTS, 0, sh.N);
   };
 
+  // light theme: a surging figure saturates into one flat cyan and his face is gone (Eric round 8), so most of the
+  // surge and the absorbed glow are shown by the composite there (deeper field, more saturated hologram)
+  const lit = sh.light ? LIGHT_SURGE : 1;
+
   gl.bindBuffer(gl.ARRAY_BUFFER, res.ribBuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, res.ribData, 0, sh.ribN * RIB_STRIDE);
   if (sh.dotN) { gl.bindBuffer(gl.ARRAY_BUFFER, res.dotBuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, res.dotData, 0, sh.dotN * DOT_STRIDE); }
   if (sh.glyphN) { gl.bindBuffer(gl.ARRAY_BUFFER, res.glyphBuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, res.glyphData, 0, sh.glyphN * GLYPH_STRIDE); }
@@ -74,12 +85,15 @@ export function renderFrame(gl: WebGL2RenderingContext, res: Res, sc: Target, ch
   gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, res.tAtlas);
   gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, res.tTr);
   gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, res.tHalo);
+  gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, res.tAura);
 
   // the void, lensed around him
   gl.useProgram(res.pBG.p); uC(res.pBG);
   gl.uniform2f(res.pBG.u.uC, sh.headC[0], (sh.headC[1] + sh.dc[1]) / 2); gl.uniform2f(res.pBG.u.uM, sh.mouse.x, sh.mouse.y);
   gl.uniform1f(res.pBG.u.uMOn, sh.mouse.on); gl.uniform1f(res.pBG.u.uU, sh.U); gl.uniform1f(res.pBG.u.uCharge, sh.charge);
   gl.uniform1f(res.pBG.u.uBoot, sh.boot); gl.uniform1f(res.pBG.u.uFlash, sh.flash);
+  gl.uniform1i(res.pBG.u.uAura, 7); gl.uniform4f(res.pBG.u.uAuraRect, ...sh.auraRect); gl.uniform2f(res.pBG.u.uFO, fo[0], fo[1]);
+  gl.uniform1f(res.pBG.u.uS, s); gl.uniform1f(res.pBG.u.uAbsorb, sh.light ? 0 : sh.absorb); // light: the composite draws his glow
   gl.uniform4f(res.pBG.u.uShock, ...sh.shock); gl.uniform1f(res.pBG.u.uShockW, sh.shockW); gl.uniform4f(res.pBG.u.uZone, ...sh.column);
   gl.bindVertexArray(res.vFS); gl.drawArrays(gl.TRIANGLES, 0, 3);
 
@@ -87,7 +101,7 @@ export function renderFrame(gl: WebGL2RenderingContext, res: Res, sc: Target, ch
   disk(0); // the far side of the disk, behind him
   ribbons(0, sh.ribBack); // the network's edges and the far ring
   if (sh.dotN) {
-    gl.blendFunc(gl.ONE, gl.ONE); gl.useProgram(res.pDot.p); gl.uniform2f(res.pDot.u.uRes, W, H);
+    gl.blendFunc(gl.ONE, gl.ONE); gl.useProgram(res.pDot.p); uC(res.pDot);
     gl.bindVertexArray(res.vDot); gl.drawArrays(gl.POINTS, 0, sh.dotN);
   }
   if (sh.glyphN) { // the data field: glyph particles, added like the dots, on the atlas bound above
@@ -97,7 +111,8 @@ export function renderFrame(gl: WebGL2RenderingContext, res: Res, sc: Target, ch
 
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   gl.useProgram(res.pMesh.p); uC(res.pMesh); uFig(res.pMesh);
-  gl.uniform1f(res.pMesh.u.uCell, clamp(6 * DPR / s, 6, 40)); gl.uniform1f(res.pMesh.u.uGlitch, sh.glitch); gl.uniform1f(res.pMesh.u.uSurge, sh.surge);
+  gl.uniform1f(res.pMesh.u.uCell, clamp(6 * DPR / s, 6, 40)); gl.uniform1f(res.pMesh.u.uGlitch, sh.glitch);
+  gl.uniform1f(res.pMesh.u.uSurge, sh.surge * lit); gl.uniform1f(res.pMesh.u.uAbsorb, sh.absorb * lit);
   gl.bindVertexArray(res.vMesh); gl.drawElements(gl.TRIANGLES, res.nIdx, gl.UNSIGNED_INT, 0);
 
   gl.blendFunc(gl.ONE, gl.ONE);
@@ -136,10 +151,15 @@ function composite(gl: WebGL2RenderingContext, res: Res, sc: Target, bloomTarget
   gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, sh.W, sh.H);
   gl.useProgram(res.pComp.p);
   gl.uniform2f(res.pComp.u.uRes, sh.W, sh.H); gl.uniform1f(res.pComp.u.uTime, sh.t); gl.uniform1f(res.pComp.u.uDpr, sh.DPR);
+  gl.uniform4f(res.pComp.u.uHead, ...sh.head);
   gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, sc.t); gl.uniform1i(res.pComp.u.uScene, 4);
   gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D, bloomTarget.t); gl.uniform1i(res.pComp.u.uBloom, 5);
-  gl.uniform1f(res.pComp.u.uBloomK, sh.bloomK); gl.uniform1f(res.pComp.u.uBoot, sh.boot); gl.uniform1f(res.pComp.u.uFlash, sh.flash);
+  gl.uniform1f(res.pComp.u.uBloomK, sh.bloomK); gl.uniform1f(res.pComp.u.uBloomRest, sh.bloomRest); gl.uniform1f(res.pComp.u.uBoot, sh.boot); gl.uniform1f(res.pComp.u.uFlash, sh.flash);
   gl.uniform4f(res.pComp.u.uWave, sh.shock[0], sh.shock[1], sh.shock[2], sh.shock[3]);
   gl.uniform1f(res.pComp.u.uLight, sh.light); gl.uniform3f(res.pComp.u.uProj, sh.dc[0], sh.dc[1], sh.U); gl.uniform1f(res.pComp.u.uExpo, sh.expo); gl.uniform1f(res.pComp.u.uCharge, sh.charge);
+  // the light theme's field is his own glow: his silhouette and its blurs (units 0 and 7, bound for the scene)
+  gl.uniform1i(res.pComp.u.uAura, 7); gl.uniform1i(res.pComp.u.uFig, 0);
+  gl.uniform2f(res.pComp.u.uFO, sh.fo[0], sh.fo[1]); gl.uniform1f(res.pComp.u.uS, sh.s); gl.uniform2f(res.pComp.u.uFigSize, FIG.w, FIG.h);
+  gl.uniform4f(res.pComp.u.uAuraRect, ...sh.auraRect); gl.uniform1f(res.pComp.u.uAbsorb, sh.absorb); gl.uniform1f(res.pComp.u.uHit, sh.hit);
   gl.bindVertexArray(res.vFS); gl.drawArrays(gl.TRIANGLES, 0, 3);
 }

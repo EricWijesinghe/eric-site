@@ -8,6 +8,10 @@ import type { Pt } from './singularity-math';
 const COPY_SEL = '.m2c-eyebrow, .m2c-name-wrap, .m2c-roles, .m2c-bio, .hero-actions';
 const COPY_GAIN = 0.22; // the text's backdrop: quiet enough that the name keeps its contrast in both themes
 const COPY_PAD = 14; // css px around each text block
+// The nav's row (O8): the hero's glyphs printed between or over the nav links read as clutter on them
+const NAV_SEL = '.nav-links, .logo';
+const NAV_PAD = 16; // css px around the row
+const NAV_FEATHER = 24; // css px soft edge
 const FACE_GAIN = 0.3; // his face and head: a release reads as energy around him, not across his features
 const FACE_PAD = 26; // figure px beyond the head box
 
@@ -25,6 +29,19 @@ export function copyGains(root: HTMLElement, dpr: number, out: Gain[]): void {
       x1: (b.right - r.left + COPY_PAD) * dpr,
       y1: (b.bottom - r.top + COPY_PAD) * dpr,
       k: COPY_GAIN,
+    });
+  }
+  // the nav's links and logo as one row: nothing of the hero is drawn there
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const el of document.querySelectorAll<HTMLElement>(NAV_SEL)) {
+    const b = el.getBoundingClientRect();
+    if (b.width === 0 || b.height === 0) continue;
+    x0 = Math.min(x0, b.left); y0 = Math.min(y0, b.top); x1 = Math.max(x1, b.right); y1 = Math.max(y1, b.bottom);
+  }
+  if (x1 > x0) {
+    out.push({
+      x0: (x0 - r.left - NAV_PAD) * dpr, y0: (y0 - r.top - NAV_PAD) * dpr,
+      x1: (x1 - r.left + NAV_PAD) * dpr, y1: (y1 - r.top + NAV_PAD) * dpr, k: 0, f: NAV_FEATHER * dpr,
     });
   }
 }

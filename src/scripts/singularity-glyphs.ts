@@ -1,20 +1,25 @@
 // The data field: binary and code glyphs that orbit him, rain in depth down the canvas, and burst out of his body
-// on release as a spherical shock of data (Eric round 3: "I wanna codes, binaries and so much more"). Glyphs are
+// (through the outline of his shoulders and arms) on release as a shock of data (Eric round 3: "I wanna codes, binaries and so much more"). Glyphs are
 // decoration, never words about him. Ink drops any glyph inside his silhouette or head zone, so nothing reads as a
 // line leaving him. The head zone's column cuts the rain, so none stands above his head.
 import { CODE_GLYPH_FIRST, CODE_GLYPH_N } from './singularity-config';
 import { clamp, frac, rng, smooth, type Pt } from './singularity-math';
 import { CYAN, ICE, spectrum, type Rgb } from './singularity-palette';
 import type { Ink } from './singularity-ink';
+import type { Sites } from './singularity-figure';
 
 const ORBIT_N = 220; // glyph streams circling him, at depth
 const RAIN_N = 130; // columns of code rain across the canvas
 const RAIN_LEN = 7; // glyphs per rain column
-const BURST_N = 420; // particles per release
+const BURST_N = 520; // particles in a full-strength release
+const BURST_K_MAX = 2.2; // the strongest release: a full charge (singularity-input.ts)
+const BURST_SHARE_MIN = 0.3; // the weakest release still throws this share of them
 const BURST_LIFE = [2.2, 3.2]; // seconds a burst particle lives
 const BURST_SPEED = 0.42; // canvas heights per second, before drag
 const BURST_DRAG = 0.8; // per second: eases the shock out to the canvas edges
-const BURST_START = 0.18; // a burst starts this far (in figure units) from his centre, outside the body
+const BURST_SPREAD = 1.1; // radians of scatter around each glyph's way out
+const BURST_OUT_MIN = 0.15; // a glyph's direction must keep at least this much of the outward normal
+const SITE_STRIDE = 4; // x, y, nx, ny per site
 const FLIP_RATE = 5; // glyph changes per second in the streams
 const RAIN_PITCH = 15; // CSS px between rain glyphs
 const BINARY_HEX = [0, 1, 0, 1, 2, 3, 4, 5, 6, 7]; // atlas cells: 0, 1 and the hex digits
@@ -52,19 +57,33 @@ export class DataField {
     }));
   }
 
-  /** A release at time t: a spherical shock of glyphs leaves his body. `H` is the canvas height, `U` his disk radius (device px). */
-  burst(t: number, hub: Pt, U: number, H: number, k: number): void {
-    const lift = 1 + 0.25 * clamp(k, 0, 2);
-    for (let i = 0; i < BURST_N; i++) {
-      const th = this.rnd() * Math.PI * 2, sp = BURST_SPEED * H * (0.55 + 0.6 * this.rnd()) * lift;
-      const r0 = BURST_START * U;
+  /**
+   * A release at time t: a shock of glyphs leaves his body. Each one starts on a site just inside the outline of his
+   * shoulders and arms (singularity-figure.ts), hidden by his silhouette, and comes out through that outline: nothing
+   * appears from empty space or from his head (Eric round 10). `map` places a figure-px point on the canvas, `H` is
+   * the canvas height, and `k` the release's strength: a longer hold throws more glyphs, faster.
+   */
+  burst(t: number, hub: Pt, H: number, k: number, sites: Sites, map: (x: number, y: number) => Pt): void {
+    const power = clamp(k, 0, BURST_K_MAX), lift = 1 + 0.25 * power;
+    const n = Math.round(BURST_N * (BURST_SHARE_MIN + (1 - BURST_SHARE_MIN) * power / BURST_K_MAX));
+    for (let i = 0; i < n; i++) {
+      const side = sites[this.rnd() < 0.5 ? 0 : 1], from = side.length ? side : sites[0].length ? sites[0] : sites[1];
+      if (!from.length) return;
+      const j = Math.floor(this.rnd() * (from.length / SITE_STRIDE)) * SITE_STRIDE;
+      const [x, y] = map(from[j], from[j + 1]), nx = from[j + 2], ny = from[j + 3];
+      // out through the outline and away from his chest, so the burst still spreads as a sphere around him
+      const rl = Math.hypot(x - hub[0], y - hub[1]) || 1;
+      const th = Math.atan2(ny + (y - hub[1]) / rl, nx + (x - hub[0]) / rl) + (this.rnd() - 0.5) * BURST_SPREAD;
+      let dx = Math.cos(th), dy = Math.sin(th);
+      if (dx * nx + dy * ny < BURST_OUT_MIN) { dx = nx; dy = ny; } // never back into his body
+      const sp = BURST_SPEED * H * (0.55 + 0.6 * this.rnd()) * lift;
       this.bursts.push({
-        x: hub[0] + Math.cos(th) * r0, y: hub[1] + Math.sin(th) * r0 * 0.7,
-        vx: Math.cos(th) * sp, vy: Math.sin(th) * sp * 0.7, born: t, life: BURST_LIFE[0] + this.rnd() * (BURST_LIFE[1] - BURST_LIFE[0]),
-        sz: 0.8 + this.rnd() * 0.5, seed: this.rnd() * 1000, rgb: spectrum(this.rnd() * 7),
+        x, y, vx: dx * sp, vy: dy * sp * 0.7, born: t, life: BURST_LIFE[0] + this.rnd() * (BURST_LIFE[1] - BURST_LIFE[0]),
+        // inked in his own cyan and ice only: magenta and emerald glyphs read as colour dabs beside him (round 10 review)
+        sz: 0.8 + this.rnd() * 0.5, seed: this.rnd() * 1000, rgb: this.rnd() < 0.6 ? CYAN : ICE,
       });
     }
-    this.spawned += BURST_N;
+    this.spawned += n;
   }
 
   /** Moves the burst by this frame's dt, and retires particles past their life at time t. */
