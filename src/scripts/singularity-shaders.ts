@@ -374,13 +374,16 @@ void main(){
     // centred lower than the disk, on his shoulders, so the body keeps the deep field the face has
     vec2 pd = (fc - uProj.xy - vec2(0., uProj.z*.3))/(uProj.z*1.6);
     // the field's core: wider than the disc and shifted left, so the navy covers his left cheek and shoulder as well as the right (round 9 audit)
-    vec2 pf = (fc - uProj.xy - vec2(-uProj.z*.25, uProj.z*.3))/(uProj.z*vec2(2.1, 1.6)); float rf = dot(pf, pf);
+    vec2 pf = (fc - uProj.xy - vec2(-uProj.z*.25, uProj.z*.3))/(uProj.z*vec2(1.85, 1.6)); float rf = dot(pf, pf);
     // a flat navy core (no pale paper leaking into it), dissolving over a long radius and before the canvas edges (no box on a phone)
     float phone = step(uRes.x, 700.); // a phone canvas is narrow: its navy must dissolve across the gutters and the top too
     float ew = mix(.12, .32, phone), eh = mix(.1, .2, phone);
     float edge = smoothstep(0., ew, uv.x)*smoothstep(0., ew, 1. - uv.x)*smoothstep(0., eh, uv.y)*smoothstep(0., eh, 1. - uv.y);
-    // wide falloff (about 1.6-2x the head radius): a long gradient, not a dark plateau with a hard edge (round 3 critic)
-    float field = (1. - smoothstep(1.1, 4.2, rf))*edge;
+    // Eric (2026-11-17): the edge was too soft and the transition not smooth. The falloff ran on rf (distance squared)
+    // over 1.1..4.2, so it was long and lopsided, and the canvas-edge fade multiplied in a box shape. It now eases on
+    // the true distance over a tighter band, so the field is a clean ellipse whose edge is one smooth curve; the
+    // canvas-edge fade stays only as a guard for the phone.
+    float field = (1. - smoothstep(1.15, 1.75, sqrt(rf)))*mix(1., edge, phone);
     vec3 ink = mix(vec3(.04,.40,.86), vec3(.02,.30,.66), smoothstep(.4, 1., l));
     vec3 outside = mix(paper, ink, smoothstep(.03, .4, l)*.9);
     // navy core lifted off near-black (a dark blob at 768), azure #1f6fd1 at the dissolve; charge still deepens it, by less

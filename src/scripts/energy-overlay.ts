@@ -1,8 +1,9 @@
-// Eric (2026-11-16): energizing must reach the whole page and the circle around him must look powerful. While he
-// charges, binary and code glyphs stream in from every edge of the screen, are captured by the energy ring around
-// him and spiral inward, concentrating like matter falling into a black hole; the ring tightens and burns brighter.
-// On release everything erupts outward from that core like a big bang, past every edge, and the page's headings
-// surge for a moment. One fixed canvas over the page (pointer-events none, aria-hidden); it draws only while there
+// Eric (2026-11-16): energizing must reach the whole page. While he charges, binary and code glyphs stream in from
+// every edge of the screen, spiral down the tilted disk plane and cross an event horizon at its core. There is no
+// drawn ring (2026-11-17, Eric: the pink circle did not match): the horizon is a void with a thin photon rim, and it
+// grows with every glyph it swallows. The longer he holds, the more it absorbs, and the release scales with that
+// mass: more glyphs, faster, a bigger flash and a stronger shell, erupting past every edge like a big bang. The
+// page's headings surge for a moment. One fixed canvas over the page (pointer-events none, aria-hidden); it draws only while there
 // is energy, so an idle page costs nothing. Glyphs stay faint over words and over his face. Reduced motion: off.
 
 const GLYPHS = ['0', '1', '0', '1', '0', '1', '0x', 'fn', 'let', '->', '::', '{}', 'impl', 'u8', 'ff', 'c9'];
@@ -10,12 +11,14 @@ const MAX_FREE = 260;
 const SPAWN_PER_S = 280; // glyphs entering from the screen edges at full charge
 const SURGE_MS = 1300;
 const BANG_S = 1.6;
+const MASS_FULL = 420; // glyphs swallowed for a full-power release (about 4 s of holding at full charge)
+const HORIZON_MIN = 5, HORIZON_GROW = 30; // px: the horizon's radius when empty, and what a full mass adds
 
 // A glyph is free (flying in or blown out) or captured (spiralling in the ring: angle, radius, angular speed).
 interface Glyph { x: number; y: number; vx: number; vy: number; g: string; hue: number; life: number; cap: boolean; a: number; r: number; w: number }
 
-const DARK = { ink: ['#38e1ff', '#8b5cf6', '#2df5a0', '#e04cff', '#bff4ff'], hot: '191 244 255', edge: '56 225 255', violet: '139 92 246', blend: 'lighter' as GlobalCompositeOperation };
-const LIGHT = { ink: ['#0b5fbf', '#5b2bd6', '#047857', '#a21caf', '#0a1830'], hot: '11 95 191', edge: '11 95 191', violet: '91 43 214', blend: 'source-over' as GlobalCompositeOperation };
+const DARK = { ink: ['#38e1ff', '#8b5cf6', '#2df5a0', '#e04cff', '#bff4ff'], hot: '191 244 255', edge: '56 225 255', void: '1 3 8', blend: 'lighter' as GlobalCompositeOperation };
+const LIGHT = { ink: ['#0b5fbf', '#5b2bd6', '#047857', '#a21caf', '#0a1830'], hot: '11 95 191', edge: '11 95 191', void: '4 12 32', blend: 'source-over' as GlobalCompositeOperation };
 
 export function mountEnergy(canvas: HTMLCanvasElement): void {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -26,7 +29,9 @@ export function mountEnergy(canvas: HTMLCanvasElement): void {
   let W = 0, H = 0, dpr = 1, level = 0, held = 0;
   let disc = { x: innerWidth * 0.7, y: innerHeight * 0.75, u: innerHeight * 0.7 }; // stage-relative until aimed
   let fig: { x: number; y: number; w: number; h: number } | null = null;
-  let core: [number, number] = [0, 0], ringR = 200;
+  let core: [number, number] = [0, 0], ringR = 200, mass = 0;
+  const massK = (): number => Math.min(1, mass / MASS_FULL);
+  const horizon = (): number => HORIZON_MIN + HORIZON_GROW * Math.sqrt(massK());
   const glyphs: Glyph[] = [];
   let bang = -1, raf = 0, last = 0, t = 0, spawnAcc = 0;
   const quiet: DOMRect[] = [];
@@ -47,7 +52,7 @@ export function mountEnergy(canvas: HTMLCanvasElement): void {
   function aim(): void {
     const r = stage?.getBoundingClientRect();
     if (r) core = [r.left + disc.x, r.top + disc.y];
-    ringR = disc.u * 0.5 * (1 - 0.22 * level); // the ring tightens as it gathers
+    ringR = disc.u * 0.5 * (1 - 0.22 * level); // the capture radius (never drawn) tightens as it gathers
     quiet.length = 0;
     document.querySelectorAll<HTMLElement>('.m2c-copy, main h2, main p, main .btn').forEach((el) => {
       const b = el.getBoundingClientRect();
@@ -65,34 +70,46 @@ export function mountEnergy(canvas: HTMLCanvasElement): void {
     glyphs.push({ x, y, vx: 0, vy: 0, g: GLYPHS[Math.floor(Math.random() * GLYPHS.length)], hue: Math.floor(Math.random() * 5), life: 1, cap: false, a: 0, r: 0, w: 0 });
   }
 
-  function bigBang(k: number): void {
+  // Release power from what the horizon swallowed: a tap gives a small burst, a long hold a full one.
+  let power = 1;
+  function bigBang(): void {
     bang = t;
-    const n = Math.round(160 + 120 * k);
-    for (const p of glyphs) { // everything captured is thrown out along its orbit's tangent and away from the core
+    power = 0.35 + 1.65 * Math.sqrt(massK());
+    mass = 0;
+    const n = Math.round(80 + 380 * power), speed = 0.6 + 0.5 * power;
+    for (const p of glyphs) { // everything still falling is thrown out along its orbit and away from the core
       if (!p.cap) continue;
-      const [x, y] = ring(p.a, p.r), out = Math.atan2(y - core[1], x - core[0]), sp = 520 + Math.random() * 600;
+      const [x, y] = ring(p.a, p.r), out = Math.atan2(y - core[1], x - core[0]), sp = (520 + Math.random() * 600) * speed;
       Object.assign(p, { x, y, cap: false, vx: Math.cos(out) * sp, vy: Math.sin(out) * sp, life: 1 });
     }
     for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2 + Math.random() * 0.3, sp = 420 + Math.random() * 900;
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.3, sp = (420 + Math.random() * 900) * speed;
       glyphs.push({ x: core[0], y: core[1], vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.8, g: GLYPHS[i % GLYPHS.length], hue: i % 5, life: 1, cap: false, a: 0, r: 0, w: 0 });
     }
   }
 
-  function drawRing(pal: typeof DARK): void {
-    const glow = Math.max(level, bang >= 0 ? Math.max(0, 1 - (t - bang) / 0.6) : 0);
+  function drawHorizon(pal: typeof DARK): void {
+    const glow = Math.max(level, bang >= 0 ? Math.max(0, 1 - (t - bang) / 0.35) : 0);
     if (glow < 0.01) return;
-    // the energy ring around him: a burning ellipse in the disk plane, wider glow behind a hot core line
-    for (const [w, a] of [[16, 0.10], [7, 0.22], [2.2, 0.85]] as const) {
-      ctx!.strokeStyle = `rgb(${w > 3 ? pal.violet : pal.hot} / ${(a * glow).toFixed(3)})`;
-      ctx!.lineWidth = w * (0.7 + 0.6 * glow);
-      ctx!.beginPath(); ctx!.ellipse(core[0], core[1], ringR, ringR * 0.3, 0, 0, Math.PI * 2); ctx!.stroke();
-    }
-    // the gathering core: a photon ring that shrinks and burns hotter as the energy concentrates
-    const cr = 26 * (1.4 - level) + 4;
-    const g = ctx!.createRadialGradient(core[0], core[1], cr * 0.5, core[0], core[1], cr * 3.2);
-    g.addColorStop(0, `rgb(${pal.hot} / 0)`); g.addColorStop(0.35, `rgb(${pal.hot} / ${(0.7 * glow).toFixed(3)})`); g.addColorStop(1, `rgb(${pal.violet} / 0)`);
-    ctx!.fillStyle = g; ctx!.beginPath(); ctx!.arc(core[0], core[1], cr * 3.2, 0, Math.PI * 2); ctx!.fill();
+    const hr = horizon(), m = massK();
+    // lensed light just outside the horizon: brighter and wider as it gathers mass, no hard edge anywhere
+    const lens = ctx!.createRadialGradient(core[0], core[1], hr, core[0], core[1], hr * 3.4);
+    lens.addColorStop(0, `rgb(${pal.hot} / ${((0.35 + 0.45 * m) * glow).toFixed(3)})`);
+    lens.addColorStop(0.3, `rgb(${pal.edge} / ${((0.12 + 0.2 * m) * glow).toFixed(3)})`);
+    lens.addColorStop(1, `rgb(${pal.edge} / 0)`);
+    ctx!.fillStyle = lens; ctx!.beginPath(); ctx!.arc(core[0], core[1], hr * 3.4, 0, Math.PI * 2); ctx!.fill();
+    // the horizon itself: a void that swallows whatever crosses it, so it is painted over, never added
+    ctx!.globalCompositeOperation = 'source-over';
+    const v = ctx!.createRadialGradient(core[0], core[1], 0, core[0], core[1], hr * 1.12);
+    v.addColorStop(0, `rgb(${pal.void} / ${(0.96 * glow).toFixed(3)})`);
+    v.addColorStop(0.86, `rgb(${pal.void} / ${(0.96 * glow).toFixed(3)})`);
+    v.addColorStop(1, `rgb(${pal.void} / 0)`);
+    ctx!.fillStyle = v; ctx!.beginPath(); ctx!.arc(core[0], core[1], hr * 1.12, 0, Math.PI * 2); ctx!.fill();
+    ctx!.globalCompositeOperation = pal.blend;
+    // the photon rim: one thin hot circle hugging the void
+    ctx!.strokeStyle = `rgb(${pal.hot} / ${((0.55 + 0.4 * m) * glow).toFixed(3)})`;
+    ctx!.lineWidth = 1.2 + 1.3 * m;
+    ctx!.beginPath(); ctx!.arc(core[0], core[1], hr * 1.08, 0, Math.PI * 2); ctx!.stroke();
   }
 
   function drawBang(pal: typeof DARK): void {
@@ -101,13 +118,13 @@ export function mountEnergy(canvas: HTMLCanvasElement): void {
     if (k >= 1) { bang = -1; return; }
     const R = k * Math.hypot(W, H) * 1.1;
     // the flash at the core, then a shell of light leaving the screen at every edge
-    if (k < 0.25) {
-      const f = ctx!.createRadialGradient(core[0], core[1], 0, core[0], core[1], 260);
-      f.addColorStop(0, `rgb(${pal.hot} / ${(0.9 * (1 - k * 4)).toFixed(3)})`); f.addColorStop(1, `rgb(${pal.hot} / 0)`);
+    if (k < 0.25) { // flash and shell both scale with the absorbed power
+      const f = ctx!.createRadialGradient(core[0], core[1], 0, core[0], core[1], 160 + 220 * power);
+      f.addColorStop(0, `rgb(${pal.hot} / ${(Math.min(1, 0.5 + 0.25 * power) * (1 - k * 4)).toFixed(3)})`); f.addColorStop(1, `rgb(${pal.hot} / 0)`);
       ctx!.fillStyle = f; ctx!.fillRect(0, 0, W, H);
     }
-    const s = ctx!.createRadialGradient(core[0], core[1], Math.max(0, R - 70), core[0], core[1], R + 8);
-    s.addColorStop(0, `rgb(${pal.edge} / 0)`); s.addColorStop(0.85, `rgb(${pal.edge} / ${(0.5 * (1 - k)).toFixed(3)})`); s.addColorStop(1, `rgb(${pal.edge} / 0)`);
+    const s = ctx!.createRadialGradient(core[0], core[1], Math.max(0, R - (40 + 40 * power)), core[0], core[1], R + 8);
+    s.addColorStop(0, `rgb(${pal.edge} / 0)`); s.addColorStop(0.85, `rgb(${pal.edge} / ${((0.22 + 0.24 * power) * (1 - k)).toFixed(3)})`); s.addColorStop(1, `rgb(${pal.edge} / 0)`);
     ctx!.fillStyle = s; ctx!.fillRect(0, 0, W, H);
   }
 
@@ -115,6 +132,7 @@ export function mountEnergy(canvas: HTMLCanvasElement): void {
     const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now; t += dt;
     const pal = html.dataset.theme === 'light' ? LIGHT : DARK;
     held = level > 0.01 ? held + dt : 0;
+    if (level < 0.01 && bang < 0) mass = Math.max(0, mass - dt * MASS_FULL); // let go without a release: it evaporates
     aim();
     ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx!.clearRect(0, 0, W, H);
@@ -124,7 +142,6 @@ export function mountEnergy(canvas: HTMLCanvasElement): void {
       e.addColorStop(0, `rgb(${pal.edge} / 0)`); e.addColorStop(1, `rgb(${pal.edge} / ${(0.26 * level).toFixed(3)})`);
       ctx!.fillStyle = e; ctx!.fillRect(0, 0, W, H);
     }
-    drawRing(pal);
     spawnAcc += SPAWN_PER_S * level * dt;
     while (spawnAcc >= 1 && glyphs.length < MAX_FREE * 2) { spawn(); spawnAcc -= 1; }
     ctx!.font = '600 13px "JetBrains Mono", ui-monospace, monospace';
@@ -132,13 +149,15 @@ export function mountEnergy(canvas: HTMLCanvasElement): void {
     for (let i = glyphs.length - 1; i >= 0; i--) {
       const p = glyphs[i];
       let x: number, y: number, size = 1;
-      if (p.cap) { // spiralling inward, faster the deeper it falls
+      if (p.cap) { // spiralling inward, faster the deeper it falls; crossing the horizon adds to its mass
         p.w += dt * (1.2 + 3 * level);
         p.a += p.w * dt;
         p.r *= 1 - dt * (0.25 + 0.9 * level);
         [x, y] = ring(p.a, p.r);
-        size = 0.6 + 0.4 * (p.r / ringR);
-        if (p.r < 6 || level < 0.01) p.life -= dt * 3;
+        const hr = horizon();
+        if (p.r < hr) { mass++; glyphs.splice(i, 1); continue; }
+        size = 0.45 + 0.55 * Math.min(1, (p.r - hr) / Math.max(1, ringR - hr)); // shrinks as it nears the edge
+        if (level < 0.01) p.life -= dt * 3;
       } else if (level > 0.01 && bang < 0) { // flying in toward the ring; captured on reaching it
         const dx = core[0] - p.x, dy = core[1] - p.y, d = Math.hypot(dx, dy) || 1;
         const sp = 240 + 620 * level;
@@ -158,6 +177,7 @@ export function mountEnergy(canvas: HTMLCanvasElement): void {
       else ctx!.fillText(p.g, x, y);
     }
     ctx!.globalAlpha = 1;
+    drawHorizon(pal);
     drawBang(pal);
     if (level > 0.01 || glyphs.length || bang >= 0) raf = requestAnimationFrame(frame);
     else { raf = 0; last = 0; ctx!.clearRect(0, 0, W, H); }
@@ -174,11 +194,11 @@ export function mountEnergy(canvas: HTMLCanvasElement): void {
     const d = (e as CustomEvent<{ k: number; auto: boolean }>).detail;
     if (d.auto) return; // an idle pulse stays inside the hero; only his own release reaches the whole page
     aim();
-    bigBang(Math.min(1.5, Math.max(0.6, d.k)));
+    bigBang();
     wake();
     html.classList.add('m2c-surge');
     window.clearTimeout(surgeTimer);
-    surgeTimer = window.setTimeout(() => html.classList.remove('m2c-surge'), SURGE_MS);
+    surgeTimer = window.setTimeout(() => html.classList.remove('m2c-surge'), SURGE_MS * (0.6 + 0.4 * power));
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden && raf) { cancelAnimationFrame(raf); raf = 0; } else wake(); });
 }

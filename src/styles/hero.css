@@ -380,26 +380,51 @@ main#main > section.m2c-stage.m2c-stage {
     radial-gradient(38% 34% at 60% 96%, rgb(45 245 160 / 0.08), transparent 70%);
 }
 
+/* Eric (2026-11-17): the edge was too soft and the transition banded. The old mask fell off in two straight
+   segments with kinks at 58% and 80%, which the eye reads as rings. Both the plate and the mask now follow one
+   smoothstep curve, sampled every 1/8, over a narrower band (80% to 100% here; on the phone the wide 20% to 100% ease stays, because the shader's edge fade is a box there),
+   so more of him stays solid and the edge has no kink to see. The shader's field (singularity-shaders.ts) sits
+   inside this circle, so the circle never cuts its corners. */
 :root[data-theme='light'] .m2c-sing {
   background: radial-gradient(
     closest-side at calc(var(--fig-x, 0.5) * 100%) 50%,
-    rgb(18 56 106 / 0.42),
-    rgb(31 111 209 / 0.16) 62%,
-    transparent 100%
+    rgb(18 56 106 / 0.42) 0%,
+    rgb(22 70 140 / 0.4) 50%,
+    rgb(24 80 160 / 0.36) 70%,
+    rgb(26 88 172 / 0.345) 73.75%,
+    rgb(28 94 182 / 0.304) 77.5%,
+    rgb(29 100 192 / 0.246) 81.25%,
+    rgb(30 104 198 / 0.18) 85%,
+    rgb(31 108 204 / 0.114) 88.75%,
+    rgb(31 110 207 / 0.056) 92.5%,
+    rgb(31 111 209 / 0.015) 96.25%,
+    rgb(31 111 209 / 0) 100%
   );
 }
 
 :root[data-theme='light'] .m2c-sing canvas {
   -webkit-mask-image: radial-gradient(
     closest-side at calc(var(--fig-x, 0.5) * 100%) 50%,
-    #000 58%,
-    rgb(0 0 0 / 0.5) 80%,
+    #000 80%,
+    rgb(0 0 0 / 0.957) 82.5%,
+    rgb(0 0 0 / 0.844) 85%,
+    rgb(0 0 0 / 0.684) 87.5%,
+    rgb(0 0 0 / 0.5) 90%,
+    rgb(0 0 0 / 0.316) 92.5%,
+    rgb(0 0 0 / 0.156) 95%,
+    rgb(0 0 0 / 0.043) 97.5%,
     transparent 100%
   );
   mask-image: radial-gradient(
     closest-side at calc(var(--fig-x, 0.5) * 100%) 50%,
-    #000 58%,
-    rgb(0 0 0 / 0.5) 80%,
+    #000 80%,
+    rgb(0 0 0 / 0.957) 82.5%,
+    rgb(0 0 0 / 0.844) 85%,
+    rgb(0 0 0 / 0.684) 87.5%,
+    rgb(0 0 0 / 0.5) 90%,
+    rgb(0 0 0 / 0.316) 92.5%,
+    rgb(0 0 0 / 0.156) 95%,
+    rgb(0 0 0 / 0.043) 97.5%,
     transparent 100%
   );
 }
@@ -431,12 +456,12 @@ main#main > section.m2c-stage.m2c-stage {
     -webkit-mask-image:
       linear-gradient(to bottom, transparent 0%, #000 12%, #000 78%, transparent 100%),
       linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%),
-      radial-gradient(ellipse 66% 62% at 50% 47%, #000 14%, rgb(0 0 0 / 0.7) 38%, rgb(0 0 0 / 0.3) 64%, rgb(0 0 0 / 0.08) 86%, transparent 100%);
+      radial-gradient(ellipse 66% 62% at 50% 47%, #000 20%, rgb(0 0 0 / 0.957) 30%, rgb(0 0 0 / 0.844) 40%, rgb(0 0 0 / 0.684) 50%, rgb(0 0 0 / 0.5) 60%, rgb(0 0 0 / 0.316) 70%, rgb(0 0 0 / 0.156) 80%, rgb(0 0 0 / 0.043) 90%, transparent 100%);
     -webkit-mask-composite: source-in, source-in;
     mask-image:
       linear-gradient(to bottom, transparent 0%, #000 12%, #000 78%, transparent 100%),
       linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%),
-      radial-gradient(ellipse 66% 62% at 50% 47%, #000 14%, rgb(0 0 0 / 0.7) 38%, rgb(0 0 0 / 0.3) 64%, rgb(0 0 0 / 0.08) 86%, transparent 100%);
+      radial-gradient(ellipse 66% 62% at 50% 47%, #000 20%, rgb(0 0 0 / 0.957) 30%, rgb(0 0 0 / 0.844) 40%, rgb(0 0 0 / 0.684) 50%, rgb(0 0 0 / 0.5) 60%, rgb(0 0 0 / 0.316) 70%, rgb(0 0 0 / 0.156) 80%, rgb(0 0 0 / 0.043) 90%, transparent 100%);
     mask-composite: intersect;
   }
 }
