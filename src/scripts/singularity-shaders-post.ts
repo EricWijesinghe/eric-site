@@ -96,10 +96,12 @@ const LIGHT = `
     float field = clamp(max(near, band*BAND_K), 0., 1.)*low*(1. - port);
     // the release's hit deepens the field for a moment; it is gone again within about 0.6 s (uHit, singularity-hero.ts)
     vec3 navy = mix(vec3(.055,.118,.42), vec3(.03,.12,.56), uAbsorb*.6)*(1. - .25*uCharge - .25*uHit);
-    vec3 fcol = mix(vec3(.66,.84,1.), vec3(.35,.59,.94), smoothstep(0., .28, field)); // ice to azure
-    fcol = mix(fcol, vec3(.16,.35,.82), smoothstep(.25, .58, field));               // royal
-    fcol = mix(fcol, navy, smoothstep(.55, .88, field));                            // navy only right beside him
-    float fa = smoothstep(0., .45, field);
+    // wide, overlapping ramps: each tone hands over to the next across a long run, so no ring of equal colour reads as
+    // the field's edge (round 10 critique: "a soft blob with an edge, not a flow into the page")
+    vec3 fcol = mix(vec3(.72,.87,1.), vec3(.38,.62,.95), smoothstep(0., .42, field)); // ice to azure
+    fcol = mix(fcol, vec3(.16,.35,.82), smoothstep(.36, .78, field));               // royal
+    fcol = mix(fcol, navy, smoothstep(.72, .96, field));                            // navy only right beside him
+    float fa = smoothstep(0., .62, field)*smoothstep(0., .62, field);
     // on the field only sparks of the scene count, in a deeper azure than his own cyan
     float sparks = smoothstep(.5, .95, l)*.6*(1. - .6*max(uCharge, uAbsorb));
     col = mix(outside, mix(fcol, vec3(.30,.62,1.), sparks*(1. - .7*band)), fa);

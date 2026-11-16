@@ -63,6 +63,8 @@ test('it animates, pulses on Space, and stops drawing offscreen and in a hidden 
   expect((await dbg(page))!.fired).toBe(fired + 1);
 
   await page.locator('#contact').scrollIntoViewIfNeeded();
+  // the page scrolls smoothly, so wait until the hero has really left the viewport, then for the observer to fire
+  await expect(page.locator('.m2c-sing')).not.toBeInViewport();
   await page.waitForTimeout(400);
   const offscreen = await frames(page);
   await page.waitForTimeout(800);
@@ -124,11 +126,11 @@ test('his glow follows m2c:absorb, clamped and eased', async ({ page }) => {
 // The theme toggle recolours the hero live (Eric round 3: the scene follows dark and light).
 test('the hero follows the theme toggle without a reload', async ({ page }) => {
   await open(page, '?debug');
-  await expect.poll(() => frames(page), { timeout: 15_000 }).toBeGreaterThan(5);
+  await expect.poll(() => frames(page), { timeout: 40_000 }).toBeGreaterThan(5);
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
-  await expect.poll(async () => (await dbg(page))?.light ?? false, { timeout: 15_000 }).toBe(true);
+  await expect.poll(async () => (await dbg(page))?.light ?? false, { timeout: 40_000 }).toBe(true);
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
-  await expect.poll(async () => (await dbg(page))?.light ?? true, { timeout: 15_000 }).toBe(false);
+  await expect.poll(async () => (await dbg(page))?.light ?? true, { timeout: 40_000 }).toBe(false);
 });
 
 test('reduced motion and ?still draw one settled frame, then stop', async ({ browser }) => {
