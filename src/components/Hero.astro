@@ -1,34 +1,51 @@
-<section class="hero" id="top" aria-labelledby="hero-title">
-  <div class="hero-copy">
-    <p class="eyebrow">// now building maya2c.dev — post-quantum L1</p>
-    <h1 id="hero-title">Eric Wijesinghe</h1>
-    <p class="hero-role">Rust-First Engineer · Founder &amp; Builder · Security Researcher</p>
-    <p class="hero-bio">
-      Building systems at the intersection of <strong>Rust</strong>, cryptography, cybersecurity, and AI.
-      Creator of <strong>Maya2C</strong>, a post-quantum Layer-1 blockchain with DAG-BFT finality.
-    </p>
-    <div class="hero-actions">
-      <a class="btn btn-primary" href="#projects">View projects</a>
-      <a class="btn btn-ghost" href="https://maya2c.dev" rel="noopener noreferrer" target="_blank">maya2c.dev <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+---
+import { ROLES } from '../data/content';
+---
+
+<section class="hero" id="top" aria-labelledby="hero-title" data-gl="hero">
+  <div class="hero-poster" aria-hidden="true">
+    <span class="hero-floor"></span>
+  </div>
+  <canvas class="gl-canvas" aria-hidden="true"></canvas>
+  <div class="hero-vignette" aria-hidden="true"></div>
+  <div class="wrap hero-grid">
+    <!-- The focal image: drawn inline so it is crisp at any size, themed by CSS, and painted
+         with the first frame. The WebGL lattice is only ever a backdrop behind it. -->
+    <figure class="hero-emblem" aria-hidden="true">
+      <svg viewBox="0 0 200 200" focusable="false">
+        <defs>
+          <linearGradient id="he-edge" x1="0" y1="0" x2="1" y2="1">
+            <stop class="he-a" offset="0" /><stop class="he-b" offset=".55" /><stop class="he-c" offset="1" />
+          </linearGradient>
+          <radialGradient id="he-core"><stop class="he-core-a" offset="0" /><stop class="he-core-b" offset="1" /></radialGradient>
+        </defs>
+        <circle class="he-ring" cx="100" cy="100" r="92" />
+        <circle class="he-ring faint" cx="100" cy="100" r="76" />
+        <path class="he-hex" d="M100 30 160.6 65v70L100 170 39.4 135V65z" />
+        <path class="he-bond" d="M100 30v140M39.4 65l121.2 70M160.6 65 39.4 135" />
+        <path class="he-inner" d="M100 62 133 81v38l-33 19-33-19V81z" />
+        <circle class="he-glow" cx="100" cy="100" r="34" />
+        <circle class="he-dot" cx="100" cy="100" r="11" />
+        <circle class="he-node" cx="100" cy="30" r="5" /><circle class="he-node" cx="160.6" cy="65" r="5" />
+        <circle class="he-node" cx="160.6" cy="135" r="5" /><circle class="he-node" cx="100" cy="170" r="5" />
+        <circle class="he-node" cx="39.4" cy="135" r="5" /><circle class="he-node" cx="39.4" cy="65" r="5" />
+      </svg>
+    </figure>
+    <div class="hero-copy">
+      <p class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span>now building maya2c.dev<span class="eyebrow-tail"> — post-quantum L1</span></p>
+      <h1 id="hero-title"><span class="h1-line">Eric</span> <span class="h1-line h1-accent">Wijesinghe</span></h1>
+      <ul class="hero-roles" aria-label="Roles">
+        {ROLES.map((r) => <li>{r}</li>)}
+      </ul>
+      <p class="hero-bio">
+        Building systems at the intersection of <strong>Rust</strong>, cryptography, cybersecurity, and AI.
+        Creator of <strong>Maya2C</strong>, a post-quantum Layer-1 blockchain with DAG-BFT finality.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#projects">View projects</a>
+        <a class="btn btn-ghost" href="https://maya2c.dev" rel="noopener noreferrer" target="_blank">maya2c.dev <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+      </div>
     </div>
   </div>
-  <div class="orbit" aria-hidden="true">
-    <svg viewBox="0 0 200 200">
-      <defs>
-        <linearGradient id="orbit-grad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#1fb5c2" />
-          <stop offset="0.5" stop-color="#a78bfa" />
-          <stop offset="1" stop-color="#ff8a65" />
-        </linearGradient>
-      </defs>
-      <circle cx="100" cy="100" r="92" fill="none" stroke="url(#orbit-grad)" stroke-width="1.5" opacity="0.6" />
-      <circle class="ring-dash ring-dash-a" cx="100" cy="100" r="76" fill="none" stroke="#7eeaf0" stroke-width="2" stroke-dasharray="4 10" stroke-linecap="round" />
-      <circle class="ring-dash ring-dash-b" cx="100" cy="100" r="58" fill="none" stroke="#c9a86a" stroke-width="2" stroke-dasharray="20 14" />
-      <polygon points="100,52 142,76 142,124 100,148 58,124 58,76" fill="rgba(31,181,194,0.12)" stroke="url(#orbit-grad)" stroke-width="2" />
-      <circle class="node-spark" cx="100" cy="100" r="7" fill="#7eeaf0" />
-      <circle cx="142" cy="76" r="4" fill="#ff8a65" />
-      <circle cx="58" cy="124" r="4" fill="#a78bfa" />
-    </svg>
-  </div>
-  <a class="scroll-cue" href="#about"><span aria-hidden="true">↓</span><span class="visually-hidden">Scroll to about</span></a>
+  <a class="scroll-cue" href="#about"><span class="scroll-line" aria-hidden="true"></span><span class="visually-hidden">Scroll to about</span></a>
 </section>

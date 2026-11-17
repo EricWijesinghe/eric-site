@@ -1,37 +1,44 @@
 ---
 import { SKILL_GROUPS } from '../data/content';
-const CORE = { x: 500, y: 320 };
 ---
 
 <section id="skills" aria-labelledby="skills-title">
   <div class="wrap">
-    <p class="section-label" data-reveal>04 / skills</p>
+    <p class="section-label" data-reveal><span>03</span> skills</p>
     <h2 class="section-title" id="skills-title" data-reveal>Stack &amp; expertise</h2>
-    <div class="constellation" data-reveal>
-      <svg class="constellation-lines" viewBox="0 0 1000 640" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-        <defs>
-          <linearGradient id="skill-line" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#7eeaf0" stop-opacity="0.7" />
-            <stop offset="1" stop-color="#ff8a65" stop-opacity="0.5" />
-          </linearGradient>
-        </defs>
+    <p class="section-lede" data-reveal>Six skill groups orbit one core. Pick one to open it.</p>
+    <div class="orbit-wrap" data-reveal>
+      <div class="orbit-stage" data-orbit data-gl="orbit">
+        <div class="orbit-poster" aria-hidden="true"><span></span><span></span><span></span></div>
+        <canvas class="gl-canvas" aria-hidden="true"></canvas>
+        <div class="orbit-core" aria-hidden="true">Rust</div>
+        <ul class="orbit-nodes" aria-label="Skill groups">
+          {
+            SKILL_GROUPS.map((g, i) => (
+              <li>
+                <button class="orbit-node" type="button" data-node aria-controls={`skill-panel-${i}`}>
+                  <span class="node-name">{g.name}</span>
+                  <span class="node-line">{g.line}</span>
+                </button>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+      <div class="orbit-panels">
         {
-          SKILL_GROUPS.map((g) => (
-            <line x1={CORE.x} y1={CORE.y} x2={g.x} y2={g.y} />
+          SKILL_GROUPS.map((g, i) => (
+            <section class="orbit-panel" id={`skill-panel-${i}`} data-panel aria-labelledby={`skill-panel-${i}-title`}>
+              <p class="panel-kicker">orbit 0{i + 1}</p>
+              <h3 id={`skill-panel-${i}-title`}>{g.name}</h3>
+              <p class="panel-line">{g.line}</p>
+              <ul class="chips">
+                {g.items.map((item) => <li>{item}</li>)}
+              </ul>
+            </section>
           ))
         }
-      </svg>
-      <div class="constellation-core" aria-hidden="true">Rust</div>
-      <ul class="skill-nodes">
-        {
-          SKILL_GROUPS.map((g) => (
-            <li class="node">
-              <h3 class="node-name">{g.name}</h3>
-              <p class="node-items">{g.items.join(' · ')}</p>
-            </li>
-          ))
-        }
-      </ul>
+      </div>
     </div>
   </div>
 </section>

@@ -1,19 +1,19 @@
 ---
-import { DONATION_URL, MAYA2C_REPO } from '../data/content';
+import { DONATION_URL, MAYA2C_CONTRIBUTING, MAYA2C_REPO } from '../data/content';
 ---
 
 <section id="support" aria-labelledby="support-title">
   <div class="wrap">
-    <p class="section-label" data-reveal>03 / support</p>
+    <p class="section-label" data-reveal><span>04</span> support</p>
     <h2 class="section-title" id="support-title" data-reveal>Support my work</h2>
-    <div class="card support-card" data-tilt data-reveal>
+    <div class="card panel support-card" data-tilt="4" data-reveal>
       <p>
         Maya2C is open for anyone to read, star, and build on. A star helps other developers find it;
         an issue or a pull request helps it get better.
       </p>
       <div class="support-actions">
         <a class="btn btn-primary" href={MAYA2C_REPO} rel="noopener noreferrer" target="_blank">Star Maya2C on GitHub <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
-        <a class="btn btn-ghost" href={MAYA2C_REPO} rel="noopener noreferrer" target="_blank">Contribute on GitHub <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+        <a class="btn btn-ghost" href={MAYA2C_CONTRIBUTING} rel="noopener noreferrer" target="_blank">How to contribute <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
         {DONATION_URL && (
           <a class="btn btn-ghost" href={DONATION_URL} rel="noopener noreferrer" target="_blank">Donate <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
         )}

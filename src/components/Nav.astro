@@ -1,14 +1,40 @@
 <div class="progress" data-progress aria-hidden="true"></div>
 <header class="nav">
-  <div class="wrap">
-    <a class="logo" href="#top"><span aria-hidden="true">EW://</span><span class="visually-hidden">Eric Wijesinghe, back to top</span></a>
+  <div class="wrap nav-inner">
+    <a class="logo" href="#top"><span class="logo-mark" aria-hidden="true"></span><span aria-hidden="true">EW</span><span class="visually-hidden">Eric Wijesinghe, back to top</span></a>
     <nav aria-label="Primary">
-      <ul class="nav-links">
+      <!-- Phones get a menu button (shown by CSS once theme-init.js marks :root.js); without JS the links wrap onto a second row. -->
+      <button class="nav-menu" type="button" aria-expanded="false" aria-controls="nav-links">
+        <span class="nav-menu-bars" aria-hidden="true"></span><span class="visually-hidden">Menu</span>
+      </button>
+      <ul class="nav-links" id="nav-links">
         <li><a href="#about">about</a></li>
         <li><a href="#projects">projects</a></li>
         <li><a href="#skills">skills</a></li>
         <li><a href="#contact">contact</a></li>
       </ul>
     </nav>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false">
+      <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
+      <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /></svg>
+      <span class="visually-hidden">Light theme</span>
+    </button>
   </div>
 </header>
+
+<script>
+  const header = document.querySelector<HTMLElement>(".nav")!;
+  const btn = header.querySelector<HTMLButtonElement>(".nav-menu")!;
+  const setOpen = (open: boolean) => {
+    btn.setAttribute("aria-expanded", String(open));
+    header.classList.toggle("menu-open", open);
+  };
+  btn.addEventListener("click", () => setOpen(btn.getAttribute("aria-expanded") !== "true"));
+  header.querySelectorAll(".nav-links a").forEach((a) => a.addEventListener("click", () => setOpen(false)));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && header.classList.contains("menu-open")) { setOpen(false); btn.focus(); }
+  });
+  document.addEventListener("click", (e) => {
+    if (!header.contains(e.target as Node)) setOpen(false);
+  });
+</script>

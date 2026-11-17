@@ -1,9 +1,9 @@
 ---
-import { FEATURED_PROJECT, MAYA2C_REPO, MAYA2C_SITE, PROJECTS } from '../data/content';
+import { FEATURED_PROJECT, PROJECTS } from '../data/content';
 const f = FEATURED_PROJECT;
 // Live network view: the four validators on a ring around the core. Every
 // real block (polled from rpc.maya2c.dev) sends a pulse ring outward; the
-// numbers under it are the chain's own. Without data it says "offline".
+// numbers under it are the chain's own. Without data it says so and asks less often.
 const VALIDATORS = [0, 1, 2, 3].map((i) => {
   const a = (i / 4) * Math.PI * 2 - Math.PI / 4;
   return { x: +(200 + Math.cos(a) * 92).toFixed(1), y: +(130 + Math.sin(a) * 92).toFixed(1) };
@@ -12,64 +12,71 @@ const VALIDATORS = [0, 1, 2, 3].map((i) => {
 
 <section id="projects" aria-labelledby="projects-title">
   <div class="wrap">
-    <p class="section-label" data-reveal>02 / portfolio</p>
+    <p class="section-label" data-reveal><span>02</span> portfolio</p>
     <h2 class="section-title" id="projects-title" data-reveal>What I'm building</h2>
 
-    <div class="project-grid" data-reveal>
-      <article class="card featured">
-        <div>
-          <p class="card-badge">{f.badge}</p>
-          <h3 class="card-name">{f.name}</h3>
-          <p class="card-desc">{f.description}</p>
-          <ul class="tags">
-            {f.tags.map((t) => <li>{t}</li>)}
-          </ul>
-          <dl class="spec">
-            {f.spec.map(([k, v]) => (
-              <div class="spec-row">
-                <dt>{k}</dt>
-                <dd>{v}</dd>
-              </div>
-            ))}
-          </dl>
-          <div class="card-links">
-            {f.links.map((l) => (
-              <a href={l.href} rel="noopener noreferrer" target="_blank">{l.label} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
-            ))}
-          </div>
+    <article class="card panel featured" data-tilt="3" data-reveal>
+      <div class="panel-body">
+        <p class="card-badge"><span class="pulse-dot" aria-hidden="true"></span>{f.badge}</p>
+        <h3 class="card-name featured-name">{f.name}</h3>
+        <p class="card-desc">{f.description}</p>
+        <ul class="tags">
+          {f.tags.map((t) => <li>{t}</li>)}
+        </ul>
+        <dl class="spec">
+          {f.spec.map(([k, v]) => (
+            <div class="spec-row">
+              <dt>{k}</dt>
+              <dd>{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <p class="card-desc disclosure">{f.disclosure}</p>
+        <div class="card-links">
+          {f.links.map((l, i) => (
+            <a class:list={['btn', i === 0 ? 'btn-primary' : 'btn-ghost']} href={l.href} rel="noopener noreferrer" target="_blank">{l.label} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+          ))}
         </div>
-        <figure class="netview" aria-label="Maya2C testnet, live: validators, blocks and finality">
-          <svg viewBox="0 0 400 260" role="img" aria-hidden="true" focusable="false">
-            <defs>
-              <radialGradient id="nv-core"><stop offset="0" stop-color="#e9fdff" /><stop offset=".35" stop-color="#3fd2e0" stop-opacity=".8" /><stop offset="1" stop-color="#1fb5c2" stop-opacity="0" /></radialGradient>
-            </defs>
-            <circle class="nv-orbit" cx="200" cy="130" r="92" />
-            <circle class="nv-orbit faint" cx="200" cy="130" r="122" />
-            {VALIDATORS.map((v, i) => VALIDATORS.slice(i + 1).map((w) => <line class="nv-link" x1={v.x} y1={v.y} x2={w.x} y2={w.y} />))}
-            {VALIDATORS.map((v) => <line class="nv-spoke" x1="200" y1="130" x2={v.x} y2={v.y} />)}
-            <g id="nv-pulses"></g>
-            <circle cx="200" cy="130" r="34" fill="url(#nv-core)" class="core" />
-            {VALIDATORS.map((v, i) => (
-              <g class="validator" style={`--d:${i * 0.4}s`}>
-                <circle cx={v.x} cy={v.y} r="11" class="halo" />
-                <circle cx={v.x} cy={v.y} r="4.5" class="dot" />
-              </g>
-            ))}
-          </svg>
-          <figcaption class="nv-stats">
-            <span><b id="nv-height">—</b> height</span>
-            <span><b id="nv-bt">—</b> block time</span>
-            <span><b>3 of 4</b> to finalize</span>
-            <span class="nv-live" id="nv-state">connecting…</span>
-          </figcaption>
-        </figure>
-      </article>
-    </div>
+      </div>
+      <figure class="netview" id="netview" aria-label="Maya2C testnet: validators, blocks and finality">
+        <div class="holo" data-gl="emblem">
+          <div class="holo-plate">
+            <svg viewBox="0 0 400 260" aria-hidden="true" focusable="false">
+              <defs>
+                <radialGradient id="nv-core"><stop offset="0" stop-color="#f2f9fa" /><stop offset=".35" stop-color="#52e5dd" stop-opacity=".85" /><stop offset="1" stop-color="#1fd3cc" stop-opacity="0" /></radialGradient>
+              </defs>
+              <circle class="nv-orbit" cx="200" cy="130" r="92" />
+              <circle class="nv-orbit faint" cx="200" cy="130" r="122" />
+              {VALIDATORS.map((v, i) => VALIDATORS.slice(i + 1).map((w) => <line class="nv-link" x1={v.x} y1={v.y} x2={w.x} y2={w.y} />))}
+              {VALIDATORS.map((v) => <line class="nv-spoke" x1="200" y1="130" x2={v.x} y2={v.y} />)}
+              <g id="nv-pulses"></g>
+              <circle cx="200" cy="130" r="34" fill="url(#nv-core)" class="core" />
+              {VALIDATORS.map((v) => (
+                <g class="validator">
+                  <circle cx={v.x} cy={v.y} r="11" class="halo" />
+                  <circle cx={v.x} cy={v.y} r="4.5" class="dot" />
+                </g>
+              ))}
+            </svg>
+          </div>
+          <span class="holo-beam" aria-hidden="true"></span>
+          <span class="holo-mark" aria-hidden="true"></span>
+          <canvas class="gl-canvas" aria-hidden="true"></canvas>
+        </div>
+        <figcaption class="nv-stats">
+          <span class="nv-num"><b id="nv-height">—</b> height</span>
+          <span class="nv-num"><b id="nv-bt">—</b> block time</span>
+          <span><b>DAG-BFT</b> finality</span>
+          <span class="nv-live" id="nv-state" role="status">connecting…</span>
+        </figcaption>
+      </figure>
+    </article>
 
-    <div class="project-grid other-projects" data-reveal>
+    <div class="project-grid">
       {
-        PROJECTS.map((p) => (
-          <article class="card">
+        PROJECTS.map((p, i) => (
+          <article class="card panel" data-tilt data-reveal>
+            <span class="panel-index" aria-hidden="true">0{i + 1}</span>
             <p class="card-badge">{p.badge}</p>
             <h3 class="card-name">{p.name}</h3>
             <p class="card-desc">{p.description}</p>
@@ -83,29 +90,32 @@ const VALIDATORS = [0, 1, 2, 3].map((i) => {
                 </a>
               </div>
             ) : (
-              <p class="card-desc">Private repository.</p>
+              <p class="card-desc card-note">{p.note}</p>
             )}
           </article>
         ))
       }
     </div>
 
-    <ul class="card-desc source-links" data-reveal>
-      <li>Maya2C source: <a class="tap-link" href={MAYA2C_REPO} rel="noopener noreferrer" target="_blank">github.com/EricWijesinghe/Maya2C <span class="visually-hidden">(opens in a new tab)</span></a></li>
-      <li>Live site: <a class="tap-link" href={MAYA2C_SITE} rel="noopener noreferrer" target="_blank">maya2c.dev <span class="visually-hidden">(opens in a new tab)</span></a></li>
-    </ul>
   </div>
 </section>
 
 <script>
-  // Polls the public gateway; each new height pulses the core once.
+  // Polls the public gateway; each new height pulses the core once. "live" is earned only by a
+  // height that moves: a gateway answering with a frozen height is a stalled chain, not a live one.
   const RPC = "https://rpc.maya2c.dev/rpc";
+  const POLL_MS = 2000;
+  const RETRY_MS = 30_000; // once the gateway is down, keep asking, just less often
+  const STALE_MS = 60_000; // no new height for this long: say when the last block came
+  const MAX_MISSES = 3;
   const pulses = document.getElementById("nv-pulses");
-  const heightEl = document.getElementById("nv-height");
-  const btEl = document.getElementById("nv-bt");
-  const stateEl = document.getElementById("nv-state");
+  const heightEl = document.getElementById("nv-height")!;
+  const btEl = document.getElementById("nv-bt")!;
+  const stateEl = document.getElementById("nv-state")!;
+  const view = document.getElementById("netview");
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let last = 0, lastAt = 0;
+  let misses = 0;
+  let last = 0, lastAt = 0, moved = false;
   const gaps: number[] = [];
   function pulse() {
     if (reduce || !pulses) return;
@@ -115,23 +125,43 @@ const VALIDATORS = [0, 1, 2, 3].map((i) => {
     pulses.appendChild(c);
     setTimeout(() => c.remove(), 2600);
   }
+  function setState(text: string, on: boolean) {
+    stateEl.textContent = text;
+    stateEl.classList.toggle("on", on);
+  }
   async function tick() {
     try {
       const r = await fetch(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "get_chain_info", params: [] }) });
       const h = ((await r.json()).result ?? {}).height as number;
       if (typeof h !== "number") throw new Error("no height");
-      const now = performance.now();
+      const now = Date.now();
       if (last && h > last) {
         gaps.push((now - lastAt) / (h - last)); if (gaps.length > 12) gaps.shift();
-        btEl!.textContent = (gaps.reduce((a, b) => a + b, 0) / gaps.length / 1000).toFixed(1) + " s";
+        btEl.textContent = (gaps.reduce((a, b) => a + b, 0) / gaps.length / 1000).toFixed(1) + " s";
+        moved = true;
         pulse();
       }
       if (h !== last) { last = h; lastAt = now; }
-      heightEl!.textContent = h.toLocaleString("en-US");
-      stateEl!.textContent = "live"; stateEl!.classList.add("on");
+      heightEl.textContent = h.toLocaleString("en-US");
+      misses = 0;
+      view?.classList.remove("is-paused");
+      if (now - lastAt >= STALE_MS) {
+        const at = new Date(lastAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        setState(`no new blocks since ${at}`, false);
+      } else {
+        setState(moved ? "live" : "waiting for a new block…", moved);
+      }
     } catch {
-      stateEl!.textContent = "offline"; stateEl!.classList.remove("on");
+      misses += 1;
+      if (misses < MAX_MISSES) { setState("connecting…", false); return; }
+      view?.classList.add("is-paused");
+      // A failed fetch says nothing about the chain, only that this page cannot reach it.
+      setState("Live data unavailable right now", false);
     }
   }
-  tick(); setInterval(tick, 2000);
+  async function loop() {
+    await tick();
+    setTimeout(loop, misses >= MAX_MISSES ? RETRY_MS : POLL_MS);
+  }
+  loop();
 </script>
