@@ -1,6 +1,181 @@
-<footer>
-  <div class="wrap footer-inner">
-    <p class="footer-text">© 2026 Eric Wijesinghe · <span>Maya2C</span></p>
-    <a class="footer-top" href="#top">back to top ↑</a>
+---
+import { GITHUB_PROFILE, MAYA2C_REPO, MAYA2C_SITE } from '../data/content';
+
+// Source of this site. Public, so a visitor can read exactly what they are looking at.
+const SITE_REPO = 'https://github.com/EricWijesinghe/eric-site';
+// Eric (round 12): a plain, authentic sign-off. No build date and no technology credits, only the copyright.
+const year = new Date().getUTCFullYear();
+
+const SECTIONS = [
+  { label: 'About', href: '#about' },
+  { label: 'Projects', href: '#projects' },
+  { label: 'Skills', href: '#skills' },
+  { label: 'Contact', href: '#contact' },
+] as const;
+// Short on screen; the hidden part keeps each link's full name for screen readers.
+const SOURCES = [
+  { label: 'GitHub', before: '', after: ' profile', href: GITHUB_PROFILE },
+  { label: 'maya2c.dev', before: '', after: ' (Maya2C site)', href: MAYA2C_SITE },
+  { label: 'Repository', before: 'Maya2C ', after: '', href: MAYA2C_REPO },
+  { label: 'Source', before: '', after: ' of this site', href: SITE_REPO },
+] as const;
+---
+
+<!-- A sign-off and one HUD line. The socials are not repeated: they sit just above, as the globe's stations. -->
+<footer class="site-foot" aria-labelledby="foot-name">
+  <div class="wrap">
+    <p class="foot-sign">
+      <span class="foot-name" id="foot-name">Eric Wijesinghe</span>
+      <span class="foot-line">Rust developer and security researcher. Creator of Maya2C, a post-quantum Layer-1 blockchain in development.</span>
+    </p>
+    <div class="foot-hud">
+      <nav aria-label="Footer">
+        <ul class="foot-group">
+          {SECTIONS.map((s) => <li><a href={s.href}>{s.label}</a></li>)}
+        </ul>
+      </nav>
+      <ul class="foot-group" aria-label="Links">
+        {SOURCES.map((s) => (
+          <li>
+            <a href={s.href} rel="noopener noreferrer" target="_blank">
+              {s.before && <span class="visually-hidden">{s.before}</span>}{s.label}<span class="visually-hidden">{s.after} (opens in a new tab)</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+      <p class="foot-group foot-meta">
+        <span>© {year} Eric Wijesinghe. All rights reserved.</span>
+      </p>
+      <p class="foot-end">
+        <a class="foot-top" href="#top" aria-label="Back to top">↑</a>
+      </p>
+    </div>
   </div>
 </footer>
+
+<style>
+  /* No top edge, no fill, no chips: the page field runs straight through, so the footer has no seam. */
+  .site-foot {
+    position: relative;
+    margin-top: clamp(48px, 6vw, 80px);
+    padding: 24px 0 calc(16px + env(safe-area-inset-bottom));
+  }
+  /* Wide: the contact stage above already ends in its stations, so a tall gap here only pushes the globe's top
+     off the last screen (round 11 finding 7). */
+  @media (min-width: 900px) {
+    .site-foot {
+      margin-top: 32px;
+    }
+  }
+  .foot-sign {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 20px;
+    margin: 0 0 8px;
+  }
+  .foot-name {
+    font: 800 clamp(1.25rem, 2.2vw, 1.5rem) / 1.2 var(--font-display);
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .foot-line {
+    color: var(--text-dim);
+    font-size: 15px;
+  }
+  .foot-hud {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 28px;
+    color: var(--text-dim);
+    font: 500 12px / 1.5 var(--font-mono);
+  }
+  .foot-hud > nav {
+    display: inline-flex;
+    align-items: center;
+  }
+  .foot-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  /* The dots are drawn, not typed, so a screen reader reads a clean list. */
+  .foot-group > li + li::before,
+  .foot-meta > span + span::before {
+    content: '·';
+    margin: 0 6px;
+    opacity: 0.7;
+  }
+  .foot-group > li {
+    display: inline-flex;
+    align-items: center;
+  }
+  .foot-hud a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    color: var(--text);
+    text-decoration: underline 1px transparent;
+    text-underline-offset: 5px;
+    transition: color 0.3s var(--sig-ease), text-decoration-color 0.3s var(--sig-ease);
+  }
+  .foot-hud a:hover,
+  .foot-hud a:focus-visible {
+    color: var(--accent);
+    text-decoration-color: currentColor;
+  }
+  .foot-meta {
+    min-height: 44px;
+  }
+  .foot-meta > span {
+    white-space: nowrap;
+  }
+  .foot-end {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 0 auto;
+  }
+  .foot-hud .foot-top {
+    font-size: 1rem;
+  }
+  /* Phone: each group on its own row, the meta in two lines, no dots at the wrap points. */
+  @media (max-width: 720px) {
+    .foot-sign {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .foot-hud {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .foot-meta {
+      flex-direction: column;
+      align-items: flex-start;
+      min-height: 0;
+      padding-block: 8px;
+    }
+    .foot-meta > span {
+      white-space: normal; /* the copyright line is longer than 320px */
+    }
+    .foot-meta > span + span::before {
+      display: none;
+    }
+    .foot-end {
+      margin-left: 0;
+    }
+    .foot-group {
+      gap: 0 18px;
+    }
+    .foot-group > li + li::before {
+      display: none;
+    }
+  }
+</style>

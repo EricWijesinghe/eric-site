@@ -1,0 +1,67 @@
+/* The "Work together" globe (src/scripts/contact-globe.ts): one canvas over the whole section, a circular button
+   over the sphere for drag, tap and keys, and the inks the canvas reads (getComputedStyle on the theme switch).
+   Layout of the stage and the stations: finale-contact.css. */
+
+#contact .fin-globe-canvas {
+  /* Dark: the approved globe values, unchanged. */
+  --gl-dot: #bff4ff;
+  --gl-rim: #38e1ff;
+  --gl-ring: #38e1ff;
+  --gl-ping: #2df5a0;
+  --gl-arc-1: #38e1ff;
+  --gl-arc-2: #8b5cf6;
+  --gl-arc-3: #2df5a0;
+  --gl-arc-4: #e04cff;
+  --gl-sat-1: #38e1ff;
+  --gl-sat-2: #8b5cf6;
+  --gl-sat-3: #e04cff;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Light: deep inks drawn with normal alpha, so nothing vanishes on the pearl page. */
+:root[data-theme='light'] #contact .fin-globe-canvas {
+  --gl-dot: #0a285a;
+  --gl-rim: #0b5fbf;
+  --gl-ring: #0b5fbf;
+  --gl-ping: #047857;
+  --gl-arc-1: #0b5fbf;
+  --gl-arc-2: #5b2bd6;
+  --gl-arc-3: #047857;
+  --gl-arc-4: #a21caf;
+  --gl-sat-1: #0b5fbf;
+  --gl-sat-2: #5b2bd6;
+  --gl-sat-3: #a21caf;
+}
+
+/* The hit area is the sphere itself: a transparent circle, so the focus ring sits around the globe. */
+#contact .globe-hit {
+  position: absolute;
+  left: calc(var(--gx) - var(--gr));
+  top: calc(var(--gy) - var(--gr));
+  width: calc(var(--gr) * 2);
+  height: calc(var(--gr) * 2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: grab;
+  touch-action: pan-y;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#contact .globe-hit:active {
+  cursor: grabbing;
+}
+
+#contact .globe-hit:focus-visible {
+  outline: 2px solid var(--glow);
+  outline-offset: 10px;
+}

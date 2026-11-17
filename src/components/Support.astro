@@ -1,23 +1,140 @@
 ---
-import { DONATION_URL, MAYA2C_CONTRIBUTING, MAYA2C_REPO } from '../data/content';
+import { DONATION_URL, FEATURED_PROJECT, MAYA2C_CONTRIBUTING, MAYA2C_REPO } from '../data/content';
+import '../styles/sections-signal.css';
+import '../styles/finale-support.css';
+
+// "The address, bit by bit": the tape carries the repository address as UTF-8 bits, so every bit on screen
+// decodes to a real character (round 3: code and binary are the approved motif). Every count is computed here.
+const payload = MAYA2C_REPO.replace(/^https:\/\//, '');
+const bytes = [...new TextEncoder().encode(payload)];
+const bits = bytes.map((b) => b.toString(2).padStart(8, '0'));
+const chars = [...payload];
+const n = bytes.length;
+// Self-check: one byte per character (the inspect readout pairs them by index) and the bits decode back.
+const decoded = new TextDecoder().decode(Uint8Array.from(bits.map((b) => parseInt(b, 2))));
+if (chars.length !== n || decoded !== payload) throw new Error(`Support tape does not decode to ${payload}`);
+
+const PUNCT = /[./]/; // separators get the accent ink in the address
+
+// Wide: six strands, three from each side, run into one point above the address (a funnel of bits that
+// becomes the address). Each strand's bytes are in reading order; --d (data-d) is a byte's step from the
+// strand's far end, so the decode light travels down every strand into the address at the same time.
+const WIDE_SPLIT = [6, 5, 5, 5, 5, 6]; // bytes per strand: left top, mid, low, then right low, mid, top
+const APEX = { x: 590, y: 236 }; // viewBox point where the strands meet, centred over the address
+const STRAND_Y = [14, 84, 154];
+const BYTE_GAP = 8; // viewBox units between bytes on a strand
+// Text stops short of the apex so the bare strands visibly merge there instead of piling bytes on each other.
+// Lower strands are shorter and carry fewer bytes, so they stop further out; the ends stagger, never stack.
+const TEXT_END = ['82%', '78%', '74%'];
+const TEXT_START = ['26%', '22%', '18%'];
+const MERGE = 90; // viewBox units over which the strands bend into the apex: short, so they meet late and cleanly
+// The edge mask clips to the svg box even with overflow: visible, so the box itself reaches past the glyphs of the
+// top strands and past the apex glow at its 1.6x pulse; finale-support.css takes the same units back as margins.
+const HEAD = 20;
+const FOOT = 40;
+const WIDE_BOX = `0 ${-HEAD} 1180 ${252 + HEAD + FOOT}`;
+const SIDE = WIDE_SPLIT.length / 2;
+const STEPS = Math.max(...WIDE_SPLIT); // light steps from a strand's far end to the apex
+if (WIDE_SPLIT.reduce((a, b) => a + b, 0) !== n) throw new Error('Support strands must carry every byte');
+const strands = WIDE_SPLIT.map((m, s) => {
+  const from = WIDE_SPLIT.slice(0, s).reduce((a, b) => a + b, 0);
+  const left = s < SIDE;
+  const y = STRAND_Y[left ? s : WIDE_SPLIT.length - 1 - s];
+  // Every strand arrives at the apex level, so the six merge smoothly instead of crossing.
+  const d = left
+    ? `M0 ${y} C 250 ${y}, ${APEX.x - MERGE} ${APEX.y}, ${APEX.x} ${APEX.y}`
+    : `M${APEX.x} ${APEX.y} C ${APEX.x + MERGE} ${APEX.y}, 930 ${y}, 1180 ${y}`;
+  const items = bits.slice(from, from + m).map((b, k) => ({ b, i: from + k, d: left ? k + STEPS - m : STEPS - 1 - k }));
+  return { id: `fin-strand-${s}`, d, left, row: s, items, lane: left ? 'lane-a' : 'lane-b' };
+});
+
+// Phone: three gentle parallel waves carry the last bytes of the address (all 32 do not fit a phone's width at a
+// legible size); the full address is shown below and every byte on screen is still its real character.
+const PHONE_WAVES = 3;
+const PHONE_PER = 6;
+const PHONE_FROM = n - PHONE_WAVES * PHONE_PER;
+const PHONE_W = 358;
+const WAVE_Y = [30, 84, 138];
+const WAVE_AMP = 14;
+const waves = WAVE_Y.map((y, k) => {
+  const from = PHONE_FROM + k * PHONE_PER;
+  const q = (PHONE_W + 20) / 4;
+  const d = `M-10 ${y} Q ${-10 + q / 2} ${y - WAVE_AMP * 2}, ${-10 + q} ${y} T ${-10 + 2 * q} ${y} T ${-10 + 3 * q} ${y} T ${PHONE_W + 10} ${y}`;
+  const items = bits.slice(from, Math.min(n, from + PHONE_PER)).map((b, j) => ({ b, i: from + j, d: j }));
+  return { id: `fin-wave-${k}`, d, items, lane: k === 1 ? 'lane-b' : 'lane-a' };
+});
 ---
 
 <section id="support" aria-labelledby="support-title">
   <div class="wrap">
     <p class="section-label" data-reveal><span>04</span> support</p>
     <h2 class="section-title" id="support-title" data-reveal>Support my work</h2>
-    <div class="card panel support-card" data-tilt="4" data-reveal>
-      <p>
-        Maya2C is open for anyone to read, star, and build on. A star helps other developers find it;
-        an issue or a pull request helps it get better.
-      </p>
-      <div class="support-actions">
-        <a class="btn btn-primary" href={MAYA2C_REPO} rel="noopener noreferrer" target="_blank">Star Maya2C on GitHub <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
-        <a class="btn btn-ghost" href={MAYA2C_CONTRIBUTING} rel="noopener noreferrer" target="_blank">How to contribute <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
-        {DONATION_URL && (
-          <a class="btn btn-ghost" href={DONATION_URL} rel="noopener noreferrer" target="_blank">Donate <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
-        )}
+    <p class="fin-lead" data-reveal>Maya2C is open for anyone to read, star, and build on.</p>
+
+    <div class="fin-signal" data-reveal data-tape-root>
+      <svg class="fin-tape fin-tape-d" data-tape viewBox={WIDE_BOX} aria-hidden="true" focusable="false">
+        <defs>
+          <radialGradient id="fin-apex-g">
+            <stop offset="0" class="apex-0" />
+            <stop offset="1" class="apex-1" />
+          </radialGradient>
+        </defs>
+        {strands.map((s) => <path class={`strand ${s.lane}`} id={s.id} d={s.d} />)}
+        <circle class="fin-apex" cx={APEX.x} cy={APEX.y} r="34" fill="url(#fin-apex-g)" />
+        {strands.map((s) => (
+          <text class={s.lane} text-anchor={s.left ? 'end' : 'start'}>
+            <textPath href={`#${s.id}`} startOffset={s.left ? TEXT_END[s.row] : TEXT_START[s.row - SIDE]}>
+              {s.items.map((it, k) => (
+                <tspan class="by" data-i={it.i} data-d={it.d} dx={k ? BYTE_GAP : 0} dy={k ? 0 : -6}>{it.b}</tspan>
+              ))}
+            </textPath>
+          </text>
+        ))}
+      </svg>
+      <svg class="fin-tape fin-tape-p" data-tape viewBox={`0 0 ${PHONE_W} 160`} aria-hidden="true" focusable="false">
+        {waves.map((w) => <path class={`strand ${w.lane}`} id={w.id} d={w.d} />)}
+        {waves.map((w) => (
+          <text class={w.lane} text-anchor="middle">
+            <textPath href={`#${w.id}`} startOffset="50%">
+              {w.items.map((it, j) => (
+                <tspan class="by" data-i={it.i} data-d={it.d} dx={j ? 4 : 0} dy={j ? 0 : -5}>{it.b}</tspan>
+              ))}
+            </textPath>
+          </text>
+        ))}
+      </svg>
+
+      <div class="fin-dock">
+        <p class="fin-readout" data-readout aria-hidden="true"></p>
+        <a class="fin-addr" href={MAYA2C_REPO} target="_blank" rel="noopener noreferrer" aria-label={`${payload}, the Maya2C repository on GitHub (opens in a new tab)`}>
+          {chars.map((c, i) => <span aria-hidden="true" class:list={['ch', PUNCT.test(c) && 'p']} data-i={i}>{c}</span>)}
+        </a>
+        <div class="fin-routes">
+          <p class="fin-route">
+            <a href={MAYA2C_REPO} target="_blank" rel="noopener noreferrer">Star Maya2C on GitHub <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+            <span class="fin-cap">A star helps other developers find it.</span>
+          </p>
+          <p class="fin-route">
+            <a href={MAYA2C_CONTRIBUTING} target="_blank" rel="noopener noreferrer">How to contribute <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+            <span class="fin-cap">An issue or a pull request helps it get better.</span>
+          </p>
+          {DONATION_URL && (
+            <p class="fin-route">
+              <a href={DONATION_URL} target="_blank" rel="noopener noreferrer">Donate <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+              <span class="fin-cap"></span>
+            </p>
+          )}
+        </div>
       </div>
     </div>
+
+    <p class="fin-status" data-reveal>{FEATURED_PROJECT.badge} · {FEATURED_PROJECT.disclosure}</p>
   </div>
 </section>
+
+<script>
+  import { mountTape } from '../scripts/finale-tape';
+
+  const root = document.querySelector<HTMLElement>('[data-tape-root]');
+  if (root) mountTape(root);
+</script>

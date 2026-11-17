@@ -1,43 +1,103 @@
 ---
+// Skills as one loop: a change travels WRITE, CHECK, RUN, TRACE, BREAK around a Rust core, and every
+// skill sits where it acts (src/data/spectrum.ts). The canvas (gl/loop-scene.ts) is decoration for
+// pointer users; the rail, readout and index carry everything for keyboard, screen readers and no-JS.
 import { SKILL_GROUPS } from '../data/content';
+import { ALL_STARS, CORE, PHASES, RING, ordinal, starId } from '../data/spectrum';
+import { POSTER_H, POSTER_VIEW, POSTER_W, posterDots, posterPath, project3 } from '../scripts/gl/loop-geom';
+import '../styles/sections-signal.css';
+import '../styles/skills.css';
+import '../styles/skills-stage.css';
+
+const track = posterPath();
+const dots = posterDots();
+const core = project3(0, 0.16, 0, POSTER_VIEW);
+const CORE_R = 26;
+const phaseName = (name: string): string => {
+  const s = ALL_STARS[starId(name)];
+  return s && s.phase >= 0 ? PHASES[s.phase]!.name : 'CORE';
+};
+const coreGroup = SKILL_GROUPS[CORE.group]!.name.toUpperCase();
 ---
 
 <section id="skills" aria-labelledby="skills-title">
   <div class="wrap">
     <p class="section-label" data-reveal><span>03</span> skills</p>
     <h2 class="section-title" id="skills-title" data-reveal>Stack &amp; expertise</h2>
-    <p class="section-lede" data-reveal>Six skill groups orbit one core. Pick one to open it.</p>
-    <div class="orbit-wrap" data-reveal>
-      <div class="orbit-stage" data-orbit data-gl="orbit">
-        <div class="orbit-poster" aria-hidden="true"><span></span><span></span><span></span></div>
-        <canvas class="gl-canvas" aria-hidden="true"></canvas>
-        <div class="orbit-core" aria-hidden="true">Rust</div>
-        <ul class="orbit-nodes" aria-label="Skill groups">
+    <p class="section-lede" data-reveal>One change, five phases, every skill where it acts. Turn the loop or pick a skill.</p>
+    <div class="sk">
+      <figure class="sk-stage" role="group" aria-labelledby="sk-cap" data-sk-stage>
+        <figcaption id="sk-cap" class="visually-hidden">
+          Schematic: one change travels a loop of five phases, {PHASES.map((p) => p.name.toLowerCase()).join(', ')}, around
+          a Rust core, and each of the {RING.length} other skills sits in the phase where it acts. The full list follows.
+        </figcaption>
+        <div class="sk-view">
+          <svg class="sk-poster" viewBox={`0 0 ${POSTER_W} ${POSTER_H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">
+            <path class="sk-ptrack" d={track}></path>
+            <circle class="sk-pcore" cx={core.x.toFixed(1)} cy={core.y.toFixed(1)} r={CORE_R}></circle>
+            <circle class="sk-pcore-in" cx={core.x.toFixed(1)} cy={core.y.toFixed(1)} r={CORE_R / 2}></circle>
+            {dots.map((d) => <circle class={`sk-pdot sk-h${d.group}`} cx={d.x} cy={d.y} r={d.r}></circle>)}
+          </svg>
+          <canvas class="sk-canvas" aria-hidden="true"></canvas>
+        </div>
+        <div class="sk-rail">
+          <div class="sk-phases" role="group" aria-label="Loop phases">
+            {
+              PHASES.map((p, i) => (
+                <button class="sk-phase" type="button" data-sk-phase={i} aria-current={i === 0 ? 'step' : undefined}>
+                  <span class="sk-ord" aria-hidden="true">{ordinal(i)}</span>
+                  <span class="sk-pname">{p.name}</span>
+                </button>
+              ))
+            }
+          </div>
+          <div class="sk-transport">
+            <button class="sk-play" type="button" data-sk-play aria-label="Pause the loop" hidden>
+              <svg class="sk-play-i" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path class="sk-i-pause" d="M4 3h3v10H4zM9 3h3v10H9z"></path>
+                <path class="sk-i-play" d="M4 2.5v11l9-5.5z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        {/* In the stage, so on desktop it stays in view with the sticky loop it explains. */}
+        <div class="sk-readout" data-sk-readout>
+          <p class="sk-kicker" data-sk-kicker>CORE · {coreGroup}</p>
+          <p class="sk-name" data-sk-name>{CORE.name}</p>
+          <p class="sk-how" data-sk-how>{CORE.how}</p>
+        </div>
+      </figure>
+
+      <div class="sk-index">
+        <p class="visually-hidden" aria-live="polite" data-sk-live></p>
+        <ul class="sk-groups" aria-label="Skills by group">
           {
             SKILL_GROUPS.map((g, i) => (
-              <li>
-                <button class="orbit-node" type="button" data-node aria-controls={`skill-panel-${i}`}>
-                  <span class="node-name">{g.name}</span>
-                  <span class="node-line">{g.line}</span>
+              <li class={`sk-group sk-h${i}`} data-sk-group={i}>
+                <button class="sk-gbtn" type="button" aria-expanded="true" aria-controls={`sk-g${i}`}>
+                  <span class="sk-gbar" aria-hidden="true"></span>
+                  <span class="sk-gtext">
+                    <span class="sk-gname">{g.name}</span>
+                    <span class="sk-gline">{g.line}</span>
+                  </span>
+                  <span class="sk-dots" aria-hidden="true">{g.items.map(() => <i></i>)}</span>
                 </button>
+                <ul class="sk-rows" id={`sk-g${i}`}>
+                  {
+                    g.items.map((item) => (
+                      <li>
+                        <button class="sk-row" type="button" data-sk={starId(item)} aria-pressed="false">
+                          <span class="sk-rname">{item}</span>
+                          <span class="sk-rphase">{phaseName(item)}</span>
+                        </button>
+                      </li>
+                    ))
+                  }
+                </ul>
               </li>
             ))
           }
         </ul>
-      </div>
-      <div class="orbit-panels">
-        {
-          SKILL_GROUPS.map((g, i) => (
-            <section class="orbit-panel" id={`skill-panel-${i}`} data-panel aria-labelledby={`skill-panel-${i}-title`}>
-              <p class="panel-kicker">orbit 0{i + 1}</p>
-              <h3 id={`skill-panel-${i}-title`}>{g.name}</h3>
-              <p class="panel-line">{g.line}</p>
-              <ul class="chips">
-                {g.items.map((item) => <li>{item}</li>)}
-              </ul>
-            </section>
-          ))
-        }
       </div>
     </div>
   </div>

@@ -1,167 +1,123 @@
 ---
-import { FEATURED_PROJECT, PROJECTS } from '../data/content';
-const f = FEATURED_PROJECT;
-// Live network view: the four validators on a ring around the core. Every
-// real block (polled from rpc.maya2c.dev) sends a pulse ring outward; the
-// numbers under it are the chain's own. Without data it says so and asks less often.
-const VALIDATORS = [0, 1, 2, 3].map((i) => {
-  const a = (i / 4) * Math.PI * 2 - Math.PI / 4;
-  return { x: +(200 + Math.cos(a) * 92).toFixed(1), y: +(130 + Math.sin(a) * 92).toFixed(1) };
-});
+import { FEATURED_PROJECT as f, PROJECTS } from '../data/content';
+import { ACTS, BENCH, STRUCTURE_ONLY } from '../data/scenes';
+import '../styles/projects.css';
+
+// Page order: the Maya2C stage, the UNICRON stage, then one bench holding both focus areas.
+const [unicron, research, ai] = PROJECTS;
+const FACTS = { maya: f, unicron } as const;
+const BENCH_ITEMS = [
+  { p: research, s: BENCH.research, id: 'research' },
+  { p: ai, s: BENCH.ai, id: 'ai' },
+];
+// Both focus areas carry the same note today: it is printed once, under the label, instead of twice.
+const sharedNote = research.note === ai.note ? research.note : null;
 ---
 
-<section id="projects" aria-labelledby="projects-title">
+<section id="projects" class="projects" aria-labelledby="projects-title">
   <div class="wrap">
-    <p class="section-label" data-reveal><span>02</span> portfolio</p>
-    <h2 class="section-title" id="projects-title" data-reveal>What I'm building</h2>
+    <header class="projects-head">
+      <p class="section-label" data-reveal><span>02</span> portfolio</p>
+      <h2 class="section-title" id="projects-title" data-reveal>What I'm building</h2>
+    </header>
 
-    <article class="card panel featured" data-tilt="3" data-reveal>
-      <div class="panel-body">
-        <p class="card-badge"><span class="pulse-dot" aria-hidden="true"></span>{f.badge}</p>
-        <h3 class="card-name featured-name">{f.name}</h3>
-        <p class="card-desc">{f.description}</p>
-        <ul class="tags">
-          {f.tags.map((t) => <li>{t}</li>)}
-        </ul>
-        <dl class="spec">
-          {f.spec.map(([k, v]) => (
-            <div class="spec-row">
-              <dt>{k}</dt>
-              <dd>{v}</dd>
+    {ACTS.map((a, i) => {
+      const p = FACTS[a.key];
+      return (
+        <article class="act" data-reveal aria-labelledby={`act-${a.key}`}>
+          <div class="act-lockup">
+            <div class="act-id">
+              <p class="act-index"><span>{`0${i + 1}`}</span> {p.badge}</p>
+              <h3 class="act-name" id={`act-${a.key}`}>{p.name}</h3>
             </div>
-          ))}
-        </dl>
-        <p class="card-desc disclosure">{f.disclosure}</p>
-        <div class="card-links">
-          {f.links.map((l, i) => (
-            <a class:list={['btn', i === 0 ? 'btn-primary' : 'btn-ghost']} href={l.href} rel="noopener noreferrer" target="_blank">{l.label} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
-          ))}
-        </div>
-      </div>
-      <figure class="netview" id="netview" aria-label="Maya2C testnet: validators, blocks and finality">
-        <div class="holo" data-gl="emblem">
-          <div class="holo-plate">
-            <svg viewBox="0 0 400 260" aria-hidden="true" focusable="false">
-              <defs>
-                <radialGradient id="nv-core"><stop offset="0" stop-color="#f2f9fa" /><stop offset=".35" stop-color="#52e5dd" stop-opacity=".85" /><stop offset="1" stop-color="#1fd3cc" stop-opacity="0" /></radialGradient>
-              </defs>
-              <circle class="nv-orbit" cx="200" cy="130" r="92" />
-              <circle class="nv-orbit faint" cx="200" cy="130" r="122" />
-              {VALIDATORS.map((v, i) => VALIDATORS.slice(i + 1).map((w) => <line class="nv-link" x1={v.x} y1={v.y} x2={w.x} y2={w.y} />))}
-              {VALIDATORS.map((v) => <line class="nv-spoke" x1="200" y1="130" x2={v.x} y2={v.y} />)}
-              <g id="nv-pulses"></g>
-              <circle cx="200" cy="130" r="34" fill="url(#nv-core)" class="core" />
-              {VALIDATORS.map((v) => (
-                <g class="validator">
-                  <circle cx={v.x} cy={v.y} r="11" class="halo" />
-                  <circle cx={v.x} cy={v.y} r="4.5" class="dot" />
-                </g>
-              ))}
-            </svg>
+            <p class="act-desc">{p.description}</p>
           </div>
-          <span class="holo-beam" aria-hidden="true"></span>
-          <span class="holo-mark" aria-hidden="true"></span>
-          <canvas class="gl-canvas" aria-hidden="true"></canvas>
-        </div>
-        <figcaption class="nv-stats">
-          <span class="nv-num"><b id="nv-height">—</b> height</span>
-          <span class="nv-num"><b id="nv-bt">—</b> block time</span>
-          <span><b>DAG-BFT</b> finality</span>
-          <span class="nv-live" id="nv-state" role="status">connecting…</span>
-        </figcaption>
-      </figure>
-    </article>
 
-    <div class="project-grid">
-      {
-        PROJECTS.map((p, i) => (
-          <article class="card panel" data-tilt data-reveal>
-            <span class="panel-index" aria-hidden="true">0{i + 1}</span>
-            <p class="card-badge">{p.badge}</p>
-            <h3 class="card-name">{p.name}</h3>
-            <p class="card-desc">{p.description}</p>
-            <ul class="tags">
-              {p.tags.map((t) => <li>{t}</li>)}
-            </ul>
-            {p.href ? (
-              <div class="card-links">
-                <a href={p.href} rel="noopener noreferrer" target="_blank">
-                  View on GitHub <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span>
-                </a>
+          <!-- The stage: the canvas host and its tag are siblings, so pointer capture on the host never eats a control. -->
+          <div class="stage" role="group" aria-label={p.name} aria-describedby={`stage-${a.key}-d`} data-live="false">
+            <p class="visually-hidden" id={`stage-${a.key}-d`}>{a.aria}</p>
+            <div class="stage-view" data-scene={a.scene}></div>
+            <p class="stage-inspect" aria-live="polite" data-hint={a.hint}>{a.hint}</p>
+            <p class="stage-tag">
+              {a.tag === 'live'
+                ? (<><span class="tag-live">live readout</span><span class="tag-structure">{STRUCTURE_ONLY}</span></>)
+                : (<span class="tag-illustration">illustration</span>)}
+            </p>
+          </div>
+
+          <div class="explainer">
+            <div class="explainer-text">
+              <p class="explainer-line">{a.caption}</p>
+              {a.formula && <p class="explainer-formula">{a.formula}</p>}
+            </div>
+            <button type="button" class="scene-act">{a.act}</button>
+          </div>
+
+          {a.key === 'maya' && (
+            <div class="facts">
+              <dl class="facts-spec">
+                {f.spec.map(([k, v]) => (
+                  <div class="facts-pair"><dt>{k}</dt><dd>{v}</dd></div>
+                ))}
+              </dl>
+              <div class="facts-net" id="netview">
+                <p class="facts-pair nv-num"><span class="facts-k">height</span> <b id="nv-height">—</b></p>
+                <p class="facts-pair nv-num"><span class="facts-k">block time</span> <b id="nv-bt">—</b></p>
+                <p class="facts-pair"><span class="facts-k">state</span> <span id="nv-state" class="nv-live" role="status">connecting…</span></p>
               </div>
-            ) : (
-              <p class="card-desc card-note">{p.note}</p>
-            )}
-          </article>
-        ))
-      }
-    </div>
+              <p class="facts-disclosure">{f.disclosure}</p>
+              <div class="facts-links">
+                {f.links.map((l) => (
+                  <a href={l.href} rel="noopener noreferrer" target="_blank">{l.label} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+                ))}
+              </div>
+            </div>
+          )}
+        </article>
+      );
+    })}
 
+    <!-- The bench: both focus areas side by side. Neither is a shipped product, and each scene says so. -->
+    <div class="bench" data-reveal>
+      <p class="bench-label">focus areas</p>
+      {sharedNote && <p class="bench-note bench-shared">{sharedNote}</p>}
+      <div class="bench-grid">
+        {BENCH_ITEMS.map(({ p, s, id }) => (
+          <figure class="bench-item" aria-labelledby={`bench-${id}`}>
+            <div class="bench-lockup">
+              <p class="act-index">{p.badge}</p>
+              <h3 class="bench-name" id={`bench-${id}`}>{p.name}</h3>
+              <p class="bench-desc">{p.description}</p>
+              <p class="bench-tags">{p.tags.join(' · ')}</p>
+              {!sharedNote && <p class="bench-note">{p.note}</p>}
+            </div>
+            <div class="bench-view" data-scene={s.scene} role="img" aria-label={s.aria}></div>
+            <div class="scene-bar">
+              <button type="button" class="scene-act">{s.act}</button>
+              <span class="scene-badge">illustration</span>
+            </div>
+          </figure>
+        ))}
+      </div>
+    </div>
   </div>
 </section>
 
 <script>
-  // Polls the public gateway; each new height pulses the core once. "live" is earned only by a
-  // height that moves: a gateway answering with a frozen height is a stalled chain, not a live one.
-  const RPC = "https://rpc.maya2c.dev/rpc";
-  const POLL_MS = 2000;
-  const RETRY_MS = 30_000; // once the gateway is down, keep asking, just less often
-  const STALE_MS = 60_000; // no new height for this long: say when the last block came
-  const MAX_MISSES = 3;
-  const pulses = document.getElementById("nv-pulses");
-  const heightEl = document.getElementById("nv-height")!;
-  const btEl = document.getElementById("nv-bt")!;
-  const stateEl = document.getElementById("nv-state")!;
-  const view = document.getElementById("netview");
-  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let misses = 0;
-  let last = 0, lastAt = 0, moved = false;
-  const gaps: number[] = [];
-  function pulse() {
-    if (reduce || !pulses) return;
-    const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    c.setAttribute("cx", "200"); c.setAttribute("cy", "130"); c.setAttribute("r", "34");
-    c.setAttribute("class", "pulse");
-    pulses.appendChild(c);
-    setTimeout(() => c.remove(), 2600);
-  }
-  function setState(text: string, on: boolean) {
-    stateEl.textContent = text;
-    stateEl.classList.toggle("on", on);
-  }
-  async function tick() {
-    try {
-      const r = await fetch(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "get_chain_info", params: [] }) });
-      const h = ((await r.json()).result ?? {}).height as number;
-      if (typeof h !== "number") throw new Error("no height");
-      const now = Date.now();
-      if (last && h > last) {
-        gaps.push((now - lastAt) / (h - last)); if (gaps.length > 12) gaps.shift();
-        btEl.textContent = (gaps.reduce((a, b) => a + b, 0) / gaps.length / 1000).toFixed(1) + " s";
-        moved = true;
-        pulse();
-      }
-      if (h !== last) { last = h; lastAt = now; }
-      heightEl.textContent = h.toLocaleString("en-US");
-      misses = 0;
-      view?.classList.remove("is-paused");
-      if (now - lastAt >= STALE_MS) {
-        const at = new Date(lastAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-        setState(`no new blocks since ${at}`, false);
-      } else {
-        setState(moved ? "live" : "waiting for a new block…", moved);
-      }
-    } catch {
-      misses += 1;
-      if (misses < MAX_MISSES) { setState("connecting…", false); return; }
-      view?.classList.add("is-paused");
-      // A failed fetch says nothing about the chain, only that this page cannot reach it.
-      setState("Live data unavailable right now", false);
-    }
-  }
-  async function loop() {
-    await tick();
-    setTimeout(loop, misses >= MAX_MISSES ? RETRY_MS : POLL_MS);
-  }
-  loop();
+  import { startChainPoll } from '../scripts/scene-chain';
+  import { mountMaya } from '../scripts/scene-maya';
+  import { mountNeural } from '../scripts/scene-neural';
+  import { mountFuzz } from '../scripts/scene-fuzz';
+  import { mountUnicron } from '../scripts/scene-unicron';
+
+  const MOUNTS: Record<string, (host: HTMLElement) => void> = {
+    maya: mountMaya,
+    unicron: mountUnicron,
+    fuzz: mountFuzz,
+    neural: mountNeural,
+  };
+  document.querySelectorAll<HTMLElement>('[data-scene]').forEach((el) => {
+    MOUNTS[el.dataset.scene ?? '']?.(el);
+  });
+  startChainPoll();
 </script>

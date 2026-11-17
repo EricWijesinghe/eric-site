@@ -1,0 +1,110 @@
+/* Signal sections: about, skills, support and contact form one continuous space (round 3, H3). No section
+   edges, borders, rules or boxes: each section is a soft colour field whose mask fades to nothing at
+   both ends, and every container is an open glow. Light theme (H4): pastel fields, deep ink strokes.
+   Rules are scoped under the section ids so they outrank sections.css. Tokens come from global.css. */
+
+:is(#about, #skills, #support, #contact) {
+  position: relative;
+  isolation: isolate;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
+/* A drifting colour field behind each section. The mask fades it out vertically and at the sides. */
+:is(#about, #skills, #support, #contact)::before {
+  content: '';
+  position: absolute;
+  inset: -12% -8%;
+  z-index: -1;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent), radial-gradient(closest-side, #000 55%, transparent);
+  mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent), radial-gradient(closest-side, #000 55%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+  background:
+    radial-gradient(38% 36% at 14% 22%, color-mix(in srgb, var(--sig-indigo) 24%, transparent), transparent 70%),
+    radial-gradient(34% 32% at 88% 58%, color-mix(in srgb, var(--sig-magenta) 14%, transparent), transparent 72%),
+    radial-gradient(44% 40% at 46% 96%, color-mix(in srgb, var(--sig-emerald) 11%, transparent), transparent 70%),
+    radial-gradient(30% 30% at 70% 10%, color-mix(in srgb, var(--sig-cyan) 12%, transparent), transparent 70%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :is(#about, #skills, #support, #contact)::before {
+    animation: sig-drift 28s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes sig-drift {
+  from { transform: translate3d(-2%, 0, 0) scale(1); }
+  to { transform: translate3d(2%, -2%, 0) scale(1.06); }
+}
+
+/* Light ink: the four sections redefine the spectrum tokens deeper, so every hue holds contrast on pearl. */
+:root[data-theme='light'] :is(#about, #skills, #support, #contact) {
+  --sig-cyan: #0a6f8f;
+  --sig-azure: #1653b8;
+  --sig-violet: #5b3ef0;
+  --sig-magenta: #b0249a;
+  --sig-emerald: #0b7a52;
+  --sig-teal: #0a7d78;
+  --sig-indigo: #3b2bd6;
+  --sig-ice: #1b4f7a;
+  --sig-white: #0a1830;
+}
+
+:root[data-theme='light'] :is(#about, #skills, #support, #contact)::before {
+  background:
+    radial-gradient(38% 36% at 14% 22%, rgb(160 150 255 / 0.3), transparent 70%),
+    radial-gradient(34% 32% at 88% 58%, rgb(255 170 230 / 0.22), transparent 72%),
+    radial-gradient(44% 40% at 46% 96%, rgb(140 240 205 / 0.28), transparent 70%),
+    radial-gradient(30% 30% at 70% 10%, rgb(140 210 255 / 0.3), transparent 70%);
+}
+
+/* Section labels: a plain mono index, no pill. */
+:is(#about, #skills, #support, #contact) .section-label span {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: none;
+  color: var(--glow);
+}
+
+
+/* Scene viewports (round 4, I2; round 3 polish): the journey, the constellation and the finale sit in a
+   frame with 22px corners. No hard 1px rim and no solid fill: the shape is carried by feathered glows
+   that reach zero before the edge, so no container reads as a block. Content is never masked. */
+.sig-frame {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 0;
+  border-radius: 22px;
+  background:
+    radial-gradient(90% 70% at 50% 0%, rgb(56 225 255 / 0.12), transparent 70%),
+    radial-gradient(70% 60% at 100% 100%, rgb(139 92 246 / 0.12), transparent 70%);
+  box-shadow:
+    inset 0 0 56px rgb(56 225 255 / 0.08),
+    0 0 64px -20px rgb(56 225 255 / 0.4);
+}
+
+:root[data-theme='light'] .sig-frame {
+  background:
+    radial-gradient(90% 70% at 50% 0%, rgb(160 150 255 / 0.24), transparent 70%),
+    radial-gradient(70% 60% at 100% 100%, rgb(140 240 205 / 0.22), transparent 70%);
+  box-shadow:
+    inset 0 0 64px rgb(255 255 255 / 0.55),
+    0 0 64px -20px rgb(31 111 209 / 0.3);
+}
+
+/* Light index numerals (audit pass 3): deepened from azure so the worst pixel over the faint section strokes
+   still holds 4.5:1 at 13px. */
+:root[data-theme='light'] :is(#about, #skills, #support, #contact) .section-label span {
+  color: #083773;
+}
+
+/* The section label rises 28px on reveal (flow.css), and the heading below does not. During that rise the label
+   slid under the heading's box (audit pass 3: '05 / contact' hit-tested as the h2). The label fades in place. */
+:is(#about, #skills, #support, #contact) .section-label[data-reveal] {
+  translate: none;
+}

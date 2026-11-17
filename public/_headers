@@ -9,3 +9,7 @@
 
 /_astro/*
   Cache-Control: public, max-age=31536000, immutable
+
+# The hero's figure, line-art and region maps: stable names, so cached a week rather than forever.
+/eric/*
+  Cache-Control: public, max-age=604800

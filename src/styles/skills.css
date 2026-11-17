@@ -1,0 +1,306 @@
+/* Skills loop: palette tokens (the one source the canvas reads, gl/loop-palette.ts), the two-column
+   layout, the readout and the group index. Stage and rail: skills-stage.css. No boxes, no pills: groups
+   and rows are open rows that light on hover, focus and selection. */
+
+#skills {
+  --sk-h0: var(--sig-cyan);
+  --sk-h1: var(--sig-violet);
+  --sk-h2: var(--sig-magenta);
+  --sk-h3: var(--sig-emerald);
+  --sk-h4: var(--sig-azure);
+  --sk-h5: var(--sig-teal);
+  --sk-track: var(--sig-ice);
+  --sk-track-a: 0.34;
+  --sk-caption: var(--sig-ice);
+  --sk-core: var(--sig-cyan);
+  --sk-shell: var(--sig-ice);
+  --sk-label: var(--sig-white);
+  --sk-knock: var(--sig-void);
+  /* 1 = additive light on the dark page, 0 = normal-alpha ink on the light page. */
+  --sk-glow: 1;
+  --sk-hue: var(--sk-core);
+}
+
+/* Light: deep inks of its own, measured against the pearl page (see the lane report for the ratios). */
+:root[data-theme='light'] #skills {
+  --sk-h0: #0a6f8f;
+  --sk-h1: #5b3ef0;
+  --sk-h2: #b0249a;
+  --sk-h3: #0e7a40;
+  --sk-h4: #1653b8;
+  --sk-h5: #0a7d78;
+  --sk-track: #0a1830;
+  --sk-track-a: 0.62;
+  --sk-caption: #1b3a5c;
+  --sk-core: #075e66;
+  --sk-shell: #1b4f7a;
+  --sk-label: var(--text);
+  --sk-knock: var(--bg);
+  --sk-glow: 0;
+}
+
+#skills .sk-h0 { --sk-hue: var(--sk-h0); }
+#skills .sk-h1 { --sk-hue: var(--sk-h1); }
+#skills .sk-h2 { --sk-hue: var(--sk-h2); }
+#skills .sk-h3 { --sk-hue: var(--sk-h3); }
+#skills .sk-h4 { --sk-hue: var(--sk-h4); }
+#skills .sk-h5 { --sk-hue: var(--sk-h5); }
+
+#skills .sk {
+  display: grid;
+  gap: 32px;
+  margin-top: 40px;
+}
+
+@media (min-width: 1200px) {
+  #skills .sk {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 48px;
+    align-items: start;
+  }
+}
+
+/* ---------- readout (G3): kicker, big name with a hue underline, mechanism line ---------- */
+
+#skills .sk-index {
+  display: grid;
+  gap: 24px;
+  align-content: start;
+  min-width: 0;
+}
+
+/* global.css paints a veil behind .section-lede at inset -48px -64px; here the lede follows the title, so
+   the veil washed out the bottom of "& expertise". The flow glyphs never reach the text, so it goes. */
+#skills .section-lede::before {
+  display: none;
+}
+
+/* The readout lives in the stage (Skills.astro): under the rail on every width, so on desktop it sticks
+   with the loop while the group index scrolls in the right column. */
+#skills .sk-readout {
+  display: grid;
+  gap: 8px;
+  margin-top: 24px;
+  padding-top: 8px;
+}
+
+#skills .sk-kicker {
+  margin: 0;
+  font: 500 0.75rem/1.5 var(--font-mono);
+  letter-spacing: 0.16em;
+  color: var(--text-dim);
+}
+
+#skills .sk-name {
+  position: relative;
+  justify-self: start;
+  margin: 0;
+  min-height: calc(2 * 1.12em);
+  font: 800 clamp(28px, 2.4vw, 36px) / 1.12 var(--font-display);
+  letter-spacing: -0.01em;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+/* The underline sits under the last line of the name; it draws in from the left on each new subject. */
+#skills .sk-name::after {
+  content: '';
+  display: block;
+  width: 64px;
+  height: 2px;
+  margin-top: 8px;
+  border-radius: 2px;
+  background: var(--sk-hue);
+  transform-origin: left;
+}
+
+#skills .sk-readout.is-phase .sk-name::after {
+  background: var(--sk-core);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  #skills .sk-readout.is-new .sk-name::after {
+    animation: sk-draw 0.5s var(--sig-ease) both;
+  }
+}
+
+@keyframes sk-draw {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+#skills .sk-how {
+  margin: 0;
+  min-height: calc(2 * 1.5em);
+  font: 400 0.9375rem/1.5 var(--font-body);
+  color: var(--text-dim);
+}
+
+/* ---------- index: six groups, one open at a time (all open without JS) ---------- */
+
+#skills .sk-groups,
+#skills .sk-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+#skills .sk-groups {
+  display: grid;
+  gap: 8px;
+}
+
+#skills .sk-gbtn {
+  display: grid;
+  grid-template-columns: 3px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--sig-radius-ctl);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.25s var(--sig-ease);
+}
+
+#skills .sk-gbtn:hover,
+#skills .is-open > .sk-gbtn {
+  background: var(--ctl-bg);
+}
+
+#skills .sk-gbar {
+  align-self: stretch;
+  border-radius: 2px;
+  background: var(--sk-hue);
+}
+
+#skills .sk-gtext {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+#skills .sk-gname {
+  font: 700 1rem/1.3 var(--font-display);
+}
+
+#skills .sk-gline {
+  font: 400 0.8125rem/1.4 var(--font-body);
+  color: var(--text-dim);
+}
+
+#skills .sk-dots {
+  display: flex;
+  gap: 4px;
+}
+
+#skills .sk-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sk-hue);
+}
+
+#skills .sk-rows {
+  display: grid;
+  gap: 4px;
+  padding: 8px 0 8px 15px;
+}
+
+#skills .sk-rows[hidden] {
+  display: none;
+}
+
+#skills .sk-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--sig-radius-ctl);
+  background: transparent;
+  color: var(--text);
+  font: 500 0.9375rem/1.3 var(--font-body);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.25s var(--sig-ease), color 0.25s var(--sig-ease);
+}
+
+#skills .sk-row:hover,
+#skills .sk-row:focus-visible {
+  background: var(--ctl-bg);
+}
+
+#skills .sk-row[aria-pressed='true'] {
+  background: var(--ctl-bg-hover);
+}
+
+#skills .sk-rname {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#skills .sk-rname::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sk-hue);
+  opacity: 0.5;
+}
+
+#skills .sk-row[aria-pressed='true'] .sk-rname::before {
+  opacity: 1;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sk-hue) 30%, transparent);
+}
+
+#skills .sk-rphase {
+  font: 500 0.75rem/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+}
+
+/* 700-1199: the stage takes the full width, the index sits under it in two columns. */
+@media (min-width: 700px) and (max-width: 1199.98px) {
+  #skills .sk-index {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 32px;
+  }
+
+  #skills .sk-groups {
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 32px;
+    align-items: start;
+  }
+}
+
+@media (max-width: 699.98px) {
+  #skills .sk-row {
+    min-height: 48px;
+  }
+
+  #skills .sk-rows {
+    padding-left: 0;
+  }
+}
+
+/* The left column is about 800 px wide: names and mechanism lines fit one line, so reserve one, not two. */
+@media (min-width: 1200px) {
+  #skills .sk-name {
+    min-height: 1.12em;
+  }
+
+  #skills .sk-how {
+    min-height: 1.5em;
+  }
+}

@@ -1,0 +1,13 @@
+---
+// The current: one fixed canvas behind every section (flow lane). The data his figure dissolves into runs down
+// the page as a river of code and binary glyphs, pools in every gap between sections and ends at the globe in
+// Contact. It is decoration only: nothing here is focusable and no information lives only here.
+// Layout: src/scripts/conduit.ts; painting and events: src/scripts/flow-field.ts.
+import '../styles/flow.css';
+---
+
+<canvas class="flow-field" aria-hidden="true"></canvas>
+
+<script>
+  import '../scripts/flow-field';
+</script>

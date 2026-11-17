@@ -1,0 +1,249 @@
+/* Skills loop stage: the build-time SVG poster, the live canvas that replaces it, and the rail of phase
+   buttons and play/pause. No frame: the canvas fades its own edges at draw time and bleeds BLEED px above
+   and below the view (never sideways, so it is never wider than the viewport). */
+
+#skills .sk-stage {
+  position: relative;
+  margin: 0;
+  min-width: 0;
+}
+
+#skills .sk-view {
+  position: relative;
+  height: 480px;
+}
+
+@media (min-width: 700px) and (max-width: 1199.98px) {
+  #skills .sk-view {
+    height: min(64vw, 560px);
+  }
+}
+
+/* Desktop: the index column is taller than the loop, so the loop and its readout grow with the viewport
+   and then stay centred on screen while the index scrolls past (picking a skill lights a star and shows
+   its line, both in view). Not a fixed header: sticky releases at the end of the grid. 212px = rail
+   (68) + readout margin and one-line readout (144, skills.css); 700px = the 440px floor + 212 + 2 x 24. */
+@media (min-width: 1200px) {
+  #skills .sk-stage {
+    --sk-vh: clamp(440px, calc(100svh - 260px), 600px);
+  }
+
+  #skills .sk-view {
+    height: var(--sk-vh);
+  }
+}
+
+@media (min-width: 1200px) and (min-height: 700px) {
+  #skills .sk-stage {
+    position: sticky;
+    top: max(24px, calc((100svh - var(--sk-vh) - 212px) / 2));
+    align-self: start;
+  }
+}
+
+@media (max-width: 699.98px) {
+  #skills .sk-view {
+    height: min(80vw, 420px);
+  }
+}
+
+#skills .sk-poster,
+#skills .sk-canvas {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  transition: opacity 0.6s var(--sig-ease);
+}
+
+#skills .sk-poster {
+  top: 0;
+  height: 100%;
+}
+
+#skills .sk-canvas {
+  --bleed: 40px;
+  top: calc(-1 * var(--bleed));
+  height: calc(100% + 2 * var(--bleed));
+  opacity: 0;
+  touch-action: pan-y;
+  user-select: none;
+  cursor: grab;
+}
+
+#skills .sk-canvas.is-pick {
+  cursor: pointer;
+}
+
+#skills .sk-live .sk-canvas {
+  opacity: 1;
+}
+
+#skills .sk-live .sk-poster {
+  opacity: 0;
+}
+
+/* The poster is the same loop drawn once at build time: hairline track, one dot per skill, the core. */
+#skills .sk-ptrack {
+  fill: none;
+  stroke: var(--sk-track);
+  stroke-opacity: var(--sk-track-a);
+  stroke-width: 1.2;
+}
+
+#skills .sk-pdot {
+  fill: var(--sk-hue);
+}
+
+#skills .sk-pcore {
+  fill: none;
+  stroke: var(--sk-shell);
+  stroke-opacity: 0.5;
+}
+
+#skills .sk-pcore-in {
+  fill: none;
+  stroke: var(--sk-core);
+  stroke-width: 1.5;
+}
+
+/* ---------- rail ---------- */
+
+#skills .sk-rail {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  margin-top: 16px;
+}
+
+#skills .sk-phases {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(44px, 1fr));
+  gap: 8px;
+  flex: 1 1 400px;
+  min-width: 0;
+}
+
+#skills .sk-phase {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  min-height: 52px;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: var(--sig-radius-ctl);
+  background: var(--ctl-bg);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background-color 0.25s var(--sig-ease), color 0.25s var(--sig-ease);
+}
+
+#skills .sk-phase:hover {
+  background: var(--ctl-bg-hover);
+  color: var(--text);
+}
+
+#skills .sk-phase[aria-current] {
+  color: var(--text);
+  background: var(--ctl-bg-hover);
+}
+
+#skills .sk-phase::after {
+  content: '';
+  position: absolute;
+  left: 30%;
+  right: 30%;
+  bottom: 6px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--sk-core);
+  transform: scaleX(0);
+  transition: transform 0.4s var(--sig-ease);
+}
+
+#skills .sk-phase[aria-current]::after {
+  transform: scaleX(1);
+}
+
+#skills .sk-ord,
+#skills .sk-pname {
+  font: 500 0.75rem/1.2 var(--font-mono);
+  letter-spacing: 0.1em;
+}
+
+#skills .sk-ord {
+  opacity: 0.8;
+}
+
+#skills .sk-transport {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+}
+
+#skills .sk-play:not([hidden]) {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ctl-bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+#skills .sk-play:hover {
+  background: var(--ctl-bg-hover);
+}
+
+#skills .sk-play-i {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+#skills .sk-i-play,
+#skills .sk-play.is-paused .sk-i-pause {
+  display: none;
+}
+
+#skills .sk-play.is-paused .sk-i-play {
+  display: inline;
+}
+
+@media (max-width: 699.98px) {
+  #skills .sk-phases {
+    flex-basis: 100%;
+  }
+
+  /* Phones: play/pause sits over the stage's top-right corner instead of alone on a row of its own. The
+     rail stops being the positioning box, so the phases keep their own layer above the canvas bleed. */
+  #skills .sk-rail {
+    position: static;
+  }
+
+  #skills .sk-phases {
+    position: relative;
+    z-index: 1;
+  }
+
+  #skills .sk-transport {
+    position: absolute;
+    top: 8px;
+    right: 0;
+    z-index: 2;
+  }
+
+  #skills .sk-ord,
+  #skills .sk-pname {
+    letter-spacing: 0.04em;
+  }
+}

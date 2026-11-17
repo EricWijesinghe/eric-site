@@ -1,36 +1,92 @@
-/* Forged Light 2 (Maya2C design/tokens.css, PR #521): the lifted, tinted dark theme with
-   luminous teal and warm bronze, so the page reads as lit metal rather than near-black.
-   Dark is the default; [data-theme='light'] takes the Forged Light 2 paper set.
-   --gl-* feed the WebGL scenes, which re-read them when the theme changes. */
-:root {
-  --bg: #081c28;
-  --bg-2: #0d2734;
-  --surface: rgb(19 51 66 / 0.72);
-  --surface-solid: #133342;
-  --line: rgb(150 210 225 / 0.16);
-  --line-strong: #6f9aa9;
-  --text: #f2f9fa;
-  --text-dim: #bcd0d7;
-  --accent: #52e5dd;
-  --teal: #1fd3cc;
-  --glow: #52e5dd;
-  --bronze: #ffbb6b;
-  --bronze-text: #ffd39b;
-  --steel: #96b8da;
-  --ember: #f5a04a;
-  /* Decorative warm light (glows, emblem core, 3D core): never used for text. */
-  --warm: #ffbb6b;
-  --on-accent: #04222a;
-  --shadow: 0 30px 80px -30px rgb(2 10 16 / 0.65);
-  --grad-accent: linear-gradient(100deg, #52e5dd 0%, #1fd3cc 40%, #ffd39b 78%, #f5a04a 100%);
-  --grad-btn: linear-gradient(180deg, #52e5dd 0%, #0bb5b3 100%);
-  --grad-hero:
-    radial-gradient(120% 80% at 50% 0%, rgb(31 211 204 / 0.16) 0%, transparent 60%),
-    radial-gradient(70% 60% at 100% 100%, rgb(255 187 107 / 0.1) 0%, transparent 70%),
-    linear-gradient(180deg, #0d2734 0%, #081c28 100%);
-  --gl-a: #1fd3cc;
-  --gl-b: #52e5dd;
-  --gl-c: #ffbb6b;
+/* Signal design system (foundation lane). Dark is the primary theme; light is a luminous paper set.
+   Curves, no block lines (Eric feedback rounds 1-3): containers dissolve into feathered masks and soft
+   glow, never a hard 1px box or a seam between sections. Radius: scenes 24px, controls 13px, chips 10px.
+   .sig-viewport follows the theme too (round 3): dark scene in dark, pearl scene in light.
+
+   Class kit used by every lane:
+   - .wrap                          page column (max 1180px, 16px gutter)
+   - .btn .btn-primary .btn-ghost   soft-filled controls, >=44px, light sweep and glow on hover
+   - .tags > .tag                   soft tinted mono chips (no border)
+   - .section-label                 HUD index line, "02 // PORTFOLIO" (the // is drawn by CSS)
+   - .section-title                 Manrope 800 display heading (padded for descenders)
+   - .section-body / .section-lede  reading copy: a feathered veil dims the page field behind the text
+   - .sig-viewport                  scene container: theme-aware background, feathered vignette edge
+   - .hud-frame                     rounded container with a soft glow edge
+   - .visually-hidden .skip-link .icon .gl-canvas .js-reveal [data-reveal]
+   - .grain (Base.astro)            fixed film grain, pointer-events none
+   - .nav, .logo, .nav-links, .theme-toggle, .nav-menu   in src/styles/nav.css (imported by Nav.astro)
+   - .card .panel .stat-card        not defined here; the lanes style their own surfaces
+   Tokens: --sig-* (palette), --ctl-bg / --nav-bg / --veil / --sig-vignette (theme surfaces), legacy
+   names (--text, --accent, --line, --bronze ...) mapped onto Signal. No orange, bronze or gold. */
+
+:root,
+:root[data-theme='dark'] {
+  --sig-void: #02050b;
+  --sig-deep: #050d1a;
+  --sig-navy: #0a1830;
+  --sig-blue: #12386a;
+  --sig-azure: #1f6fd1;
+  --sig-cyan: #38e1ff;
+  --sig-teal: #19d3c5;
+  --sig-ice: #bff4ff;
+  --sig-white: #f3fbff;
+  --sig-indigo: #4b3cff;
+  --sig-violet: #8b5cf6;
+  --sig-magenta: #e04cff;
+  --sig-emerald: #2df5a0;
+  --sig-alert: #ff5d73;
+  --sig-line: rgb(120 220 255 / 0.12);
+  --sig-line-2: rgb(120 220 255 / 0.28);
+  --sig-glow: rgb(56 225 255 / 0.45);
+  --sig-radius-scene: 24px;
+  --sig-radius-ctl: 13px;
+  --sig-radius-chip: 10px;
+  --sig-radius: var(--sig-radius-ctl);
+  --sig-spectrum: linear-gradient(100deg, var(--sig-cyan) 0%, var(--sig-azure) 30%, var(--sig-indigo) 52%,
+    var(--sig-violet) 70%, var(--sig-magenta) 88%, var(--sig-emerald) 100%);
+  --sig-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --sig-grain-opacity: 0.06;
+  --sig-scene-bg:
+    radial-gradient(70% 60% at 20% 0%, rgb(139 92 246 / 0.22), transparent 70%),
+    radial-gradient(60% 55% at 90% 100%, rgb(45 245 160 / 0.12), transparent 70%),
+    radial-gradient(120% 90% at 50% 0%, var(--sig-navy) 0%, var(--sig-void) 72%);
+  --sig-vignette: rgb(2 5 11 / 0.75);
+  /* Surfaces that sit on the page field. */
+  --ctl-bg: rgb(120 220 255 / 0.1);
+  --ctl-bg-hover: rgb(120 220 255 / 0.18);
+  --nav-bg: rgb(2 5 11 / 0.9);
+  --nav-scrim-rgb: 2 5 11;
+  --nav-panel: rgb(5 13 26 / 0.96);
+  /* Elliptical veil behind reading copy (see .section-lede::before): only a faint dim of the field. */
+  --veil: rgb(2 5 11 / 0.5);
+  /* Focus ring: cyan on dark (about 11:1). On light paper cyan is about 1.5:1, so it goes azure. */
+  --focus-ring: var(--sig-cyan);
+
+  --bg: var(--sig-void);
+  --bg-2: var(--sig-deep);
+  --surface: rgb(10 24 48 / 0.6);
+  --surface-solid: var(--sig-navy);
+  --line: var(--sig-line);
+  --line-strong: rgb(120 220 255 / 0.42);
+  --text: var(--sig-white);
+  --text-dim: #9fbccb;
+  --accent: var(--sig-cyan);
+  --teal: var(--sig-teal);
+  --glow: var(--sig-cyan);
+  --bronze: var(--sig-cyan);
+  --bronze-text: var(--sig-ice);
+  --steel: #7fa6c8;
+  --ember: var(--sig-azure);
+  --warm: var(--sig-ice);
+  --on-accent: var(--sig-void);
+  --shadow: 0 24px 60px -24px rgb(0 0 0 / 0.8);
+  --grad-accent: linear-gradient(100deg, var(--sig-cyan) 0%, var(--sig-teal) 45%, var(--sig-ice) 100%);
+  --grad-btn: linear-gradient(180deg, var(--sig-cyan) 0%, var(--sig-teal) 100%);
+  --grad-hero: radial-gradient(90% 70% at 70% 0%, rgb(31 111 209 / 0.22) 0%, transparent 65%),
+    linear-gradient(180deg, var(--sig-deep) 0%, var(--sig-void) 100%);
+  --gl-a: var(--sig-teal);
+  --gl-b: var(--sig-cyan);
+  --gl-c: var(--sig-ice);
 
   --font-display: 'Manrope', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
@@ -38,44 +94,75 @@
 
   --max: 1180px;
   --gutter: 16px;
-  --radius: 20px;
-  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --radius: var(--sig-radius-scene);
+  --ease: var(--sig-ease);
   --tap: 44px;
   color-scheme: dark;
 }
 
+/* Light is a luminous daylight space: pearl and ice ground, pastel nebula, deep teal/azure/indigo ink.
+   Strokes use normal alpha (not additive on white). Every text pair is at least 4.5:1 (AA). */
 :root[data-theme='light'] {
-  --bg: #faf8f4;
-  --bg-2: #f4f1eb;
-  --surface: rgb(255 255 255 / 0.82);
+  --sig-grain-opacity: 0.03;
+  --focus-ring: #0b5fbf;
+  --sig-line: rgb(10 24 48 / 0.1);
+  --sig-line-2: rgb(10 24 48 / 0.22);
+  --sig-glow: rgb(31 111 209 / 0.3);
+  --sig-scene-bg:
+    radial-gradient(70% 60% at 20% 0%, rgb(190 160 255 / 0.45), transparent 70%),
+    radial-gradient(60% 55% at 90% 100%, rgb(120 240 200 / 0.35), transparent 70%),
+    radial-gradient(120% 90% at 50% 0%, #ffffff 0%, #e9f1fa 75%);
+  --sig-vignette: rgb(245 248 253 / 0.9);
+  --ctl-bg: rgb(10 24 48 / 0.05);
+  --ctl-bg-hover: rgb(31 111 209 / 0.12);
+  --nav-bg: rgb(245 248 253 / 0.9);
+  --nav-scrim-rgb: 245 248 253;
+  --nav-panel: rgb(255 255 255 / 0.97);
+  --veil: rgb(245 248 253 / 0.6);
+
+  --bg: #f5f8fd;
+  --bg-2: #e9eff9;
+  --surface: rgb(255 255 255 / 0.7);
   --surface-solid: #ffffff;
-  --line: rgb(60 45 20 / 0.14);
-  --line-strong: #8d877c;
-  --text: #14201f;
-  --text-dim: #3d4a49;
-  --accent: #075c52;
-  --teal: #0a7568;
-  --glow: #0a7568;
-  --bronze: #8a5a1f;
-  --bronze-text: #6f4612;
-  --steel: #4a5a70;
-  --ember: #b5671f;
-  /* Light theme keeps text bronze dark for AA, but lights the decoration with real amber so
-     the paper theme glows like the dark one instead of going flat brown. */
-  --warm: #f2a245;
-  --on-accent: #ffffff;
-  --shadow: 0 24px 48px -12px rgb(60 45 20 / 0.18);
-  /* Every stop is >= 3.4:1 on the paper background (large display text only). */
-  --grad-accent: linear-gradient(100deg, #0a7568 0%, #0a8576 52%, #b8701e 74%, #c27419 100%);
-  --grad-btn: linear-gradient(180deg, #0a7568 0%, #086356 100%);
-  --grad-hero:
-    radial-gradient(120% 80% at 50% 0%, rgb(10 117 104 / 0.08) 0%, transparent 60%),
-    radial-gradient(70% 60% at 100% 100%, rgb(181 103 34 / 0.08) 0%, transparent 70%),
-    linear-gradient(180deg, #ffffff 0%, #faf8f4 100%);
-  --gl-a: #0a7568;
-  --gl-b: #1fb5a8;
-  --gl-c: #f2a245;
+  --line: var(--sig-line);
+  --line-strong: #4f6880;
+  --text: #0a1830;
+  /* Deep ink for secondary copy: 10.8:1 on white, so muted labels pass AA on every light surface. */
+  --text-dim: #2a3f56;
+  --accent: #0b5fbf;
+  --teal: #0a7d78;
+  /* Section numerals and glow strokes: deep azure, 7:1 on the pale field (was 4:1 at its worst). */
+  --glow: #0a4a94;
+  --bronze: #0b5fbf;
+  --bronze-text: #0a3f8a;
+  --steel: #3a5068;
+  --ember: #0a7d78;
+  --warm: #1f6fd1;
+  --on-accent: #02050b;
+  --shadow: none;
+  --grad-accent: linear-gradient(100deg, #0a7d78 0%, #0b5fbf 60%, #4b3cff 100%);
+  --grad-btn: linear-gradient(180deg, var(--sig-cyan) 0%, var(--sig-teal) 100%);
+  --grad-hero: radial-gradient(90% 70% at 70% 0%, rgb(139 92 246 / 0.16) 0%, transparent 65%),
+    linear-gradient(180deg, #ffffff 0%, #f5f8fd 100%);
+  --gl-a: #0a7d78;
+  --gl-b: #1f6fd1;
+  --gl-c: #4b3cff;
   color-scheme: light;
+}
+
+/* Scene containers take the page theme: dark scene in dark, pearl scene in light. Their canvases
+   redraw on the data-theme change (each scene listens for it). */
+.sig-viewport {
+  color: var(--text);
+  /* No fill, no outer glow: the scene dissolves into the page field, so no rectangle is ever drawn (H3). */
+  background: none;
+  box-shadow: none;
+  border-radius: var(--sig-radius-scene);
+  -webkit-mask-image: radial-gradient(closest-side at 50% 50%, #000 72%, transparent 100%);
+  mask-image: radial-gradient(closest-side at 50% 50%, #000 72%, transparent 100%);
+  overflow: hidden;
+  isolation: isolate;
+  position: relative;
 }
 
 *,
@@ -87,9 +174,10 @@
 html {
   background: var(--bg);
   scroll-behavior: smooth;
-  scroll-padding-top: 72px;
   -webkit-text-size-adjust: 100%;
   overflow-x: clip;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sig-blue) var(--bg);
 }
 
 body {
@@ -102,7 +190,11 @@ body {
   line-height: 1.65;
   overflow-x: clip;
   position: relative;
-  transition: background-color 0.4s var(--ease), color 0.4s var(--ease);
+  /* Own stacking context: the fixed colour field (body::before, z -1) paints above the body
+     background instead of under it. */
+  isolation: isolate;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.5s var(--ease), color 0.5s var(--ease);
 }
 
 img,
@@ -111,10 +203,16 @@ svg {
   max-width: 100%;
 }
 
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+}
+
 a {
   color: var(--accent);
   text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
+  text-underline-offset: 4px;
 }
 
 a:hover {
@@ -122,14 +220,29 @@ a:hover {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 3px;
-  border-radius: 6px;
+  border-radius: var(--sig-radius);
 }
 
 ::selection {
-  background: var(--teal);
-  color: var(--on-accent);
+  background: var(--sig-cyan);
+  color: var(--sig-void);
+}
+
+/* Thin scrollbars in WebKit/Blink (Firefox reads scrollbar-width on html). */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--sig-blue);
+  border-radius: 8px;
 }
 
 .skip-link {
@@ -137,11 +250,14 @@ a:hover {
   left: 1rem;
   top: -4rem;
   z-index: 200;
-  padding: 0.6rem 1rem;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 600;
-  border-radius: 8px;
+  min-height: var(--tap);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 1rem;
+  background: var(--sig-cyan);
+  color: var(--sig-void);
+  font: 600 0.9rem/1 var(--font-display);
+  border-radius: var(--sig-radius);
   text-decoration: none;
 }
 
@@ -170,338 +286,246 @@ a:hover {
   flex: none;
 }
 
-/* ---------- ambient layer: slow colour fields behind everything ---------- */
+/* Light: scrollbar and text selection are pale, never the dark navy of the dark theme. */
+:root[data-theme='light'] {
+  scrollbar-color: #9fb8d6 var(--bg);
+}
 
-.aurora {
+:root[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background: #9fb8d6;
+}
+
+:root[data-theme='light'] ::selection {
+  background: #b9d6ff;
+  color: #0a1830;
+}
+
+/* ---------- ambient layers: the colour field and film grain ---------- */
+
+/* Colour field: a fixed, soft aurora across the whole page. No grid lines (they read as block
+   edges). The flow lane's animated field (.flow-field) sits above this in the same stacking context. */
+body::before {
+  content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  overflow: hidden;
+  background:
+    radial-gradient(55% 45% at 10% 6%, rgb(31 111 209 / 0.30), transparent 70%),
+    radial-gradient(48% 42% at 90% 12%, rgb(139 92 246 / 0.24), transparent 70%),
+    radial-gradient(42% 38% at 74% 52%, rgb(224 76 255 / 0.13), transparent 70%),
+    radial-gradient(52% 48% at 14% 74%, rgb(75 60 255 / 0.20), transparent 70%),
+    radial-gradient(40% 34% at 92% 90%, rgb(45 245 160 / 0.12), transparent 70%),
+    radial-gradient(60% 40% at 50% 0%, rgb(56 225 255 / 0.16), transparent 75%);
 }
 
-.aurora span {
-  position: absolute;
-  width: 60vmax;
-  height: 60vmax;
-  /* A gradient, not filter: blur(), which repaints a 60vmax layer on every frame of the drift. */
-  background: radial-gradient(closest-side, var(--c), transparent);
-  opacity: 0.16;
+/* Light: the same field in pastel daylight tones, drawn with normal alpha so it reads on white. */
+:root[data-theme='light'] body::before {
+  background:
+    radial-gradient(55% 45% at 10% 6%, rgb(120 190 255 / 0.38), transparent 70%),
+    radial-gradient(48% 42% at 90% 12%, rgb(190 160 255 / 0.36), transparent 70%),
+    radial-gradient(42% 38% at 74% 52%, rgb(255 170 235 / 0.22), transparent 70%),
+    radial-gradient(52% 48% at 14% 74%, rgb(150 150 255 / 0.28), transparent 70%),
+    radial-gradient(40% 34% at 92% 90%, rgb(120 240 200 / 0.24), transparent 70%),
+    radial-gradient(60% 40% at 50% 0%, rgb(140 225 255 / 0.3), transparent 75%);
 }
 
-.aurora span:nth-child(1) { --c: var(--teal); left: -20vmax; top: 30vh; }
-.aurora span:nth-child(2) { --c: var(--warm); right: -25vmax; top: 90vh; opacity: 0.1; }
-.aurora span:nth-child(3) { --c: var(--ember); left: 30vw; bottom: -40vmax; opacity: 0.07; }
-
-:root[data-theme='light'] .aurora span { opacity: 0.12; }
-
-@media (prefers-reduced-motion: no-preference) {
-  .aurora span:nth-child(1) { animation: drift 38s ease-in-out infinite alternate; }
-  .aurora span:nth-child(2) { animation: drift 46s ease-in-out -12s infinite alternate-reverse; }
-  .aurora span:nth-child(3) { animation: drift 52s ease-in-out -20s infinite alternate; }
-}
-
-@keyframes drift {
-  to { translate: 12vw -8vh; scale: 1.15; }
-}
-
-/* ---------- progress + nav ---------- */
-
-.progress {
+.grain {
   position: fixed;
-  inset: 0 0 auto;
-  height: 2px;
-  z-index: 120;
-  background: var(--grad-accent);
-  transform: scaleX(0);
-  transform-origin: 0 50%;
+  inset: 0;
+  z-index: 300;
+  pointer-events: none;
+  background: url('/grain.png') 0 0 / 160px 160px repeat;
+  opacity: var(--sig-grain-opacity);
+  mix-blend-mode: overlay;
 }
 
-.nav {
-  position: sticky;
-  top: 0;
-  z-index: 110;
-  background: color-mix(in srgb, var(--bg) 72%, transparent);
-  border-bottom: 1px solid var(--line);
-  backdrop-filter: blur(14px) saturate(1.3);
-}
-
-.nav-inner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 60px;
-}
-
-.logo {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  justify-content: center;
-  min-width: var(--tap);
-  min-height: var(--tap);
-  color: var(--text);
-  font: 800 1.05rem/1 var(--font-display);
-  letter-spacing: 0.06em;
-  text-decoration: none;
-}
-
-.logo-mark {
-  width: 26px;
-  height: 26px;
-  background: url('/emblem.svg') center / contain no-repeat;
-}
-
-.nav nav {
-  margin-left: auto;
-  min-width: 0;
-}
-
-.nav-links {
-  display: flex;
-  gap: 2px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.nav-links a {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--tap);
-  padding: 0 12px;
-  border-radius: 999px;
-  color: var(--text-dim);
-  font: 0.82rem/1 var(--font-mono);
-  text-decoration: none;
-  transition: color 0.2s, background-color 0.2s;
-}
-
-.nav-links a:hover {
-  color: var(--text);
-  background: color-mix(in srgb, var(--teal) 14%, transparent);
-}
-
-.theme-toggle {
-  display: inline-grid;
-  place-items: center;
-  width: var(--tap);
-  height: var(--tap);
-  flex: none;
-  border: 1px solid var(--line-strong);
-  border-radius: 50%;
-  background: var(--surface);
-  color: var(--text);
-  cursor: pointer;
-  transition: border-color 0.2s, transform 0.3s var(--ease);
-}
-
-.theme-toggle:hover {
-  border-color: var(--accent);
-  transform: rotate(-18deg);
-}
-
-.theme-toggle .icon-sun,
-:root[data-theme='light'] .theme-toggle .icon-moon {
-  display: none;
-}
-
-:root[data-theme='light'] .theme-toggle .icon-sun {
-  display: block;
-}
-
-.nav-menu {
-  display: none;
-  place-items: center;
-  width: var(--tap);
-  height: var(--tap);
-  border: 1px solid var(--line-strong);
-  border-radius: 50%;
-  background: var(--surface);
-  color: var(--text);
-  cursor: pointer;
-}
-
-/* Three bars that fold into an X when the menu is open. */
-.nav-menu-bars,
-.nav-menu-bars::before,
-.nav-menu-bars::after {
-  display: block;
-  width: 18px;
-  height: 2px;
-  border-radius: 2px;
-  background: currentColor;
-  transition: transform 0.25s var(--ease), background-color 0.2s;
-}
-
-.nav-menu-bars { position: relative; }
-.nav-menu-bars::before,
-.nav-menu-bars::after { content: ''; position: absolute; left: 0; }
-.nav-menu-bars::before { top: -6px; }
-.nav-menu-bars::after { top: 6px; }
-.menu-open .nav-menu-bars { background: transparent; }
-.menu-open .nav-menu-bars::before { transform: translateY(6px) rotate(45deg); }
-.menu-open .nav-menu-bars::after { transform: translateY(-6px) rotate(-45deg); }
-
-/* Phones: four links never fit beside the logo and toggle at a tappable size, so they are
-   never squeezed or scrolled. With JS they open from a menu button as full-width rows;
-   without JS they wrap onto a second row of their own. */
-@media (max-width: 480px) {
-  .nav-inner { flex-wrap: wrap; gap: 8px; }
-  .nav nav { display: flex; justify-content: flex-end; }
-  :root:not(.js) .nav nav { order: 3; flex: 1 0 100%; }
-  :root:not(.js) .nav .nav-links { justify-content: space-between; width: 100%; }
-  :root:not(.js) .nav .nav-links a { padding: 0 6px; }
-
-  .js .nav .nav-menu { display: inline-grid; }
-  .js .nav .nav-links {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    flex-direction: column;
-    gap: 0;
-    padding: 6px var(--gutter) 12px;
-    background: var(--surface-solid);
-    border-bottom: 1px solid var(--line);
-    box-shadow: var(--shadow);
-  }
-  .js .menu-open .nav-links { display: flex; }
-  .js .nav .nav-links a {
-    width: 100%;
-    min-height: 48px;
-    padding: 0 12px;
-    border-radius: 12px;
-    color: var(--text);
-    font-size: 0.95rem;
-  }
-}
-
-/* ---------- buttons ---------- */
+/* ---------- buttons: soft-filled or hairline-free ghost, a light sweep on hover ---------- */
 
 .btn {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   min-height: 48px;
   padding: 0 24px;
-  border-radius: 999px;
-  font: 600 0.95rem/1 var(--font-display);
-  letter-spacing: 0.01em;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--sig-radius);
+  font: 600 0.85rem/1 var(--font-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   text-decoration: none;
-  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease), border-color 0.2s, color 0.2s;
+  isolation: isolate;
+  transition: color 0.25s, background-color 0.25s;
 }
 
-.btn:hover {
-  transform: translateY(-2px);
+/* The light sweep: one pseudo-element, translated across on hover. */
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(100deg, transparent 35%, rgb(255 255 255 / 0.5) 50%, transparent 65%);
+  translate: -120% 0;
+  transition: translate 0.8s var(--sig-ease);
+  pointer-events: none;
+}
+
+.btn:hover::after,
+.btn:focus-visible::after {
+  translate: 120% 0;
 }
 
 .btn-primary {
-  color: var(--on-accent);
-  background: var(--grad-btn);
-  box-shadow: 0 10px 30px -10px color-mix(in srgb, var(--teal) 70%, transparent);
+  color: var(--sig-void);
+  background: linear-gradient(160deg, var(--sig-ice) 0%, var(--sig-cyan) 55%, var(--sig-teal) 100%);
 }
 
-.btn-primary:hover {
-  color: var(--on-accent);
-  box-shadow: 0 16px 40px -12px color-mix(in srgb, var(--teal) 90%, transparent);
+/* Glow is a soft radial light behind the fill, not a box-shadow edge. */
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: -40% -20%;
+  z-index: -2;
+  background: radial-gradient(closest-side, var(--sig-glow), transparent);
+  opacity: 0.35;
+  transition: opacity 0.5s var(--sig-ease);
+  pointer-events: none;
+}
+
+.btn-primary:hover::before,
+.btn-primary:focus-visible::before {
+  opacity: 0.9;
+}
+
+.btn-primary:hover,
+.btn-primary:focus-visible {
+  color: var(--sig-void);
+}
+
+/* Light: a luminous azure-to-teal fill (every stop luminance >= 0.37, so it never reads as a dark slab)
+   with deep navy ink (about 8:1 on the lightest stop, 7.9:1 on the mid stop). A solid #0b5fbf fill with
+   white text measured as a dark block at luminance 0.12, which the light-theme brief rules out. */
+:root[data-theme='light'] .btn-primary {
+  color: #061428;
+  background: linear-gradient(160deg, #9ccfff 0%, #6fb4ff 55%, #5fd9cc 100%);
+}
+
+:root[data-theme='light'] .btn-primary:hover,
+:root[data-theme='light'] .btn-primary:focus-visible {
+  color: #061428;
 }
 
 .btn-ghost {
   color: var(--text);
-  border: 1px solid var(--line-strong);
-  background: var(--surface);
-  backdrop-filter: blur(8px);
+  background: var(--ctl-bg);
 }
 
-.btn-ghost:hover {
-  color: var(--text);
-  border-color: var(--accent);
+.btn-ghost:hover,
+.btn-ghost:focus-visible {
+  color: var(--accent);
+  background: var(--ctl-bg-hover);
 }
 
-/* ---------- hero ---------- */
+/* ---------- labels, tags, reading copy, soft frames ---------- */
 
-.hero {
-  position: relative;
-  min-height: 100svh;
+.tags {
   display: flex;
-  align-items: center;
-  padding: 96px 0 120px;
-  margin-top: -61px;
-  overflow: hidden;
-  isolation: isolate;
-  background: var(--grad-hero);
-}
-
-.hero-grid {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
-  align-items: center;
-  gap: clamp(20px, 4vw, 56px);
-}
-
-/* ---------- hero emblem: the one focal image, lit teal to bronze ---------- */
-
-.hero-emblem {
-  grid-column: 2;
-  grid-row: 1;
-  justify-self: end;
-  width: min(100%, 420px);
+  flex-wrap: wrap;
+  gap: 6px;
   margin: 0;
-  aspect-ratio: 1;
-  position: relative;
+  padding: 0;
+  list-style: none;
 }
 
-.hero-emblem::before {
+.tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--sig-radius-chip);
+  color: var(--text-dim);
+  background: var(--ctl-bg);
+  font: 500 0.75rem/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* Reading copy sits in a soft elliptical veil that dims the page field behind it. A radial mask fades
+   to zero at the ellipse's closest side, so no straight edge of any kind is drawn (critic r2 finding 3). */
+.section-body,
+.section-lede {
+  position: relative;
+  isolation: isolate;
+}
+
+.section-body::before,
+.section-lede::before {
   content: '';
   position: absolute;
-  inset: -12%;
-  border-radius: 50%;
-  background:
-    radial-gradient(closest-side, color-mix(in srgb, var(--teal) 38%, transparent), transparent 70%),
-    radial-gradient(closest-side at 70% 75%, color-mix(in srgb, var(--warm) 30%, transparent), transparent 75%);
+  inset: -48px -64px;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--veil);
+  -webkit-mask-image: radial-gradient(ellipse closest-side at 50% 50%, #000 30%, transparent 100%);
+  mask-image: radial-gradient(ellipse closest-side at 50% 50%, #000 30%, transparent 100%);
 }
 
-:root[data-theme='light'] .hero-emblem::before {
-  background:
-    radial-gradient(closest-side, rgb(60 201 189 / 0.3), transparent 70%),
-    radial-gradient(closest-side at 70% 75%, rgb(255 179 92 / 0.4), transparent 75%);
-}
-
-.hero-emblem svg {
+/* Soft container: a rounded glow edge instead of a hard frame or corner brackets. */
+.hud-frame {
   position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
+  border-radius: var(--sig-radius-scene);
 }
 
-.he-a { stop-color: var(--glow); }
-.he-b { stop-color: var(--teal); }
-.he-c { stop-color: var(--bronze); }
-.he-core-a { stop-color: var(--warm); }
-.he-core-b { stop-color: var(--warm); stop-opacity: 0; }
-:root[data-theme='light'] .he-core-a { stop-color: #ffe2b0; }
-.he-ring { fill: none; stroke: color-mix(in srgb, var(--glow) 40%, transparent); stroke-width: 1; }
-.he-ring.faint { stroke: color-mix(in srgb, var(--bronze) 35%, transparent); stroke-dasharray: 2 6; }
-.he-hex { fill: color-mix(in srgb, var(--teal) 10%, transparent); stroke: url(#he-edge); stroke-width: 5; stroke-linejoin: round; }
-.he-bond { fill: none; stroke: url(#he-edge); stroke-width: 1.6; opacity: 0.6; }
-.he-inner { fill: none; stroke: color-mix(in srgb, var(--glow) 55%, transparent); stroke-width: 1.2; }
-.he-glow { fill: url(#he-core); }
-.he-dot { fill: var(--warm); }
-.he-node { fill: var(--bg); stroke: var(--glow); stroke-width: 2; }
-
-@media (prefers-reduced-motion: no-preference) {
-  /* translate only: it stays on the compositor, so it costs no main-thread time. */
-  .hero-emblem svg { animation: float 7s ease-in-out infinite; }
+/* Scene edges dissolve: a feathered vignette into the void, no line anywhere. */
+.sig-viewport::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: inherit;
+  background: radial-gradient(125% 115% at 50% 45%, transparent 60%, var(--sig-vignette) 100%);
 }
 
-@keyframes float {
-  50% { translate: 0 -8px; }
+/* ---------- scroll reveal (individual transform properties, so tilt's transform stays free) ---------- */
+
+.js-reveal [data-reveal] {
+  opacity: 0;
+  translate: 0 28px;
+  rotate: x 6deg;
+  transform-origin: 50% 100%;
+  transition:
+    opacity 0.9s var(--sig-ease),
+    translate 1.1s var(--sig-ease),
+    rotate 1.1s var(--sig-ease);
 }
+
+.js-reveal [data-reveal]:focus-within,
+.js-reveal [data-reveal].is-in {
+  opacity: 1;
+  translate: 0 0;
+  rotate: x 0deg;
+}
+
+/* Theme switch: colours cross-fade for 350 ms. Only while theme.ts holds the class, so hover and
+   reveal keep their own timing the rest of the time. Reduced motion shortens it (see the end). */
+.theme-anim,
+.theme-anim *,
+.theme-anim *::before,
+.theme-anim *::after {
+  transition:
+    background-color 0.35s var(--ease),
+    color 0.35s var(--ease),
+    border-color 0.35s var(--ease),
+    fill 0.35s var(--ease),
+    stroke 0.35s var(--ease) !important;
+}
+
+/* ---------- canvases ---------- */
 
 .gl-canvas {
   position: absolute;
@@ -510,284 +534,23 @@ a:hover {
   height: 100%;
   display: block;
   opacity: 0;
-  transition: opacity 1.6s var(--ease);
+  transition: opacity 1.6s var(--sig-ease);
 }
 
 .gl-on > .gl-canvas {
   opacity: 1;
 }
 
-.hero > .gl-canvas,
-.hero-poster,
-.hero-vignette {
-  z-index: -1;
-}
-
-/* Poster: what reduced motion, no WebGL, and the moment before the scene loads all show. */
-.hero-poster {
-  position: absolute;
-  inset: 0;
-  transition: opacity 1.6s var(--ease);
-}
-
-.gl-on > .hero-poster {
-  opacity: 0.25;
-}
-
-.hero-floor {
-  position: absolute;
-  left: -30%;
-  right: -30%;
-  bottom: -10%;
-  height: 75%;
-  background-image: radial-gradient(circle, var(--teal) 1.3px, transparent 1.8px);
-  background-size: 34px 34px;
-  transform: perspective(500px) rotateX(64deg);
-  transform-origin: 50% 100%;
-  mask-image: linear-gradient(to top, #000 10%, transparent 85%);
-  opacity: 0.55;
-}
-
-
-.hero-vignette {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle 440px at 78% 46%, color-mix(in srgb, var(--teal) 20%, transparent), transparent 70%),
-    radial-gradient(ellipse 70% 60% at 22% 50%, color-mix(in srgb, var(--bg) 72%, transparent), transparent 70%),
-    linear-gradient(to bottom, transparent 70%, var(--bg));
-}
-
-.hero-copy {
-  position: relative;
-  grid-column: 1;
-  grid-row: 1;
-  min-width: 0;
-}
-
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 0 22px;
-  padding: 7px 14px;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text-dim);
-  font: 0.8rem/1.3 var(--font-mono);
-  backdrop-filter: blur(8px);
-}
-
-.pulse-dot {
-  width: 8px;
-  height: 8px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--warm);
-  box-shadow: 0 0 0 0 var(--warm);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .pulse-dot { animation: ping 2.4s ease-out infinite; }
-}
-
-@keyframes ping {
-  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--warm) 70%, transparent); }
-  100% { box-shadow: 0 0 0 12px transparent; }
-}
-
-.hero h1 {
-  margin: 0;
-  font: 800 clamp(3.1rem, 15.5vw, 8.6rem) / 0.92 var(--font-display);
-  letter-spacing: -0.045em;
-  text-shadow: 0 0 60px color-mix(in srgb, var(--teal) 35%, transparent);
-}
-
-.h1-line {
-  display: block;
-}
-
-:root[data-theme='light'] .hero h1 {
-  text-shadow: none;
-}
-
-.h1-accent {
-  color: var(--text);
-}
-
-@supports (background-clip: text) or (-webkit-background-clip: text) {
-  .h1-accent {
-    background: var(--grad-accent);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    text-shadow: none;
-    padding-bottom: 0.08em;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
-}
-
-.hero-roles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 28px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.hero-roles li {
-  padding: 6px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--line-strong);
-  background: var(--surface);
-  color: var(--text);
-  font: 600 0.88rem/1.4 var(--font-display);
-  backdrop-filter: blur(8px);
-}
-
-.hero-roles li:nth-child(2) { border-color: color-mix(in srgb, var(--bronze) 55%, transparent); }
-.hero-roles li:nth-child(3) { border-color: color-mix(in srgb, var(--ember) 45%, transparent); }
-
-.hero-bio {
-  max-width: 38rem;
-  margin: 24px 0 0;
-  color: var(--text-dim);
-  font-size: clamp(1rem, 1.6vw, 1.15rem);
-}
-
-.hero-bio strong {
-  color: var(--text);
-  font-weight: 500;
-}
-
-.hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 34px;
-}
-
-.scroll-cue {
-  position: absolute;
-  left: 50%;
-  bottom: 28px;
-  display: grid;
-  place-items: center;
-  width: var(--tap);
-  height: 64px;
-  translate: -50% 0;
-}
-
-.scroll-line {
-  width: 1px;
-  height: 48px;
-  background: linear-gradient(to bottom, transparent, var(--accent));
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .scroll-line { animation: cue 2.2s var(--ease) infinite; transform-origin: top; }
-}
-
-@keyframes cue {
-  0% { transform: scaleY(0); opacity: 1; }
-  70% { transform: scaleY(1); opacity: 1; }
-  100% { transform: scaleY(1); opacity: 0; }
-}
-
-/* Phones and small tablets: no full-screen gap, the emblem sits above the name (never under
-   the text), and the scroll cue goes because the page already continues in view. */
-@media (max-width: 900px) {
-  .hero {
-    min-height: auto;
-    padding: 84px 0 56px;
+  .js-reveal [data-reveal] {
+    opacity: 1;
+    translate: 0 0;
+    rotate: x 0deg;
   }
-  .hero-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
-  }
-  .hero-emblem {
-    grid-column: 1;
-    grid-row: 1;
-    justify-self: center;
-    width: min(46vw, 220px);
-  }
-  .hero-copy {
-    grid-row: 2;
-  }
-  .scroll-cue {
-    display: none;
-  }
-}
-
-/* Phones: one centred column, the emblem lit above the name, and spacing tight enough that
-   both buttons sit fully inside the first screen (360x740). */
-@media (max-width: 600px) {
-  .hero {
-    padding: 72px 0 40px;
-  }
-  .hero-emblem {
-    width: min(44vw, 176px);
-  }
-  .hero-copy {
-    text-align: center;
-  }
-  .eyebrow {
-    margin-bottom: 14px;
-  }
-  .eyebrow-tail {
-    display: none;
-  }
-  .hero-roles,
-  .hero-actions {
-    justify-content: center;
-  }
-  .hero-roles {
-    margin-top: 18px;
-    gap: 6px;
-  }
-  .hero-bio {
-    margin: 14px auto 0;
-  }
-  .hero-actions {
-    margin-top: 20px;
-  }
-}
-
-/* Light theme: the lattice stays a backdrop, washed out behind the copy column. */
-@media (min-width: 721px) {
-  :root[data-theme='light'] .hero-vignette {
-    background:
-      radial-gradient(circle 440px at 78% 46%, color-mix(in srgb, var(--teal) 12%, transparent), transparent 70%),
-      radial-gradient(ellipse 72% 75% at 24% 50%, color-mix(in srgb, var(--bg) 94%, transparent) 40%, transparent 75%),
-      linear-gradient(to bottom, transparent 70%, var(--bg));
-  }
-}
-
-@media (max-width: 720px) {
-  .hero-vignette {
-    background:
-      linear-gradient(to bottom, color-mix(in srgb, var(--bg) 30%, transparent), color-mix(in srgb, var(--bg) 70%, transparent) 60%, var(--bg));
-  }
-}
-
-/* ---------- scroll reveal (individual transform properties, so tilt's transform stays free) ---------- */
-
-.js-reveal [data-reveal] {
-  opacity: 0;
-  translate: 0 32px;
-  rotate: x 8deg;
-  transform-origin: 50% 100%;
-  transition:
-    opacity 0.55s var(--ease),
-    translate 0.65s var(--ease),
-    rotate 0.65s var(--ease);
-}
-
-.js-reveal [data-reveal]:focus-within,
-.js-reveal [data-reveal].is-in {
-  opacity: 1;
-  translate: 0 0;
-  rotate: x 0deg;
 }

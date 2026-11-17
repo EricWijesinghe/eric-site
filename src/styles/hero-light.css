@@ -1,0 +1,155 @@
+/* Hero stage, light theme (split from hero.css to keep each file small). Imported by hero.css. */
+
+/* ---------- light theme: pearl and ice, his own glow behind him ----------
+   The stage keeps no solid base here: the page field (flow.css) shows through, so the hero and the next section
+   are the same surface. Eric (round 10): "soft edge is too much, I wanna my image to feel like a flow to other
+   sides". So nothing here draws a shape around him any more: no projection plate, no circle, ellipse or box mask.
+   The engine paints the whole canvas as the page's own pearl (singularity-shaders-post.ts) with a deep field that
+   is his blurred silhouette and streams out to his left and right; the canvas keeps only the masks dark has
+   (.m2c-sing: the left clearing for the copy and the bottom dissolve), which fade pearl into pearl. */
+
+:root[data-theme='light'] main#main > section.m2c-stage.m2c-stage {
+  background:
+    radial-gradient(42% 40% at 12% 20%, rgb(139 92 246 / 0.1), transparent 70%),
+    radial-gradient(38% 34% at 60% 96%, rgb(45 245 160 / 0.08), transparent 70%);
+}
+
+/* Desktop, light only: the copy's clearing starts further left than in dark, so the streams leaving his left
+   shoulder carry well toward the page's edge (Eric round 10: "flow to other sides") and are faint behind the copy. */
+@media (min-width: 1024px) and (orientation: landscape) {
+  :root[data-theme='light'] .m2c-sing {
+    -webkit-mask-image: linear-gradient(to bottom, #000 80%, transparent), linear-gradient(90deg, transparent 0%, transparent 12%, #000 46%);
+    mask-image: linear-gradient(to bottom, #000 80%, transparent), linear-gradient(90deg, transparent 0%, transparent 12%, #000 46%);
+  }
+}
+
+/* Phone and portrait, light only (the height that clears the nav is shared, hero.css). The bottom fades over one
+   long ramp from 62% of the canvas, and the shader thins the deep field by the same ramp, so the navy never meets the
+   mask's edge at full strength: a shorter fade cut his torso with a straight line (round 10 review). */
+@media (max-width: 1023px), (orientation: portrait) {
+  :root[data-theme='light'] .m2c-sing {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 12%, #000 62%, rgb(0 0 0 / 0.62) 76%, rgb(0 0 0 / 0.26) 89%, transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 12%, #000 62%, rgb(0 0 0 / 0.62) 76%, rgb(0 0 0 / 0.26) 89%, transparent 100%);
+  }
+}
+
+:root[data-theme='light'] .m2c-field,
+:root[data-theme='light'] .m2c-name-fx {
+  mix-blend-mode: normal;
+}
+
+:root[data-theme='light'] .m2c-copy::before {
+  background: linear-gradient(to bottom, rgb(244 248 251 / 0) 0%, rgb(244 248 251 / 0.8) 18%, rgb(244 248 251 / 0.9) 100%);
+}
+
+/* Small labels: solid deep ink, no alpha. The azure stays on decorative accents only. */
+:root[data-theme='light'] .m2c-eyebrow {
+  color: #12386a;
+}
+
+/* The name: the energy canvas moves under the letters in light, so the navy glyphs are never painted over.
+   The current reads as a pale glow around and behind each letter and the ink stays one colour (WCAG 4.5:1). */
+:root[data-theme='light'] .m2c-name-wrap {
+  isolation: isolate;
+}
+
+:root[data-theme='light'] .m2c-name-fx {
+  z-index: -1;
+  mix-blend-mode: normal;
+}
+
+:root[data-theme='light'] .m2c-name {
+  color: #04285a;
+  text-shadow: 0 0 2px rgb(244 248 251 / 0.95), 0 0 10px rgb(244 248 251 / 0.85), 0 0 1px rgb(11 95 191 / 0.6);
+}
+
+/* Inset, like the dark ring: the graphic runs edge to edge, so an outset ring would fall off the viewport. */
+/* Light: an ink ring with a white halo on a pale inner ring, so it holds against the dark projection field
+   behind him as well as the pale page (WCAG 1.4.11). Drawn on a pseudo-element; the outline is switched off. */
+:root[data-theme='light'] .m2c-sing:focus-visible {
+  outline: none;
+}
+
+:root[data-theme='light'] .m2c-sing:focus-visible::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  z-index: 5;
+  border: 3px solid #04285a;
+  border-radius: 20px;
+  box-shadow: 0 0 0 2px #ffffff, inset 0 0 0 2px #ffffff;
+  pointer-events: none;
+}
+
+:root[data-theme='light'] .m2c-roles {
+  color: #12386a;
+}
+
+:root[data-theme='light'] .m2c-bio {
+  color: #2a4058;
+}
+
+:root[data-theme='light'] .m2c-bio strong {
+  color: #0a1830;
+}
+
+/* Primary CTA in light: a luminous pearl-to-ice fill with an ink label (no solid azure slab, K1). The azure
+   lives on the border, so the button still reads as the primary action on the pale page. */
+:root[data-theme='light'] .m2c-stage .btn-primary {
+  background: linear-gradient(180deg, #ffffff 0%, #d7ebff 100%);
+  border-color: #0b5fbf;
+  color: #061428;
+}
+
+:root[data-theme='light'] .m2c-stage .btn-primary:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #bfe0ff 100%);
+  border-color: #04285a;
+  color: #061428;
+}
+
+:root[data-theme='light'] .m2c-stage .btn-ghost {
+  background: rgb(255 255 255 / 0.6);
+  border-color: rgb(10 24 48 / 0.22);
+  color: #0a1830;
+}
+
+:root[data-theme='light'] .m2c-stage .btn-ghost:hover {
+  border-color: #0b5fbf;
+  color: #0b5fbf;
+}
+
+:root[data-theme='light'] .m2c-stage .btn:focus-visible {
+  outline-color: #0b5fbf;
+}
+
+:root[data-theme='light'] .m2c-chain {
+  background: radial-gradient(closest-side, rgb(244 248 251 / 0.85), rgb(244 248 251 / 0));
+  color: #12386a;
+}
+
+:root[data-theme='light'] .m2c-chain-label {
+  color: #12386a;
+}
+
+:root[data-theme='light'] .m2c-chain[data-live='true'] .m2c-chain-dot {
+  background: #0a7d78;
+  box-shadow: 0 0 8px rgb(10 125 120 / 0.6);
+}
+
+/* The copy's wash, light: it used to reach x 80% and milked his left shoulder and its field over (measured: the
+   field above that shoulder was at luminance 0.27, the one above the other at 0.03). It now ends where the copy
+   does, before his body, so both shoulders keep the same deep field. */
+@media (min-width: 1024px) and (orientation: landscape) {
+  :root[data-theme='light'] .m2c-stage::before {
+    background:
+      radial-gradient(56% 74% at 24% 50%, rgb(244 248 251 / 0.8) 0%, rgb(244 248 251 / 0.55) 27%, rgb(244 248 251 / 0) 44%),
+      linear-gradient(
+        90deg,
+        rgb(244 248 251 / 0.55) 0%,
+        rgb(244 248 251 / 0.5) 30%,
+        rgb(244 248 251 / 0.3) 38%,
+        rgb(244 248 251 / 0.1) 43%,
+        rgb(244 248 251 / 0) 48%
+      );
+  }
+}

@@ -1,0 +1,149 @@
+/* Flow: one continuous field under every section (the fixed .flow-field canvas) and the reveal choreography.
+   Owned by the flow lane. The canvas reads its colours from the tokens below (flow-palette.ts), so a theme
+   switch recolours it from CSS, the single source of truth (round 6, K2). */
+
+@property --scan {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+
+/* ---------- the continuous field: one atmosphere, no section boxes ---------- */
+
+main#main {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+}
+
+/* The colour field is the fixed canvas (.flow-field) inside this stacking context, under the content. */
+main#main > .m2c-stage.m2c-stage {
+  background: none;
+}
+
+main#main > .m2c-stage::after {
+  display: none;
+}
+
+/* Sections are no longer boxes: no backgrounds, no dividers; rhythm comes from the padding. */
+main#main > section:not(.m2c-sing) {
+  background: none;
+  /* 120 at 1440 (was 168): each pool between sections is a beat, not a screen of the same glyph cloud. */
+  padding: clamp(96px, 8.4vw, 120px) 0;
+}
+
+/* ---------- the page field canvas (flow-field.ts paints it) ---------- */
+
+/* Chord per section, in page order: top, about, projects, skills, support, contact. -a and -b are the glyph
+   inks (contrast checked against the brightest gap background), -w is the soft wash of the pool. */
+.flow-field {
+  --flow-a-0: #38e1ff;
+  --flow-b-0: #5aa2ff;
+  --flow-w-0: #1f6fd1;
+  --flow-a-1: #5aa2ff;
+  --flow-b-1: #a78bfa;
+  --flow-w-1: #4b3cff;
+  --flow-a-2: #19d3c5;
+  --flow-b-2: #2df5a0;
+  --flow-w-2: #1f6fd1;
+  --flow-a-3: #a78bfa;
+  --flow-b-3: #38e1ff;
+  --flow-w-3: #4b3cff;
+  --flow-a-4: #2df5a0;
+  --flow-b-4: #19d3c5;
+  --flow-w-4: #1f6fd1;
+  --flow-a-5: #38e1ff;
+  --flow-b-5: #e04cff;
+  --flow-w-5: #4b3cff;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 50% at 82% 12%, rgb(18 56 106 / 0.55), transparent 70%),
+    radial-gradient(60% 50% at 8% 58%, rgb(75 60 255 / 0.22), transparent 70%),
+    radial-gradient(60% 45% at 70% 92%, rgb(224 76 255 / 0.12), transparent 70%),
+    var(--sig-void, #02050b);
+}
+
+/* Light: deep inks of its own (never the neon of dark on white), drawn with normal alpha; washes are pastel. */
+:root[data-theme='light'] .flow-field {
+  --flow-a-0: #0a3f86;
+  --flow-b-0: #0a4fa8;
+  --flow-w-0: #c9dcff;
+  --flow-a-1: #0a4fa8;
+  --flow-b-1: #3326c7;
+  --flow-w-1: #d9d3ff;
+  --flow-a-2: #005a55;
+  --flow-b-2: #005a36;
+  --flow-w-2: #c4ece6;
+  --flow-a-3: #5b2bc4;
+  --flow-b-3: #0a3f86;
+  --flow-w-3: #e0d4ff;
+  --flow-a-4: #005a36;
+  --flow-b-4: #005a55;
+  --flow-w-4: #c6eedb;
+  --flow-a-5: #0a3f86;
+  /* Deepened from #8a0f86: at peak alpha .7 over the Contact pool's wash it measured under 3:1. */
+  --flow-b-5: #6d0a6a;
+  --flow-w-5: #f0d2ee;
+  background:
+    radial-gradient(70% 50% at 82% 12%, rgb(56 225 255 / 0.3), transparent 70%),
+    radial-gradient(60% 50% at 8% 58%, rgb(139 92 246 / 0.14), transparent 70%),
+    radial-gradient(60% 45% at 70% 92%, rgb(45 245 160 / 0.14), transparent 70%),
+    var(--sig-white, #f3fbff);
+}
+
+/* ---------- reveal choreography (reveal.ts sets --d per element and adds .is-in) ---------- */
+
+/* Rise: translate and opacity only. The global 6deg tilt is dropped here: a rotated layer over the live canvases
+   costs a compositing pass and read as a wobble. */
+.js-reveal main#main [data-reveal] {
+  opacity: 0;
+  translate: 0 20px;
+  rotate: none;
+  transition:
+    opacity 0.9s var(--sig-ease) calc(var(--d, 0) * 1ms),
+    translate 1.1s var(--sig-ease) calc(var(--d, 0) * 1ms);
+}
+
+/* Canvases and frames fade in place: a moving canvas would smear its own animation. */
+.js-reveal main#main [data-reveal='fade'] {
+  translate: none;
+}
+
+/* Only the .is-in hook: the element animates itself (or not at all). */
+.js-reveal main#main [data-reveal='none'] {
+  opacity: 1;
+  translate: none;
+  transition: none;
+}
+
+.js-reveal main#main [data-reveal]:focus-within,
+.js-reveal main#main [data-reveal].is-in {
+  opacity: 1;
+  translate: none;
+}
+
+/* Headings are scanned in by a soft mask edge that sweeps left to right, over the decrypting row the canvas
+   draws behind them (flow-cipher.ts). The mask clips to the box, so the box carries the descenders (g, y, p)
+   below the line; the margin keeps the layout where it was. */
+.js-reveal main#main .section-title[data-reveal] {
+  /* Minus the soft edge's width, so no letter shows before the sweep starts. */
+  --scan: -14%;
+  opacity: 1;
+  translate: none;
+  padding-bottom: 0.22em;
+  margin-bottom: calc(clamp(28px, 4vw, 48px) - 0.22em);
+  -webkit-mask-image: linear-gradient(90deg, #000 var(--scan), transparent calc(var(--scan) + 14%));
+  mask-image: linear-gradient(90deg, #000 var(--scan), transparent calc(var(--scan) + 14%));
+  /* An even sweep (not the page's fast-out ease) so the decrypting row ahead of it can be seen. */
+  transition: --scan 1.1s cubic-bezier(0.4, 0, 0.2, 1) calc(var(--d, 0) * 1ms);
+}
+
+.js-reveal main#main .section-title[data-reveal].is-in,
+.js-reveal main#main .section-title[data-reveal]:focus-within {
+  --scan: 120%;
+}

@@ -1,0 +1,192 @@
+/* Finale, contact: one unboxed stage that mirrors the hero (copy left, globe right). The globe's place is
+   defined here once, as --gx/--gy/--gr in container units; the canvas reads it back from the hit button, so the
+   drawing and the layout cannot drift apart. Inks and the hit button itself: contact-globe.css. */
+
+#contact .fin-copy {
+  position: relative;
+  z-index: 1;
+}
+
+#contact .fin-text {
+  max-width: 52ch;
+  margin: 0 0 32px;
+  color: var(--text);
+}
+
+#contact .fin-orb {
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ---------- ground stations: the three profile links, one satellite each ---------- */
+
+#contact .fin-stations {
+  display: flex;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: auto;
+}
+
+#contact .fin-stations li {
+  --hue: var(--sig-cyan);
+}
+
+#contact .fin-stations li:nth-child(2) { --hue: var(--sig-violet); }
+#contact .fin-stations li:nth-child(3) { --hue: var(--sig-magenta); }
+
+#contact .fin-stations a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 96px;
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: 12px;
+  color: var(--text);
+  font: 500 0.75rem / 1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color 0.4s var(--sig-ease), text-shadow 0.4s var(--sig-ease);
+}
+
+#contact .fin-stations .icon {
+  color: var(--hue);
+  transition: scale 0.6s var(--sig-ease), filter 0.6s var(--sig-ease);
+}
+
+#contact .fin-stations a:hover,
+#contact .fin-stations a:focus-visible {
+  text-shadow: 0 0 14px color-mix(in srgb, var(--hue) 70%, transparent);
+}
+
+#contact .fin-stations a:focus-visible {
+  outline: 2px solid var(--hue);
+  outline-offset: 2px;
+}
+
+/* A packet from its satellite has landed. */
+#contact .fin-stations a.is-rx .icon,
+#contact .fin-stations a:hover .icon,
+#contact .fin-stations a:focus-visible .icon {
+  scale: 1.15;
+  filter: drop-shadow(0 0 6px var(--hue));
+}
+
+/* ---------- the one call to action: lit by the uplink, pulsed by a ping ---------- */
+
+#contact .btn-primary.is-linked::before {
+  opacity: 0.95;
+}
+
+#contact .btn-primary.is-rx::before {
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--sig-emerald) 75%, transparent), transparent);
+  opacity: 1;
+}
+
+:root[data-theme='light'] #contact .btn-primary.is-rx::before {
+  background: radial-gradient(closest-side, rgb(4 120 87 / 0.45), transparent);
+}
+
+/* ---------- wide: the stage ---------- */
+
+@media (min-width: 900px) {
+  main#main > section#contact {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: clamp(680px, 100svh, 920px);
+    padding-block: 0;
+  }
+
+  /* Narrower than the 44% column, so the ring's far edge never runs under the words. */
+  #contact .fin-copy > :not(.section-title) {
+    max-width: min(44ch, 38vw);
+  }
+
+  #contact .fin-orb {
+    position: absolute;
+    inset: 0;
+    container-type: size;
+  }
+
+  #contact .fin-sphere {
+    display: contents;
+  }
+
+  #contact :is(.globe-hit, .fin-stations) {
+    --gx: 68cqw;
+    --gy: 52cqh; /* low enough that the whole globe is on the page's last screen at 768-900px tall */
+    --gr: min(30cqh, 19cqw);
+  }
+
+  #contact .fin-stations {
+    position: absolute;
+    left: var(--gx);
+    top: calc(var(--gy) + var(--gr) * 1.24);
+    translate: -50% 0;
+  }
+}
+
+/* 900-1199 px: 19cqw sets the radius here, so the stage is taller than the globe needs; lower it so the orbits
+   clear the top of the page's last screen at 768 px tall. */
+@media (min-width: 900px) and (max-width: 1199px) {
+  #contact :is(.globe-hit, .fin-stations) {
+    --gy: 55cqh;
+  }
+}
+
+/* ---------- phone and tablet: copy, the button, then the globe full-bleed with its stations below ---------- */
+
+@media (max-width: 899px) {
+  main#main > section#contact {
+    padding-bottom: 32px;
+  }
+
+  #contact .fin-cta .btn {
+    width: 100%;
+    min-height: 52px;
+    justify-content: center;
+  }
+
+  #contact .fin-orb {
+    position: relative;
+    margin-top: 16px;
+  }
+
+  #contact .fin-sphere {
+    position: relative;
+    width: 100%;
+    max-width: 640px;
+    margin-inline: auto;
+    aspect-ratio: 100 / 104;
+    container-type: size;
+  }
+
+  #contact .globe-hit {
+    --gx: 50cqw;
+    --gy: 50cqh;
+    --gr: 36cqw;
+  }
+
+  #contact .fin-stations {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(4px, 3vw, 12px);
+    width: min(100%, 640px);
+    margin: 0 auto;
+    padding-inline: 8px;
+  }
+
+  #contact .fin-stations a {
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    min-height: 56px;
+    padding: 6px 0;
+  }
+}
