@@ -73,6 +73,10 @@ export function renderFrame(gl: WebGL2RenderingContext, res: Res, sc: Target, ch
   // light theme: a surging figure saturates into one flat cyan and his face is gone (Eric round 8), so most of the
   // surge and the absorbed glow are shown by the composite there (deeper field, more saturated hologram)
   const lit = sh.light ? LIGHT_SURGE : 1;
+  // Eric round 12: "I should glow" while he charges, not only once he has absorbed: his aura and rim follow the charge and
+  // surge on the release's flash (1.4 at most, so a full release outshines the hold). Round 12b: the charge alone takes
+  // him to 0.75 and what he absorbed adds on top, so a 5 s hold glows visibly more than a 1.5 s one
+  const glow = Math.min(1.4, Math.max(sh.charge * 0.75, sh.flash * 0.9) + sh.absorb * 0.65);
 
   gl.bindBuffer(gl.ARRAY_BUFFER, res.ribBuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, res.ribData, 0, sh.ribN * RIB_STRIDE);
   if (sh.dotN) { gl.bindBuffer(gl.ARRAY_BUFFER, res.dotBuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, res.dotData, 0, sh.dotN * DOT_STRIDE); }
@@ -93,7 +97,7 @@ export function renderFrame(gl: WebGL2RenderingContext, res: Res, sc: Target, ch
   gl.uniform1f(res.pBG.u.uMOn, sh.mouse.on); gl.uniform1f(res.pBG.u.uU, sh.U); gl.uniform1f(res.pBG.u.uCharge, sh.charge);
   gl.uniform1f(res.pBG.u.uBoot, sh.boot); gl.uniform1f(res.pBG.u.uFlash, sh.flash);
   gl.uniform1i(res.pBG.u.uAura, 7); gl.uniform4f(res.pBG.u.uAuraRect, ...sh.auraRect); gl.uniform2f(res.pBG.u.uFO, fo[0], fo[1]);
-  gl.uniform1f(res.pBG.u.uS, s); gl.uniform1f(res.pBG.u.uAbsorb, sh.light ? 0 : sh.absorb); // light: the composite draws his glow
+  gl.uniform1f(res.pBG.u.uS, s); gl.uniform1f(res.pBG.u.uAbsorb, sh.light ? 0 : glow); // light: the composite draws his glow
   gl.uniform4f(res.pBG.u.uShock, ...sh.shock); gl.uniform1f(res.pBG.u.uShockW, sh.shockW); gl.uniform4f(res.pBG.u.uZone, ...sh.column);
   gl.bindVertexArray(res.vFS); gl.drawArrays(gl.TRIANGLES, 0, 3);
 
@@ -112,7 +116,7 @@ export function renderFrame(gl: WebGL2RenderingContext, res: Res, sc: Target, ch
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   gl.useProgram(res.pMesh.p); uC(res.pMesh); uFig(res.pMesh);
   gl.uniform1f(res.pMesh.u.uCell, clamp(6 * DPR / s, 6, 40)); gl.uniform1f(res.pMesh.u.uGlitch, sh.glitch);
-  gl.uniform1f(res.pMesh.u.uSurge, sh.surge * lit); gl.uniform1f(res.pMesh.u.uAbsorb, sh.absorb * lit);
+  gl.uniform1f(res.pMesh.u.uSurge, sh.surge * lit); gl.uniform1f(res.pMesh.u.uAbsorb, Math.min(1, glow) * lit);
   gl.bindVertexArray(res.vMesh); gl.drawElements(gl.TRIANGLES, res.nIdx, gl.UNSIGNED_INT, 0);
 
   gl.blendFunc(gl.ONE, gl.ONE);

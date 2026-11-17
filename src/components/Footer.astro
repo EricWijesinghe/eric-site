@@ -3,12 +3,8 @@ import { GITHUB_PROFILE, MAYA2C_REPO, MAYA2C_SITE } from '../data/content';
 
 // Source of this site. Public, so a visitor can read exactly what they are looking at.
 const SITE_REPO = 'https://github.com/EricWijesinghe/eric-site';
-// Computed when the site is built, in UTC, so the stamp matches the deployed artifact.
-const built = new Date();
-const builtDate = built.toISOString().slice(0, 10);
-const year = built.getUTCFullYear();
-// The last byte of the stream: ASCII EOT (end of transmission), 0x04.
-const EOT = (4).toString(2).padStart(8, '0');
+// Eric (round 12): a plain, authentic sign-off. No build date and no technology credits, only the copyright.
+const year = new Date().getUTCFullYear();
 
 const SECTIONS = [
   { label: 'About', href: '#about' },
@@ -48,12 +44,10 @@ const SOURCES = [
         ))}
       </ul>
       <p class="foot-group foot-meta">
-        <span>© {year} · Built with Astro</span>
-        <span>hosted on Cloudflare · <span class="visually-hidden">built </span><time datetime={builtDate}>{builtDate}</time></span>
+        <span>© {year} Eric Wijesinghe. All rights reserved.</span>
       </p>
       <p class="foot-end">
         <a class="foot-top" href="#top" aria-label="Back to top">↑</a>
-        <span class="foot-eot" aria-hidden="true">{EOT}</span>
       </p>
     </div>
   </div>
@@ -152,10 +146,6 @@ const SOURCES = [
   .foot-hud .foot-top {
     font-size: 1rem;
   }
-  .foot-eot {
-    color: var(--text); /* dim + 0.7 opacity failed axe contrast on the light theme */
-    opacity: 1;
-  }
   /* Phone: each group on its own row, the meta in two lines, no dots at the wrap points. */
   @media (max-width: 720px) {
     .foot-sign {
@@ -171,6 +161,9 @@ const SOURCES = [
       align-items: flex-start;
       min-height: 0;
       padding-block: 8px;
+    }
+    .foot-meta > span {
+      white-space: normal; /* the copyright line is longer than 320px */
     }
     .foot-meta > span + span::before {
       display: none;

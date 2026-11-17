@@ -151,7 +151,7 @@ function glowLayers(mask: HTMLCanvasElement, dpr: number, light: boolean): { glo
     g.drawImage(mask, 0, 0);
     g.filter = 'none';
     g.globalCompositeOperation = 'source-in';
-    g.fillStyle = light ? '#0b5fbf' : '#38e1ff';
+    g.fillStyle = light ? '#008cff' : '#38e1ff'; // light: electric blue, never navy (round 12b: navy read as a shadow)
     g.fillRect(0, 0, glow.width, glow.height);
   }
   const inner = canvasOf(mask.width, mask.height);

@@ -27,6 +27,7 @@ import '../styles/energy.css';
         })
         // decoration: without it the hero still charges and releases on its own
         .catch((err: unknown) => console.warn('Energy overlay unavailable:', err));
+      import('../scripts/energy-shock').then(({ mountShock }) => mountShock(figure)).catch((err: unknown) => console.warn('Energy shocks unavailable:', err));
     });
   }
 </script>

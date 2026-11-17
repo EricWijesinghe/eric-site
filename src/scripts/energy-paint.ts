@@ -2,7 +2,8 @@
 // a toy, and the horizon must never become a drawn ring. So the inks are his own light (cyan and ice in dark), deep
 // navy and azure in light (light is first-class: ice on a pale page measured 1.77:1), glyphs over him are light with
 // a fine dark edge, and the glow of the swarm is stamped glyph by glyph into a half-resolution layer laid on with a
-// capped alpha, so it rises with what he holds but never closes into a band.
+// capped alpha, so it rises with what he holds but never closes into a band. Round 12b: the hot glow read milky grey
+// in dark and as navy smoke bands in light, so it heats toward a luminous cyan (dark) and an electric blue (light).
 
 type Ink = readonly [share: number, rgb: string];
 export interface Pal {
@@ -25,18 +26,18 @@ export interface Pal {
 export const DARK: Pal = {
   ink: [[0.75, '56 225 255'], [0.2, '191 244 255'], [0.05, '139 92 246']],
   hot: '232 251 255', flash: '244 253 255', on: '232 251 255', onA: 0.8, onEdge: null,
-  glow: '56 225 255', glowHot: '191 244 255', glowA: [0.3, 0.55], hazeR: 26, farA: 0.4,
+  glow: '56 225 255', glowHot: '110 232 255', glowA: [0.38, 0.85], hazeR: 26, farA: 0.4,
   blend: 'lighter', edge: '2 5 11', edgeA: 0.35,
   pulse: { rgb: '56 225 255', to: '56 225 255', px: [20, 30], s: 0.2, a: 0.55, op: 'lighter' }, // a 40-60 px bloom
 };
 export const LIGHT: Pal = {
   ink: [[0.7, '11 42 107'], [0.25, '31 111 209'], [0.05, '91 43 214']],
   hot: '6 24 66', flash: '6 24 66', on: '255 255 255', onA: 0.95, onEdge: '11 42 107 / 0.6',
-  glow: '31 111 209', glowHot: '18 56 140', glowA: [0.2, 0.55], hazeR: 80, farA: 0.55,
+  glow: '31 111 209', glowHot: '0 140 255', glowA: [0.22, 0.42], hazeR: 34, farA: 0.55,
   blend: 'source-over', edge: '11 95 191', edgeA: 0.22,
   pulse: { rgb: '31 111 209', to: '255 255 255', px: [3, 5], s: 0.12, a: 0.9, op: 'source-over' }, // small and crisp
 };
-const HOT_MAX = 0.6; // at full mass the swarm is this far from its inks toward `hot`
+const HOT_MAX = 0.6; // at full mass the swarm is this far from its inks toward `hot`: past that it read milky, not cyan
 export const HEAT = 4; // a released glyph cools from `flash` to its ink through this many steps
 
 const mix = (a: string, b: string, t: number): string => {

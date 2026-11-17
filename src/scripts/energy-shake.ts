@@ -8,7 +8,8 @@
 // Measured on the last build: the name, the body text and the nav links jumped up to 5.4 px forty times a second,
 // and on a phone the nav jolted twice as far as the copy (the tremor's last step was still on it). So words get a
 // smaller tremor than scenery, every offset is capped by its length (not per axis), each new step is blended with
-// the last so it reads as a tremor rather than a glitch, and a release clears the tremor before the jolt.
+// the last so it reads as a tremor rather than a glitch, and a release clears the tremor before the jolt. Round 12
+// ("the energizing level is not enough"): about twice as hard, rising sooner, words still at most 3 px, a phone half.
 
 import type { Box } from './energy-orbit';
 
@@ -17,12 +18,13 @@ import type { Box } from './energy-orbit';
 const TEXT = '.m2c-copy, .nav-inner'; // words being read: a tremor you feel, not one that blurs them
 const SCENERY = '.m2c-field, .conduit, main > section:not(.m2c-stage), .site-foot';
 const ON = 'm2c-shake';
-const AMP_LOW = 0.5; // px at the first touch
-const AMP = { text: [1.2, 0.8], scenery: [2, 2] } as const; // px added at full charge, then by what he holds (max 2 / 4)
+const AMP_LOW = 0.7; // px at the first touch
+const AMP = { text: [1.8, 1.2], scenery: [3.6, 4.4] } as const; // px at full charge, then added by what he holds (max 3 / 8)
+const PHONE_AMP = 0.5; // a phone's words are small and close: half the tremor
 const SMOOTH = 0.5; // each new offset is blended this much with the last
-const AMP_CURVE = 1.6; // the tremor stays small for the first half of the charge, then climbs
-const STEP_MS = 22, STEP_MASS = 0.3; // a new offset about 45 times a second, up to 30 % more often as he fills
-const JOLT_PX = [2, 12] as const, PHONE_W = 600, PHONE_JOLT = 1 / 3; // px at the weakest and strongest release; at most 4 on a phone
+const AMP_CURVE = 1.2; // small at the first touch, then it climbs through the charge
+const STEP_MS = 22, STEP_MASS = 0.5; // a new offset about 45 times a second, up to 50 % more often as he fills
+const JOLT_PX = [3, 16] as const, PHONE_W = 600, PHONE_JOLT = 1 / 3; // px at the weakest and strongest release; at most 5 on a phone
 const JOLT_S = 0.42, JOLT_TAU_S = 0.09, JOLT_HZ = 2.5; // pushed out, one small swing back, settled in about 0.4 s
 const INHALE_PX = 2.5, INHALE_S = 0.1; // the press: everything leans toward him for a tenth of a second
 const MIN_LEVEL = 0.02;
@@ -63,7 +65,8 @@ export function mountShake(figure: () => Box | null): Shake {
 
   function frame(now: number): void {
     const on = armed && level > MIN_LEVEL, rise = level ** AMP_CURVE;
-    const amp = (a: readonly [number, number]): number => (on ? AMP_LOW + (a[0] - AMP_LOW) * rise + a[1] * mass * level : 0);
+    const phone = innerWidth < PHONE_W ? PHONE_AMP : 1;
+    const amp = (a: readonly [number, number]): number => (on ? (AMP_LOW + (a[0] - AMP_LOW) * rise + a[1] * mass * level) * phone : 0);
     let kick = 0;
     if (inhaleT0 >= 0) {
       const it = (now - inhaleT0) / 1000;

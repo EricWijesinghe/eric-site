@@ -28,13 +28,13 @@
   translate: var(--shk-x, 0px) var(--shk-y, 0px);
   will-change: translate;
 }
-/* The field spans the hero edge to edge: while it moves it is 3 % larger, so the strongest jolt (12 px, 6 on a phone)
-   never bares its edge at the side of the screen. It swells in and out over a breath, which reads as the inhale. */
+/* The field spans the hero edge to edge: while it moves it is 4 % larger, so the strongest tremor (8 px) or jolt
+   (16 px, 5 on a phone; a release clears the tremor first) never bares its edge at the side of the screen. It swells in and out over a breath, which reads as the inhale. */
 .m2c-field {
   transition: scale 0.3s var(--sig-ease, ease);
 }
 .m2c-field.m2c-shake {
-  scale: 1.03;
+  scale: 1.04;
 }
 
 /* A release makes the page's headings and accents surge for a moment, in both themes. */

@@ -22,6 +22,7 @@ import {
 } from './hero-name-geo';
 import { heroPointer, onPointerChange, type HeroPointer } from './hero-pointer';
 import { inkNow, onInkChange, type Ink } from './hero-theme';
+import { drawStorm, nameShadow, newStorm, stepStorm, strike, type Storm } from './energy-shock-name';
 
 // Palette for the current theme; set at the start of each frame and on every rebuild.
 let ink: Ink = inkNow();
@@ -53,6 +54,7 @@ interface NameState {
   time: number;
   last: number;
   geo: Geo | null;
+  storm: Storm; // round 12: radiation and thunder (energy-shock-name.ts)
 }
 
 function newPacket(geo: Geo): Packet {
@@ -211,7 +213,7 @@ function frameStep(ctx: CanvasRenderingContext2D, geo: Geo, st: NameState, scrat
   }
   st.arcs = st.arcs.filter((a) => now - a.born < a.life);
 
-  const jitter = st.c > 0.35 ? st.c * 1.4 : 0;
+  const jitter = st.c > 0.35 ? st.c * 2.4 : 0; // round 12: a charged name shudders harder
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.setTransform(geo.dpr, 0, 0, geo.dpr, (rnd() - 0.5) * jitter, (rnd() - 0.5) * jitter);
@@ -233,9 +235,13 @@ function frameStep(ctx: CanvasRenderingContext2D, geo: Geo, st: NameState, scrat
   drawBands(ctx, geo, scratch, bands);
   drawSpot(ctx, geo, scratch, probe);
 
-  for (const s of geo.strands) strokeStrand(ctx, s, 0.34 + 0.3 * st.c + 0.8 * flareAt(s.cx));
+  // the outline strands step back as the charge rises: at full strength they drew a scratch across the name (round 10);
+  // the thunder below is the charged name's line work now
+  for (const s of geo.strands) strokeStrand(ctx, s, (0.34 + 0.3 * st.c) * (1 - 0.7 * st.c) + 0.8 * flareAt(s.cx));
   drawPackets(ctx, geo, st);
   drawArcs(ctx, st.arcs, now);
+  stepStorm(st.storm, geo, st.c, dt, now);
+  drawStorm(ctx, geo, st.storm, ink, st.c, st.time, now);
 }
 
 /** The energised name: charge raises the current, release sends a white wave right to left. */
@@ -244,7 +250,7 @@ export function mountHeroName(h1: HTMLElement, fx: HTMLCanvasElement, stage: HTM
   if (!ctx) return () => {};
   const reduce = prefersReducedMotion();
   const pointer: HeroPointer = heroPointer(stage);
-  const st: NameState = { target: 0, c: 0, wave: null, packets: [], arcs: [], spawn: 0, time: 0, last: performance.now(), geo: null };
+  const st: NameState = { target: 0, c: 0, wave: null, packets: [], arcs: [], spawn: 0, time: 0, last: performance.now(), geo: null, storm: newStorm() };
   let scratch = canvasOf(1, 1);
   let rebuilding = false;
   /** Pointer in name-canvas px for this frame, from the stage's current position on the page. */
@@ -286,6 +292,7 @@ export function mountHeroName(h1: HTMLElement, fx: HTMLCanvasElement, stage: HTM
       drawSpot(ctx, geo, scratch, probe);
     } else {
       frameStep(ctx, geo, st, scratch, now, probe);
+      nameShadow(h1, st.storm, ink, st.c, st.time);
     }
   });
 
@@ -295,25 +302,40 @@ export function mountHeroName(h1: HTMLElement, fx: HTMLCanvasElement, stage: HTM
   };
   const onRelease = (e: Event): void => {
     if (reduce) return;
+    // the engine's idle pulses are not his release: the name stays calm, thunder answers only a person (round 12)
+    if ((e as CustomEvent<{ auto?: boolean }>).detail?.auto) return;
     const amp = releaseStrength(e);
     st.wave = { t0: performance.now(), amp };
+    if (st.geo) strike(st.storm, st.geo, amp, performance.now());
     for (let i = 0; i < 5 && st.geo; i++) {
       const arc = pickArc(st.geo, performance.now(), 1, st.geo.w * WAVE_LEAD);
       if (arc && st.arcs.length < ARCS_MAX) st.arcs.push(arc);
     }
     loop.request();
   };
+  // what he absorbed widens the name's radiance (energy-shock-name.ts); the charge's own frames carry it on screen
+  const onAbsorb = (e: Event): void => {
+    const k = Number((e as CustomEvent<{ k?: number }>).detail?.k);
+    st.storm.massT = Number.isFinite(k) ? Math.max(0, Math.min(1, k)) : 0;
+  };
   window.addEventListener('m2c:charge', onCharge);
   window.addEventListener('m2c:release', onRelease);
+  window.addEventListener('m2c:absorb', onAbsorb);
   const stopResize = onResize(fx, scheduleRebuild);
   const stopPointer = onPointerChange(stage, () => loop.request());
   // The glow colours are baked into the geometry, so a theme change rebuilds it.
-  const stopInk = onInkChange(scheduleRebuild);
+  const stopInk = onInkChange(() => {
+    // the h1's radiance was built on the old theme's rim: drop it, and the next frame reads the new one
+    h1.style.removeProperty('text-shadow');
+    st.storm.base = null;
+    scheduleRebuild();
+  });
   if (document.fonts) void document.fonts.ready.then(scheduleRebuild);
 
   return () => {
     window.removeEventListener('m2c:charge', onCharge);
     window.removeEventListener('m2c:release', onRelease);
+    window.removeEventListener('m2c:absorb', onAbsorb);
     stopResize();
     stopPointer();
     stopInk();

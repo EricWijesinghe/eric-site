@@ -42,7 +42,10 @@ uniform vec4 uZone; // the head zone's column: left, right, floor (device px)
 uniform sampler2D uAura; uniform vec4 uAuraRect; uniform vec2 uFO; uniform float uS; uniform float uAbsorb;
 out vec4 o;${HEAD_KEEP}
 const vec3 PAL[7] = vec3[7](${PALETTE});
-const float AURA_K = 1.1; // his absorbed glow at full absorb: the growth lands round his body, where it cannot fog his face
+// his glow at full charge or absorb. Round 12b: 2.0 with a whitish rim read as milky grey fog on his shoulders once
+// tone-mapped; a saturated cyan at 1.5 stays luminous cyan-white at its peak instead
+const float AURA_K = 1.5;
+const vec3 AURA_RIM = vec3(.05,.70,1.), AURA_FIELD = vec3(.02,.27,.72);
 const float SHOCK_FRONT = .085; // the front's peak per unit of strength: about .12 at the strongest release
 vec3 pal(float x){ float y = mod(x, 7.); int i = int(floor(y)); float f = y - floor(y); float s = f*f*(3.-2.*f); return mix(PAL[i], PAL[(i+1)%7], s); }
 // vk: 1 normally, 0 in the column above his head, where the light trails, aurora rays and binary rain would stand on
@@ -110,12 +113,15 @@ void main(){
   float da = length(d/vec2(1., 1.25))/uU;
   float lowStage = 1. - .75*step(uRes.x, uRes.y)*smoothstep(.5, .85, fc.y/uRes.y);
   col += vec3(.05,.30,.52)*(.22 + (.35*uCharge + .5*uFlash)*lowStage)*exp(-da*da*3.2);
-  // the energy he absorbed: white-cyan along his outline (the blur is 0.5 there), deep cyan further out. A glow with
-  // his shape, never a line: the outline part is cut from his head and the column above it (round 10 review: a bright
-  // contour round his hair and ears read as a halo line), so it lands on his shoulders and torso
-  vec2 afp = (fc - uFO)/uS; float ahk = headKeep(afp);
+  // his glow: luminous cyan hugging his outline (the blur is 0.5 there) and a deep cyan field further out, round his
+  // whole figure, head included (Eric round 12b: "that field ... can be around me and I become more bright", only no
+  // straight lines from his head). Both sit outside his outline: the mesh is translucent, so anything drawn behind him
+  // fogged his face and jacket lines. A blur has no edge, so it is never a drawn ring
+  vec2 afp = (fc - uFO)/uS;
   vec3 au = texture(uAura, (afp - uAuraRect.xy)/uAuraRect.zw).rgb;
-  col += (vec3(.03,.28,.58)*au.b*(1. - .6*au.r)*mix(.4, 1., ahk) + vec3(.30,.80,1.)*au.r*(1. - au.r)*2.4*ahk)*uAbsorb*AURA_K*lowStage;
+  float outside = 1. - smoothstep(.3, .5, au.r); // gone at his outline: inside it, it lifted his hair's dark gaps to haze
+  col += (AURA_FIELD*au.b + AURA_RIM*au.r*(1. - au.r)*4.)*outside*uAbsorb*AURA_K*lowStage
+    *(.8 + .35*vnoise(vec2(uTime*7., 3.))*uAbsorb); // a full glow crackles: its strength flickers, its shape never moves
   // his shockwave: a wide, faint pressure front with a fainter volume inside it, never a bright limb (a limb read as a
   // halo arc over his head, Eric rounds 2 and 10). It is cut from his head and the column above it, so it leaves him
   // sideways and downward only
@@ -216,10 +222,11 @@ uniform sampler2D uAtlas; uniform float uCell; uniform float uGlitch; uniform fl
 uniform float uAbsorb; // 0..1: what he has absorbed of the page's energy (m2c:absorb); he glows brighter with it
 in vec2 vUV; out vec4 o;${HEAD_KEEP}
 // He gets brighter by gain on his own shading, never by a flat fill (a fill turned his face into a cyan mask with
-// black holes, round 10 review). The rim's extra glow lands on his shoulders and torso outline only: on his head it
-// drew a halo line round his hair and ears (hard rule 3). Gains are per unit of absorb (or surge).
+// black holes, round 10 review). The rim's extra glow is full from his shoulders down and half on his head: at full
+// strength it drew a halo line round his hair and ears (hard rule 3). Gains are per unit of absorb (or surge).
 // his head takes no gain here: the composite brightens his face after tone mapping, where a gain keeps its contrast
-const float ABSORB_RIM = 1.6, ABSORB_BODY = .12, ABSORB_GAIN = .12, SURGE_GAIN = .75;
+const float ABSORB_RIM = 2.4, ABSORB_BODY = .18, ABSORB_GAIN = .2, SURGE_GAIN = .75; // round 12: a stronger glow from his shoulders down
+const float HEAD_RIM = .5;     // share of the absorbed rim on his hair and ears: a soft glow round him, never a line
 const float KNEE = .35;          // the gain's soft knee: highlights rise less than mid-tones, nothing clips flat
 const float BREATH_HZ = 1.2, BREATH = .12; // a full charge breathes on his rim
 float glyph(float g, vec2 f){ vec2 cell = vec2(mod(g,8.), floor(g/8.)); return texture(uAtlas, (cell + .1 + f*.8)/8.).a; }
@@ -259,7 +266,8 @@ void main(){
   col += mix(cyan, ice, .3)*gB*(.07 + .32*cl + .7*strm*cl)*(1.-.5*isHead + uSurge*(1. - .8*isHead)); // a surge's glyphs would fog his features
   float hz = headKeep(p); // 0 on his head and the column above it, 1 from his shoulders down
   float breath = 1. + BREATH*uAbsorb*uAbsorb*sin(uTime*6.2832*BREATH_HZ);
-  col += ice*rim*.65 + mix(cyan, ice, .5)*rim*(1.8*uSurge + ABSORB_RIM*uAbsorb*breath)*hz + ice*sweep*(.15 + .5*I)*.3 + ice*fl*1.8;
+  // the absorbed rim wraps his head too, at HEAD_RIM (round 12b), in cyan: ice at this gain read grey once bloomed
+  col += ice*rim*.65 + mix(cyan, ice, .25)*rim*(1.8*uSurge*hz + ABSORB_RIM*uAbsorb*breath*mix(HEAD_RIM, 1., hz)) + ice*sweep*(.15 + .5*I)*.3 + ice*fl*1.8;
   col += cyan*body*uAbsorb*ABSORB_BODY*(1. - isHead); // his body takes a little cyan; his face only gains (below)
   float g = 1. + (SURGE_GAIN*uSurge + ABSORB_GAIN*uAbsorb)*(1. - isHead);
   col = flick*col*g/(1. + KNEE*(g - 1.)*col);

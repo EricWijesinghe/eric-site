@@ -5,54 +5,25 @@
 // slots, evenly spaced, the near side low, large, bright and fast, the far side small and dim, passing behind him.
 // The swarm itself is the horizon. Most of what arrives crosses it and pours INTO HIM along five streams that end on
 // his shoulders and chest with a short bloom; he keeps what he absorbs ('m2c:absorb' {k} tells the engine how bright
-// to make him), and with it the orbit draws in, grows, brightens and spins faster, so 2 s, 4 s and 6 s of holding
-// look different. The release gives it all back from his outline and from the orbit, out to the whole screen as far
-// as the mass he held (energy-release.ts). One fixed canvas (pointer-events none, aria-hidden) that draws only while
-// there is energy: an idle page costs nothing. Never over his face, never on the words (energy-quiet.ts).
-// Reduced motion: off.
+// to make him). Round 12 ("the energizing level is not enough", "the circle should expand ... and behave violently"):
+// the pour escalates with the charge and then with what he holds, and the orbit swells, surges, precesses and flares
+// (energy-fury.ts), so 1 s, 3 s and 6 s of holding look different. The release gives it all back evenly in every
+// direction, from his outline (head too) and from the orbit, as far as the mass he held (energy-release.ts). Round
+// 12b: the field may be around his head as well, so a share of what falls in curves into his head. One fixed canvas
+// (pointer-events none, aria-hidden), drawn only while there is energy. Never over his face or words. Reduced motion: off.
 
 import { FACE, HEAD_LINE, angleToward, loadBody, placeOrbit, project, roughBody, smooth, type Body, type Box, type Plane } from './energy-orbit';
 import { DARK, HEAT, LIGHT, edges, glowLayer, glowOf, inkOf, inks, pulse, roomGrid, type Pal } from './energy-paint';
 import { quietAlpha, readQuiet, type Quiet } from './energy-quiet';
-import { along, fanDirs, route, type Path } from './energy-release';
-
-const ORBIT_GLYPHS = ['0', '1', '0', '1', '0', '1', '0x', 'fn', '->', '::', '{}', 'u8', 'ff', 'c9']; // short: a swarm, not words
-const OUT_GLYPHS = ['0', '1', '0', '1', '0x', 'fn', 'let', '->', '::', '{}', 'impl', 'u8', 'ff', 'c9'];
-const FIGURE_SRC = '/eric/eric-v11-figure.webp';
-const SLOTS = { desk: 96, phone: 90, minShare: 0.75 }; // places on the orbit: the horizon, thin enough to read as one
-const SLOT_JITTER = 0.3, NEAR_FAST = 0.14; // slots: even but not a ruler; the near side sweeps faster (~1.8x on screen)
-const DEPTH_S = [0.6, 1.6] as const; // glyph scale, far side .. near side (alpha: the palette's farA .. 1)
-const GROW = 0.35; // the near side grows by this share at full mass
-const SPAWN_PER_S = 100; // entering from the screen's edges at full charge
-const PRESS_GLYPHS = 20, PRESS_INSET = [120, 200] as const; // the press answers at once: glyphs already on their way in
-const DIVE_PER_S = 26, DIVE_MASS = 1.5; // pulled off the orbit into him at full charge, up to 2.5x at full mass
-const ABSORB_FROM = 0.2; // a moment of gathering first: anticipation
-const MASS_FULL = 300; // absorbed glyphs for a full-power release: about 4 s of holding at full charge
-const TIGHTEN = { charge: 0.05, mass: 0.15 }; // the orbit draws in with the charge, then with what he holds
-const LANE = 0.07, MASS_SQUEEZE = 0.5; // the two lanes' spread; it compresses as he charges and fills
-const SPIN = { base: 0.5, charge: 1.3, mass: 1.4 }; // rad/s: ever faster with the charge and with what he holds
-const FAR_JOIN = 0.55; // rad: glyphs from above join behind his shoulders' ends, never down past his head
-const CAPTURE_PX = 26, GATHER_MAX_S = 1.8;
-const GATHER_SPEED = { base: 640, charge: 640 }; // px/s: quick enough that the first glyphs reach him inside a short tap-hold
-const DIVE_BEHIND = -0.45; // sin of the orbit angle: nothing falls in from behind him, where nobody would see it go
-const DWELL_S = 0.25, DIVE_S = 0.9, DIVE_LEAD = 2.4, ARRIVE_LEAD_S = 0.22;
-const DIVE_S0 = [0.9, 1.3] as const, DIVE_END = 0.65; // a falling glyph: about its orbit size, shrinking as it goes into him
-const DIVE_FROM_FILL = 0.6, DIRECT = 0.5; // the orbit is thinned into him only while this full; share of arrivals that fall straight in
-const TRAIL = [0.5, 0.32, 0.18], TRAIL_S = 0.06, TRAIL_SHRINK = 0.86; // the copies behind a falling glyph, so the eye follows the stream in
-const STREAMS = [0.24, 0.38, 0.52, 0.68, 0.84], STREAM_JITTER = 0.012; // figure-width columns where the streams enter him
-const REACH = { tap: 250, far: [0.55, 1.15] as const }; // px at the weakest; share of the way to the screen's edge at full
-const TAU_S = { up: 0.17, right: 0.25, lead: 1.3, rest: [0.7, 1] as const }; // ease-out time of a released glyph's flight
-const LEAD = { share: 0.25, size: 1.4 }; // the burst's front: the first quarter out are bigger, white-hot and faster
-const HOT_S = [0.15, 0.4] as const, BIRTH_S = 1.55; // a glyph leaving his outline: ~20 px and white-hot, then it cools
-const OUT_TRAIL_S = 0.25; // fast enough to need a short smear for the first quarter second
-const LIFE_S = { base: 0.9, power: 0.3 }, DRAIN_PER_S = 1.8, SURGE_MS = 1300;
-const QUIET_MS = 250, FONT_PX = 13, FONT_PHONE_PX = 11, PHONE_W = 600;
-const HAZE = { orbit: 0.5, dive: 0.7, rRef: 400, twinkle: 3 }; // strength per glyph; radius from the palette at rRef
-const SPACING = 1.15; // glyph heights: no glyph in orbit is drawn this close to one already drawn this frame
-const FULL_HZ = 1.2, FULL_FROM = 0.9; // once he holds all he can, the haze breathes: holding longer adds nothing
-const STAGE_FADE = [0.78, 0.98] as const; // the hero canvas dissolves into the page over this share of its height
-const NECK_COL = 0.3, TAU = 2 * Math.PI; // half-width of the column under his face where the orbit fades out (figure widths)
-const SMALL_W = 1280, SMALL_MIN = 0.42; // narrower screens get a proportional share of the glyphs, never under 42 %
+import { SECTORS, along, fillDirs, route, sectorOf, type Path } from './energy-release';
+import { makeFury, type Fury } from './energy-fury';
+import {
+  ABSORB_FROM, ARRIVE_LEAD_S, BIRTH_S, CAPTURE_PX, DEPTH_S, DIRECT, DIVE_BEHIND, DIVE_END, DIVE_FROM_FILL, DIVE_LEAD, DIVE_MASS, DIVE_PER_S,
+  DIVE_S, DIVE_S0, DRAIN_PER_S, DWELL_S, FAR_COL, FAR_JOIN, FIGURE_SRC, FONT_PHONE_PX, FONT_PX, FULL_FROM, FULL_HZ, GATHER_MAX_S, GATHER_SPEED,
+  GROW, HAZE, HEAD_DIVE, HOT_S, LANE, LEAD, LIFE_S, MASS_FULL, MASS_SQUEEZE, MIN_PITCH, NEAR_FAST, NECK_COL, ORBIT_GLYPHS, OUT_GLYPHS, OUT_TRAIL_S,
+  BURST_Y, DOWN_FROM, LOW_PX, PHONE_W, PRESS_GLYPHS, PRESS_INSET, QUIET_MS, REACH, SEC_AT_S, SLOTS, SLOT_JITTER, SMALL_MIN, SMALL_W, SPACING, SPAWN_PER_S, SPIN, STAGE_FADE,
+  STREAMS, STREAM_JITTER, SURGE_MS, TAU, TAU_S, TRAIL, TRAIL_S, TRAIL_SHRINK, TWIST,
+} from './energy-tune';
 
 const enum Mode { Gather, Orbit, Dive, Out }
 interface Glyph extends Path {
@@ -60,9 +31,9 @@ interface Glyph extends Path {
   x: number; y: number; vx: number; vy: number; s: number; // screen position, velocity and drawn scale
   slot: number; a: number; // its place on the orbit (-1: none, it falls straight in) and the angle it last had there
   t: number; w: number; // seconds in this mode (negative while a released glyph waits inside him); per-mode number
-  s0: number; s1: number; hot: number; // sizes at the start and end of a dive or flight; 1: born white-hot
+  s0: number; s1: number; hot: number; head: boolean; // sizes at the start and end of a dive or flight; 1: born white-hot; diving into his head
 }
-export interface EnergyDebug { quad?: number[]; orbit: number; diving: number; gathering: number; out: number; absorbed: number; k: number; power: number; fromBody: number; flung: number; plane: Plane | null; column?: DOMRect | null }
+export interface EnergyDebug { sec?: number[]; sec200?: number[]; secRatio?: number; headDives?: number; orbit: number; diving: number; gathering: number; out: number; absorbed: number; k: number; power: number; fromBody: number; flung: number; plane: Plane | null; column?: DOMRect | null }
 
 export function mountEnergy(canvas: HTMLCanvasElement, figure: () => Box | null, onBurst: (power: number) => void): void {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -73,14 +44,15 @@ export function mountEnergy(canvas: HTMLCanvasElement, figure: () => Box | null,
   const dbg: EnergyDebug | null = new URLSearchParams(location.search).has('debug') ? { orbit: 0, diving: 0, gathering: 0, out: 0, absorbed: 0, k: 0, power: 0, fromBody: 0, flung: 0, plane: null } : null;
   if (dbg) (window as unknown as { __m2cEnergy: EnergyDebug }).__m2cEnergy = dbg;
   let W = 0, H = 0, dpr = 1, level = 0, live = 0, armed = true, pressed = false;
-  let fig: Box = { x: 0, y: 0, w: 1, h: 1 }, ox = 0, oy = 0, plane: Plane = { cx: 0, cy: 0, R: 1, sp: 0.4, cp: 0.9 };
+  let fig: Box = { x: 0, y: 0, w: 1, h: 1 }, ox = 0, oy = 0, plane: Plane = { cx: 0, cy: 0, R: 1, sp: 0.4, cp: 0.9, roll: 0, yaw: 0 };
   let body: Body = roughBody, streamY = STREAMS.map((nx) => body.entry(nx));
   let pal: Pal = DARK, fills: string[][] = [], onFill = '', onEdge = '', glow = '', k = 0, squeeze = 1, hazeR = 1;
   let stageH = 1, share = 1, font = FONT_PX, quiet: Quiet = { column: null, boxes: [] };
   let mass = 0, sentK = 0, power = 1, raf = 0, last = 0, t = 0, spin = 0, spawnAcc = 0, diveAcc = 0, quietAt = -1e9;
-  let slotAt: number[] = [], slotTaken: boolean[] = [];
+  let slotAt: number[] = [], slotTaken: boolean[] = [], surgeTimer = 0, burstC: [number, number] = [0, 0], burstT = -1;
   const glyphs: Glyph[] = [];
-  const room = roomGrid(SPACING);
+  const room = roomGrid(SPACING), fury = makeFury();
+  let fz: Fury = fury(0, 0, 0, 0);
   const haze = glowLayer();
   loadBody(FIGURE_SRC).then((b) => { body = b; streamY = STREAMS.map((nx) => b.entry(nx)); }).catch(() => undefined); // roughBody stands in
   const massK = (): number => Math.min(1, mass / (MASS_FULL * share));
@@ -106,8 +78,8 @@ export function mountEnergy(canvas: HTMLCanvasElement, figure: () => Box | null,
     const r = stage?.getBoundingClientRect(), f = figure();
     if (!r || !f) return false;
     fig = f; ox = r.left; oy = r.top;
-    const tighten = (1 - TIGHTEN.charge * live) * (1 - TIGHTEN.mass * k);
-    plane = placeOrbit(fig, ox, oy, tighten, { w: W, h: H }, font * DEPTH_S[1] * (1 + GROW), body.axis);
+    const base = placeOrbit(fig, ox, oy, fz.grow, { w: W, h: H }, font * DEPTH_S[1] * (1 + GROW), body.axis), pitch = Math.max(MIN_PITCH, Math.asin(base.sp) + fz.pitch);
+    plane = { ...base, R: base.R * (1 + fz.beat), sp: Math.sin(pitch), cp: Math.cos(pitch), roll: base.roll + fz.roll, yaw: base.yaw + fz.yaw };
     if (now - quietAt < QUIET_MS) return true;
     quietAt = now;
     stageH = sing?.getBoundingClientRect().height || r.height;
@@ -122,7 +94,7 @@ export function mountEnergy(canvas: HTMLCanvasElement, figure: () => Box | null,
 
   function glyph(m: Mode, x: number, y: number): Glyph {
     const set = m === Mode.Out ? OUT_GLYPHS : ORBIT_GLYPHS;
-    return { m, g: set[Math.floor(Math.random() * set.length)], u: Math.random(), ph: rnd(0, TAU), v: 1, life: 1, x, y, vx: 0, vy: 0, s: 1, slot: -1, a: 0, t: 0, w: 0, s0: 1, s1: 1, hot: 0, bx: 0, by: 0, cx: 0, cy: 0, c2x: 0, c2y: 0, ex: 0, ey: 0 };
+    return { m, g: set[Math.floor(Math.random() * set.length)], u: Math.random(), ph: rnd(0, TAU), v: 1, life: 1, x, y, vx: 0, vy: 0, s: 1, slot: -1, a: 0, t: 0, w: 0, s0: 1, s1: 1, hot: 0, head: false, bx: 0, by: 0, cx: 0, cy: 0, c2x: 0, c2y: 0, ex: 0, ey: 0 };
   }
   /** The free slot nearest an angle, or -1 when the orbit is full (then the glyph crosses it and falls in). */
   function freeSlot(a: number): number {
@@ -160,7 +132,7 @@ export function mountEnergy(canvas: HTMLCanvasElement, figure: () => Box | null,
   /** Flying in from an edge toward its place on the orbit, which sweeps it up as it arrives. */
   function gather(p: Glyph, dt: number): void {
     const q = target(p), dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1;
-    const sp = GATHER_SPEED.base + GATHER_SPEED.charge * live, e = Math.min(1, dt * 3);
+    const sp = GATHER_SPEED.base + GATHER_SPEED.charge * live + GATHER_SPEED.mass * k, e = Math.min(1, dt * 3);
     p.vx += ((dx / d) * sp - p.vx) * e; p.vy += ((dy / d) * sp - p.vy) * e;
     p.x += p.vx * dt; p.y += p.vy * dt; p.t += dt;
     if (d > CAPTURE_PX && p.t < GATHER_MAX_S) return;
@@ -171,7 +143,7 @@ export function mountEnergy(canvas: HTMLCanvasElement, figure: () => Box | null,
   /** In orbit: it rides its slot; the last of its approach blends in. Returns its depth (-1 far .. 1 near). */
   function orbit(p: Glyph, dt: number): number {
     p.a = slotAngle(p.slot); p.t += dt;
-    const q = project(plane, p.a, laneR(p.slot)), ease = Math.exp(-dt * 7);
+    const q = project(plane, p.a, laneR(p.slot) * (1 + fz.jitter * Math.sin(t * (40 + 30 * p.u) + p.ph))), ease = Math.exp(-dt * 7); // it shivers
     p.bx *= ease; p.by *= ease;
     p.x = q.x + p.bx; p.y = q.y + p.by;
     const near = (q.z + 1) / 2;
@@ -182,15 +154,22 @@ export function mountEnergy(canvas: HTMLCanvasElement, figure: () => Box | null,
   /** Crossing the horizon: it peels off the way it was heading and curves into the nearest stream into his body. */
   function startDive(p: Glyph, arriving = false): void {
     if (p.slot >= 0) { slotTaken[p.slot] = false; p.slot = -1; }
-    const [nx] = toFig(p.x, p.y);
-    let lane = 0;
-    STREAMS.forEach((c, i) => { if (Math.abs(c - nx) < Math.abs(STREAMS[lane] - nx)) lane = i; });
-    p.ex = ox + fig.x + (STREAMS[lane] + rnd(-STREAM_JITTER, STREAM_JITTER)) * fig.w;
-    p.ey = Math.min(H - 12, oy + fig.y + streamY[lane] * fig.h);
-    const q0 = project(plane, p.a, plane.R), q1 = project(plane, p.a + 0.1, plane.R);
+    const [nx] = toFig(p.x, p.y), q0 = project(plane, p.a, plane.R), q1 = project(plane, p.a + 0.1, plane.R);
     p.bx = p.x; p.by = p.y;
     // one that has just arrived keeps flying the way it came; one in orbit leaves along the orbit
     p.cx = p.x + (arriving ? p.vx * ARRIVE_LEAD_S : (q1.x - q0.x) * DIVE_LEAD); p.cy = p.y + (arriving ? p.vy * ARRIVE_LEAD_S : (q1.y - q0.y) * DIVE_LEAD);
+    p.head = Math.random() < HEAD_DIVE.share + HEAD_DIVE.mass * k;
+    if (p.head) { // into his head, from its own side: up beside it, then in
+      const side = nx < FACE.x ? 0 : 1, [lo, hi] = HEAD_DIVE.deg[side], th = (rnd(lo, hi) * Math.PI) / 180;
+      [p.ex, p.ey] = fromFig([FACE.x + Math.cos(th) * FACE.rx * HEAD_DIVE.rim, FACE.y + Math.sin(th) * FACE.ry * HEAD_DIVE.rim]);
+      p.cx = p.ex + (side ? 1 : -1) * FACE.rx * fig.w; p.cy = p.ey + FACE.ry * fig.h * 0.6;
+      if (dbg) dbg.headDives = (dbg.headDives ?? 0) + 1;
+    } else {
+      let lane = 0;
+      STREAMS.forEach((c, i) => { if (Math.abs(c - nx) < Math.abs(STREAMS[lane] - nx)) lane = i; });
+      p.ex = ox + fig.x + (STREAMS[lane] + rnd(-STREAM_JITTER, STREAM_JITTER)) * fig.w;
+      p.ey = Math.min(H - 12, oy + fig.y + streamY[lane] * fig.h);
+    }
     p.s0 = Math.max(DIVE_S0[0], Math.min(DIVE_S0[1], p.s)); p.m = Mode.Dive; p.t = 0; p.w = 0;
   }
   const onCurve = (p: Glyph, e: number): [number, number] => {
@@ -228,41 +207,52 @@ export function mountEnergy(canvas: HTMLCanvasElement, figure: () => Box | null,
 
   /** A glyph sets off on its release path: the ease time sets how fast it gets there. */
   function launch(p: Glyph, dx: number, dy: number, f: number, cap: number, tau: number, decay: number): void {
-    route(p, p.x, p.y, dx, dy, f, cap, quiet.column, { w: W, h: H });
+    route(p, p.x, p.y, dx, dy, f, cap, { w: W, h: H });
     p.m = Mode.Out; p.t = 0; p.life = 1; p.w = decay; p.vx = tau; p.slot = -1; // vx holds tau in flight
   }
-  /** The release: what he absorbed leaves from his outline, everything in orbit is flung off where it is. */
+  /** The release. Everything leaves along a ray from his chin, so it keeps to its own sector of the screen: the orbit
+      flung outward from where it is (with a little of its spin), the rest filling every sector to an equal share,
+      each from where its ray leaves his outline (head included) or, below, where he runs off the screen, from the
+      orbit's near side. */
   function bigBang(): void {
     power = 0.35 + 1.65 * Math.sqrt(massK());
     mass = 0; armed = level <= 0.01; // a tap too quick to raise any charge leaves nothing to drain
     // share of the way to the screen's edge: a tap stays within REACH.tap of him, a full hold leaves the screen
     const pk = (power - 0.35) / 1.65, f = (): number => rnd(...REACH.far) * (0.25 + 0.75 * pk);
     const decay = 1 / (LIFE_S.base + LIFE_S.power * power), cap = REACH.tap + pk * 4 * Math.hypot(W, H);
-    let flung = 0;
+    const cN: [number, number] = [(body.axis + FACE.x) / 2, BURST_Y], low = Math.min(H - LOW_PX, project(plane, Math.PI / 2, plane.R).y);
+    burstC = fromFig(cN); burstT = t;
+    let flung = 0; const inside: Glyph[] = [], have = Array<number>(SECTORS).fill(0); // those falling into him join the burst
     slotTaken.fill(false);
     for (const p of glyphs) {
       if (p.m === Mode.Out) continue;
-      let dx = p.x - plane.cx, dy = p.y - plane.cy;
-      const d = Math.hypot(dx, dy) || 1;
-      dx /= d; dy /= d;
-      if (p.m === Mode.Orbit) { // a little of its spin stays, so the ring bursts outward with a twist
-        const q0 = project(plane, p.a, plane.R), q1 = project(plane, p.a + 0.05, plane.R), tl = Math.hypot(q1.x - q0.x, q1.y - q0.y) || 1;
-        dx += ((q1.x - q0.x) / tl) * 0.35; dy += ((q1.y - q0.y) / tl) * 0.35;
-      }
+      if (p.m === Mode.Dive) { inside.push(p); continue; }
+      let dx = p.x - burstC[0], dy = p.y - burstC[1];
       const n = Math.hypot(dx, dy) || 1;
-      launch(p, dx / n, dy / n, f(), cap, (dx > 0 ? TAU_S.right : TAU_S.up) / rnd(...TAU_S.rest), decay);
+      if (p.m === Mode.Orbit) { // it keeps a little of its spin: its slot's way round, on screen
+        const q0 = project(plane, p.a, plane.R), q1 = project(plane, p.a + 0.05, plane.R), m = Math.hypot(q1.x - q0.x, q1.y - q0.y) || 1;
+        dx = dx / n + (TWIST * (q1.x - q0.x)) / m; dy = dy / n + (TWIST * (q1.y - q0.y)) / m;
+      }
+      const m = Math.hypot(dx, dy) || 1;
+      have[sectorOf(dx, dy)]++;
+      launch(p, dx / m, dy / m, f(), cap, TAU_S.base / rnd(...TAU_S.rest), decay);
       p.s0 = p.s; p.s1 = 0.8 + 0.25 * power; p.hot = 0; flung++;
     }
-    const n = Math.round((140 * power - 10) * share ** 0.7), dirs = fanDirs(n);
+    const dirs = fillDirs(Math.round((200 * power - 20) * share ** 0.7) + inside.length, have);
     dirs.forEach((dir, i) => {
-      const [x, y] = fromFig(body.rim(dir.left, dir.up)), p = glyph(Mode.Out, x, Math.min(y, H - 12)), lead = i < dirs.length * LEAD.share;
-      const tau = (dir.dx > 0 ? TAU_S.right : TAU_S.up) / (lead ? TAU_S.lead : rnd(...TAU_S.rest));
-      launch(p, dir.dx, dir.dy, f(), cap, tau, decay);
+      let [x, y] = fromFig(body.exit(cN[0], cN[1], dir.dx, dir.dy, fig.w / fig.h));
+      if (dir.dy > 0.05 && y > low) { // he runs off the screen this way: it leaves his chest, anywhere down to the orbit's near side
+        const r = Math.max(0, (low - burstC[1]) / dir.dy) * rnd(DOWN_FROM, 1);
+        x = burstC[0] + dir.dx * r; y = burstC[1] + dir.dy * r;
+      }
+      const old = inside[i], lead = i < dirs.length * LEAD.share, p = old ?? glyph(Mode.Out, x, y);
+      p.x = x; p.y = Math.min(y, H - 12);
+      launch(p, dir.dx, dir.dy, f(), cap, TAU_S.base / (lead ? TAU_S.lead : rnd(...TAU_S.rest)), decay);
       p.s0 = BIRTH_S * (lead ? LEAD.size : 1); p.s1 = (0.8 + 0.25 * power) * (lead ? LEAD.size : 1); p.s = p.s0; p.hot = 1;
       p.t = lead ? -rnd(0, 0.03) : -rnd(0.02, 0.12) * power; // they surface over a moment, the front first
-      glyphs.push(p);
+      if (!old) glyphs.push(p);
     });
-    if (dbg) Object.assign(dbg, { power, fromBody: n, flung });
+    if (dbg) Object.assign(dbg, { power, fromBody: dirs.length, flung });
     onBurst(power);
   }
   /** Along its path, easing out; white-hot and large as it leaves him, then cooling and shrinking to its ink. */
@@ -284,22 +274,24 @@ export function mountEnergy(canvas: HTMLCanvasElement, figure: () => Box | null,
       else { // let go without a release: it drifts out the way it was going
         if (p.slot >= 0) slotTaken[p.slot] = false;
         const sp = Math.hypot(p.vx, p.vy) || 1;
-        launch(p, p.vx / sp, p.vy / sp, 0.1, 60, TAU_S.right, DRAIN_PER_S); p.s0 = p.s1 = p.s;
+        launch(p, p.vx / sp, p.vy / sp, 0.1, 60, TAU_S.base, DRAIN_PER_S); p.s0 = p.s1 = p.s;
       }
     } else if (p.m === Mode.Orbit) {
       z = orbit(p, dt);
       const near = (z + 1) / 2, far = pal.farA;
       alpha = (far + (1 - far) * near) * (0.85 + 0.15 * k); // far side small and dim, near side large and bright
-      lit = HAZE.orbit * smooth(-0.3, 0.7, z) * (0.35 + 0.65 * live) * (0.6 + 0.4 * Math.sin(t * HAZE.twinkle + p.ph));
+      lit = HAZE.orbit * smooth(-0.3, 0.7, z) * (0.35 + 0.65 * live) * (0.6 + 0.4 * Math.sin(t * HAZE.twinkle + p.ph)) * (1 + HAZE.flare * fz.flare);
     } else if (p.m === Mode.Dive) { alpha = dive(p, dt); lit = alpha * HAZE.dive; }
     else alpha = fly(p, dt);
-    if (p.life <= 0 || p.x < -80 || p.x > W + 80 || p.y < -80 || p.y > H + 80) { if (p.slot >= 0) slotTaken[p.slot] = false; return false; }
+    // the swollen orbit may run off screen and back: only the rest leave for good there
+    if (p.life <= 0 || (p.m !== Mode.Orbit && (p.x < -80 || p.x > W + 80 || p.y < -80 || p.y > H + 80))) { if (p.slot >= 0) slotTaken[p.slot] = false; return false; }
     if (alpha <= 0) return true;
     const [nx, ny] = toFig(p.x, p.y), cover = body.alphaAt(nx, ny);
-    alpha *= smooth(0, 1, p.life) * smooth(1, 1.3, Math.hypot((nx - FACE.x) / FACE.rx, (ny - FACE.y) / FACE.ry)) * quietAlpha(quiet, p.x, p.y);
+    alpha *= smooth(0, 1, p.life) * smooth(1, p.head && p.m === Mode.Dive ? HEAD_DIVE.fade : 1.3, Math.hypot((nx - FACE.x) / FACE.rx, (ny - FACE.y) / FACE.ry)) * quietAlpha(quiet, p.x, p.y);
     if (p.m === Mode.Orbit) {
       alpha *= 1 - 0.96 * cover * smooth(0.05, -0.2, z); // behind him
-      alpha *= 1 - (1 - smooth(HEAD_LINE, HEAD_LINE + 0.07, ny)) * (1 - smooth(NECK_COL * 0.8, NECK_COL, Math.abs(nx - FACE.x))); // never at his neck
+      const col = NECK_COL + (FAR_COL - NECK_COL) * smooth(0.2, -0.2, z);
+      alpha *= 1 - (1 - smooth(HEAD_LINE, HEAD_LINE + 0.07, ny)) * (1 - smooth(col * 0.8, col, Math.abs(nx - FACE.x))); // never at his neck or head
       p.v += ((alpha > 0.05 && room.claim(p.x, p.y, p.g.length * 0.6 * font * p.s, font * p.s) ? 1 : 0) - p.v) * Math.min(1, dt * 10);
       alpha *= p.v;
     }
@@ -341,6 +333,7 @@ export function mountEnergy(canvas: HTMLCanvasElement, figure: () => Box | null,
     live = armed ? level : 0; // after a release the rest of the charge only drains: nothing new gathers
     if (live < 0.01) mass = Math.max(0, mass - dt * MASS_FULL); // let go without a release: it evaporates
     k = massK();
+    fz = fury(dt, t, live, k);
     squeeze = (1 - 0.6 * live) * (1 - MASS_SQUEEZE * k);
     spin += (SPIN.base + SPIN.charge * live + SPIN.mass * k) * dt;
     ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -352,7 +345,7 @@ export function mountEnergy(canvas: HTMLCanvasElement, figure: () => Box | null,
     ctx!.globalCompositeOperation = pal.blend;
     let held = 0;
     for (const p of glyphs) if (p.m === Mode.Gather || p.m === Mode.Orbit) held++;
-    spawnAcc = Math.min(8, spawnAcc + SPAWN_PER_S * Math.max(share, SLOTS.minShare) * live ** 0.7 * dt);
+    spawnAcc = Math.min(12, spawnAcc + (SPAWN_PER_S.charge * live ** 0.7 + SPAWN_PER_S.mass * k * live) * Math.max(share, SLOTS.minShare) * dt);
     while (spawnAcc >= 1) { spawnAcc -= 1; if (held++ < slotAt.length * 2) spawn(-10); }
     if (live > 0.01) absorb(dt);
     haze.clear(); room.clear(font * 0.5);
@@ -368,9 +361,10 @@ export function mountEnergy(canvas: HTMLCanvasElement, figure: () => Box | null,
     const kq = Math.round(k * 200) / 200;
     if (kq !== sentK) { sentK = kq; dispatchEvent(new CustomEvent('m2c:absorb', { detail: { k: kq } })); }
     if (dbg) {
-      const c = [0, 0, 0, 0], quad = [0, 0, 0, 0]; // released glyphs on screen: top-left, top-right, bottom-left, bottom-right
-      for (const p of glyphs) { c[p.m]++; if (p.m === Mode.Out && p.t > 0 && p.x >= 0 && p.x <= W && p.y >= 0 && p.y <= H) quad[(p.x > W / 2 ? 1 : 0) + (p.y > H / 2 ? 2 : 0)]++; }
-      Object.assign(dbg, { quad, gathering: c[Mode.Gather], orbit: c[Mode.Orbit], diving: c[Mode.Dive], out: c[Mode.Out], absorbed: mass, k: kq, plane, column: quiet.column });
+      const c = [0, 0, 0, 0], sec = Array<number>(SECTORS).fill(0); // released glyphs on screen per sector round the burst's centre
+      for (const p of glyphs) { c[p.m]++; if (p.m === Mode.Out && p.t > 0 && p.x >= 0 && p.x <= W && p.y >= 0 && p.y <= H) sec[sectorOf(p.x - burstC[0], p.y - burstC[1])]++; }
+      if (burstT >= 0 && t - burstT >= SEC_AT_S) { burstT = -1; Object.assign(dbg, { sec200: sec, secRatio: Math.max(...sec) / Math.max(1, Math.min(...sec)) }); }
+      Object.assign(dbg, { sec, gathering: c[Mode.Gather], orbit: c[Mode.Orbit], diving: c[Mode.Dive], out: c[Mode.Out], absorbed: mass, k: kq, plane, column: quiet.column });
     }
     if (live > 0.01 || glyphs.length || mass > 0) raf = requestAnimationFrame(frame);
     else { raf = 0; last = 0; ctx!.clearRect(0, 0, W, H); }
@@ -385,7 +379,6 @@ export function mountEnergy(canvas: HTMLCanvasElement, figure: () => Box | null,
     if (armed && was <= 0.01) pressed = true;
     wake();
   });
-  let surgeTimer = 0;
   addEventListener('m2c:release', (e) => {
     if ((e as CustomEvent<{ auto: boolean }>).detail.auto) return; // an idle pulse stays inside the hero
     if (!aim(performance.now())) return;

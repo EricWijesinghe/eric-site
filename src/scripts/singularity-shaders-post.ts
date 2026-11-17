@@ -69,7 +69,6 @@ const LIGHT = `
     vec3 ink = mix(vec3(.30,.58,.96), vec3(.08,.36,.80), smoothstep(.3, 1., l));
     vec3 outside = mix(paper, ink, smoothstep(.03, .45, l)*.62);
 
-    vec3 au = texture(uAura, (fp - uAuraRect.xy)/uAuraRect.zw).rgb;
     float grow = 1. + .15*uCharge + .15*uAbsorb + .25*uHit;          // the field swells as he charges, absorbs and releases
     float ox = fp.x - ${AXIS_X}, sx = abs(ox);
     float drift = vnoise(vec2(sx*.0035 - uTime*.07, fp.y*.005)) - .5; // drifts outward from his axis
@@ -123,9 +122,17 @@ const LIGHT = `
     // (portrait: over a longer run, with the field, so his lit lower body does not end on a line across the phone)
     float figM = smoothstep(.04, .5, figA)*smoothstep(110., 470., fp.x)*(1. - smoothstep(mix(1040., 800., isPort), 1195., fp.y))*(1. - port);
     col = mix(col, mix(navy, holo, tone), figM);
+    // round 12, "I should glow": a saturated cyan glow just outside his outline, rising with the charge, what he
+    // absorbed and the release's hit. Colour on the navy field, never white. Round 12b: round his head too, a little
+    // softer there (Eric: the field "can be around me", only no lines from his head); the wide au.b breath it had
+    // over the field mixed with the page's mint patches into olive blotches beside his shoulder, so it is gone
+    float glowL = clamp(max(max(uCharge, uAbsorb), uHit), 0., 1.)*(.85 + .15*sin(uTime*11.));
+    float hugG = clamp(au.r*(1. - au.r)*4., 0., 1.)*(1. - figM)*mix(.6, 1., headKeep(fp))*low*(1. - port);
+    col = mix(col, vec3(.05,.70,1.), clamp(hugG*glowL*.85, 0., .8));
     // deep-teal rim on his left silhouette: a dark pixel with a bright neighbour to its right is the outer edge
     float rimL = clamp(dot(texture(uScene, u2 + vec2(6./uRes.x, 0.)).rgb - texture(uScene, u2).rgb, vec3(.299,.587,.114)), 0., 1.);
-    col = mix(col, vec3(.0,.42,.50), clamp(rimL*4.*(1. + uHit), 0., 1.)*smoothstep(0., -.3, pd.x)*.85);
+    // only along his outline: across the half page it caught every scene glyph and left teal-olive specks (round 12b)
+    col = mix(col, vec3(.0,.42,.50), clamp(rimL*4.*(1. + uHit), 0., 1.)*smoothstep(0., -.3, pd.x)*.85*clamp(au.r*(1. - au.r)*4., 0., 1.));
   }`;
 
 export const FS_COMP = COMMON + `
@@ -144,6 +151,7 @@ void main(){
   vec2 uv = gl_FragCoord.xy/uRes;
   vec2 fp = (fc - uFO)/uS, fu = fp/uFigSize;
   float figA = textureLod(uFig, fu, 3.).a*step(0., fu.x)*step(fu.x, 1.)*step(0., fu.y)*step(fu.y, 1.);
+  vec3 au = texture(uAura, (fp - uAuraRect.xy)/uAuraRect.zw).rgb; // his glow's blurs (singularity-figure.ts)
   // the shockwave bends what is behind him as it passes, never him: refracting his face smeared it, his torso turned to
   // moire, and the column above his head would draw an arc there (round 10 review)
   vec2 d = fc - uWave.xy; float r = length(d);
@@ -162,7 +170,7 @@ void main(){
   // light: charge adds no white bloom. Dark: the bloom over his torso thins so his jacket lines stay drawn, and over
   // his face it is held near half its idle level: the charged scene's bloom fogged his face at full strength, and none
   // at all crushed his eyes and hair to black (round 10 review)
-  float bk = uBloomK*mix(1., 1. - .7*uCharge, uLight)*(1. - e*.5*figA);
+  float bk = uBloomK*mix(1., 1. - .7*uCharge, uLight)*(1. - e*.7*figA); // .7: the halo round his head bled into his hair
   col += texture(uBloom, u2).rgb*mix(bk, uBloomRest*${FACE_BLOOM}, e*hw); col *= uExpo;
   col += vec3(.4,.85,1.)*abs(k)*.10;
   float onFace = hw*smoothstep(.1, .6, figA);
@@ -171,10 +179,12 @@ void main(){
   col = (col*(2.51*col+.03))/(col*(2.43*col+.59)+.14);
   // and at the peak his face is a brighter cyan face: a gain with a soft knee on his own tones (never a cap, whose flat
   // plateau read as a mask), its hue held, so every feature keeps its depth and nothing falls below idle
-  float L = dot(col, vec3(.299,.587,.114)), fg = 1. + ${FACE_LIFT}*e;
+  // the lift keeps rising with what he absorbed, so a 5 s hold reads brighter than a 1.5 s one (round 12b)
+  float L = dot(col, vec3(.299,.587,.114)), fg = 1. + ${FACE_LIFT}*min(1.3, .65*e + .65*uAbsorb*(1. - uLight));
   col = mix(col, vec3(.30,.86,1.)*(L*fg/(1. + (fg - 1.)*L*${FACE_KNEE})/.709), e*onFace*.75);
-  // charged, he stays a cyan hologram: the white bloom and rim read grey or beige on him, so red is held under green
-  col.r = mix(col.r, min(col.r, .7*col.g), e*smoothstep(.1, .6, figA));
+  // charged, he stays a cyan hologram: the white bloom and rim read grey or beige on him, so red is held under green,
+  // on him and in the glow round him (round 12b: his shoulders' glow read milky grey, RGB 106,129,135)
+  col.r = mix(col.r, min(col.r, .7*col.g), e*max(smoothstep(.1, .6, figA), smoothstep(.03, .3, au.b)));
   col *= 1.-dot(cc*vec2(1.,1.2), cc*vec2(1.,1.2))*.9;${LIGHT}
   col += (h2(fc+fract(uTime*7.)*91.)-.5)*.02;
   o = vec4(col*uBoot, 1.);

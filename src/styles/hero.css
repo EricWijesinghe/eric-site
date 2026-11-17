@@ -216,23 +216,21 @@ main#main > section.m2c-stage.m2c-stage {
 .m2c-name-fx {
   position: absolute;
   left: -32px;
-  top: -40px;
+  /* 56 px above and below: room for the thunder that leaps out of the letters (energy-shock-name.ts, LEAP_PX) */
+  top: -56px;
   width: calc(100% + 64px);
-  height: calc(100% + 80px);
+  height: calc(100% + 112px);
   z-index: 1;
   pointer-events: none;
   mix-blend-mode: screen;
 }
 
-/* Charging and releasing, the name's canvas steps back: its strands drew a thin line across the name, which reads as
-   a scratch (round 10 review; hero-name.ts has no owner this round). The letters keep their glow (energy.css). */
-.m2c-name-fx {
-  opacity: clamp(0, 1 - var(--m2c-charge, 0) * 12, 1);
-  transition: opacity 0.3s ease;
-}
-
-.m2c-surge .m2c-name-fx {
-  opacity: 0;
+/* Round 12 ("my name should enrich like radiation and thunder"): the canvas stays up through the charge and the
+   release, where it carries the radiation and the thunder; its outline strands, which drew the round-10 scratch,
+   fade out with the charge in hero-name.ts instead. While it radiates, hero-name.ts writes the h1's text-shadow each
+   frame, so the release surge's 0.5 s easing (energy.css) would smear the flicker into a slow glow. */
+#hero-title.m2c-name[data-hot] {
+  transition: none;
 }
 
 .m2c-roles {
