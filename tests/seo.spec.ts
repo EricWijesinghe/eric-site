@@ -1,5 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 // Search and share metadata for the built site (`npm run build` first). Head tags, structured data,
 // crawlable text and the sitemap/robots files are checked against the real server output.
@@ -61,9 +63,11 @@ test.describe('home page head', () => {
     for (const [, ref] of refs) expect(ids.has(ref), `unresolved @id ${ref}`).toBe(true);
     // sameAs lists profiles of the person only; the Maya2C project sits on its own node.
     expect(person?.sameAs).not.toContain('https://maya2c.dev');
+    const project = nodes.find((n) => n['@type'] === 'SoftwareSourceCode');
+    expect(String(project?.description)).toMatch(/pre-mainnet/i);
   });
 
-  test('no CSP violation is reported by the page (JSON-LD is a data block)', async ({ page }) => {
+  test('no inline script runs on the preview build (JSON-LD is a data block)', async ({ page }) => {
     // Chromium reports violations as DOM events (not Playwright events), so record them in the page.
     await page.addInitScript(() => {
       const w = window as unknown as { __cspViolations: string[] };
@@ -79,6 +83,16 @@ test.describe('home page head', () => {
     const domCsp = await page.evaluate(() => (window as unknown as { __cspViolations: string[] }).__cspViolations);
     expect(domCsp).toEqual([]);
     expect(consoleCsp).toEqual([]);
+  });
+
+  // astro preview does not apply public/_headers (Cloudflare serves it), so the served policy is read
+  // from the file here; the live header itself is not exercised by these tests.
+  test('public/_headers keeps script-src and style-src to self, with no unsafe-inline or unsafe-eval', () => {
+    const headers = readFileSync(join(process.cwd(), 'public/_headers'), 'utf8');
+    const policy = headers.match(/Content-Security-Policy:\s*(.+)/)?.[1] ?? '';
+    expect(policy).toContain("script-src 'self';");
+    expect(policy).toContain("style-src 'self';");
+    expect(policy).not.toMatch(/unsafe-inline|unsafe-eval/);
   });
 
   test('exactly one h1', async ({ page }) => {

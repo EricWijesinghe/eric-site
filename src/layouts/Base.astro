@@ -60,7 +60,8 @@ const jsonLd = JSON.stringify({
       '@type': 'SoftwareSourceCode',
       '@id': MAYA2C_ID,
       name: FEATURED_PROJECT.name,
-      description: FEATURED_PROJECT.description,
+      // Status is part of the description search engines ingest: the project is pre-mainnet, not live.
+      description: `Pre-mainnet. ${FEATURED_PROJECT.description}`,
       url: MAYA2C_SITE,
       codeRepository: MAYA2C_REPO,
       programmingLanguage: 'Rust',
