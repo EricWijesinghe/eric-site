@@ -1,0 +1,50 @@
+---
+import '../styles/page-doc.css';
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import { FEATURED_PROJECT } from '../data/content';
+
+// Every line is from FEATURED_PROJECT in data/content.ts. Status is stated as pre-mainnet; no launch date is given.
+---
+
+<Base
+  title="Maya2C — Post-Quantum Layer-1 Blockchain"
+  description="Maya2C is a pre-mainnet post-quantum Layer-1 blockchain written in Rust, created by Eric Wijesinghe. Signatures use ML-DSA (FIPS 204) and SLH-DSA (FIPS 205)."
+>
+  <Nav />
+  <main id="main" class="page-doc">
+    <div class="wrap">
+      <p class="section-label"><span>project</span> Maya2C</p>
+      <h1 class="section-title">Maya2C</h1>
+      <p>{FEATURED_PROJECT.description}</p>
+      <p><strong>Status: pre-mainnet.</strong> Mainnet is not live.</p>
+      <h2>Specification</h2>
+      <dl>
+        {FEATURED_PROJECT.spec.map(([k, v]) => (
+          <Fragment>
+            <dt>{k}</dt>
+            <dd>{v}</dd>
+          </Fragment>
+        ))}
+      </dl>
+      <h2>Built with</h2>
+      <ul>
+        {FEATURED_PROJECT.tags.map((t) => <li>{t}</li>)}
+      </ul>
+      <p>{FEATURED_PROJECT.disclosure}</p>
+      <div class="doc-actions">
+        {FEATURED_PROJECT.links.filter((l) => l.href !== '/maya2c').map((l) => {
+          const external = /^https?:/.test(l.href);
+          return external ? (
+            <a class="btn btn-ghost" href={l.href} rel="noopener noreferrer" target="_blank">{l.label} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+          ) : (
+            <a class="btn btn-ghost" href={l.href}>{l.label}</a>
+          );
+        })}
+      </div>
+      <p><a href="/#projects">Back to the projects section</a> · <a href="/about">About Eric Wijesinghe</a></p>
+    </div>
+  </main>
+  <Footer />
+</Base>
