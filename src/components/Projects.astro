@@ -67,9 +67,15 @@ const sharedNote = research.note === ai.note ? research.note : null;
               </div>
               <p class="facts-disclosure">{f.disclosure}</p>
               <div class="facts-links">
-                {f.links.map((l) => (
-                  <a href={l.href} rel="noopener noreferrer" target="_blank">{l.label} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
-                ))}
+                {f.links.map((l) => {
+                  // Site pages open in place; only outside links open a new tab.
+                  const external = /^https?:/.test(l.href);
+                  return external ? (
+                    <a href={l.href} rel="noopener noreferrer" target="_blank">{l.label} <span aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+                  ) : (
+                    <a href={l.href}>{l.label}</a>
+                  );
+                })}
               </div>
             </div>
           )}

@@ -26,11 +26,11 @@ const coreGroup = SKILL_GROUPS[CORE.group]!.name.toUpperCase();
     <h2 class="section-title" id="skills-title" data-reveal>Stack &amp; expertise</h2>
     <p class="section-lede" data-reveal>One change, five phases, every skill where it acts. Turn the loop or pick a skill.</p>
     <div class="sk">
-      <figure class="sk-stage" role="group" aria-labelledby="sk-cap" data-sk-stage>
-        <figcaption id="sk-cap" class="visually-hidden">
+      <div class="sk-stage" role="group" aria-labelledby="sk-cap" data-sk-stage>
+        <p id="sk-cap" class="visually-hidden">
           Schematic: one change travels a loop of five phases, {PHASES.map((p) => p.name.toLowerCase()).join(', ')}, around
           a Rust core, and each of the {RING.length} other skills sits in the phase where it acts. The full list follows.
-        </figcaption>
+        </p>
         <div class="sk-view">
           <svg class="sk-poster" viewBox={`0 0 ${POSTER_W} ${POSTER_H}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">
             <path class="sk-ptrack" d={track}></path>
@@ -66,7 +66,7 @@ const coreGroup = SKILL_GROUPS[CORE.group]!.name.toUpperCase();
           <p class="sk-name" data-sk-name>{CORE.name}</p>
           <p class="sk-how" data-sk-how>{CORE.how}</p>
         </div>
-      </figure>
+      </div>
 
       <div class="sk-index">
         <p class="visually-hidden" aria-live="polite" data-sk-live></p>

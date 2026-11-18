@@ -13,3 +13,9 @@
 # The hero's figure, line-art and region maps: stable names, so cached a week rather than forever.
 /eric/*
   Cache-Control: public, max-age=604800
+
+# Social and search previews are fetched by crawlers, not the page: cache them a week like /eric/*.
+/og.png
+  Cache-Control: public, max-age=604800
+/grain.png
+  Cache-Control: public, max-age=604800

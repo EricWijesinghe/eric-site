@@ -81,6 +81,8 @@ export function attachInput(root: HTMLElement, fire: (k: number) => void, reduce
   root.addEventListener('keydown', (e) => {
     if (e.code !== 'Space') return;
     e.preventDefault();
+    // Holding Space auto-repeats keydown; the page still swallows the repeats, but only the first one fires.
+    if (e.repeat) return;
     inp.lastInput = performance.now();
     fire(1.2);
   });

@@ -1,0 +1,44 @@
+---
+import '../styles/page-doc.css';
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import { ABOUT_PARAGRAPHS, ROLES, SOCIALS, STATS } from '../data/content';
+---
+
+<!-- The one page whose subject is the person: Base adds the ProfilePage node only here. Every sentence is from data/content.ts. -->
+<Base
+  profile
+  title="About Eric Wijesinghe — Rust Developer, Security Research"
+  description="About Eric Wijesinghe: an independent Rust developer working on network protocols, security, and AI in security work, and building Maya2C."
+>
+  <Nav />
+  <main id="main" class="page-doc">
+    <div class="wrap">
+      <p class="section-label"><span>about</span> profile</p>
+      <h1 class="section-title">Eric Wijesinghe</h1>
+      <p>{ROLES.join(' · ')}</p>
+      {ABOUT_PARAGRAPHS.map((p) => <p>{p}</p>)}
+      <h2>At a glance</h2>
+      <dl>
+        {STATS.map((s) => (
+          <Fragment>
+            <dt>{s.value}</dt>
+            <dd>{s.label}</dd>
+          </Fragment>
+        ))}
+      </dl>
+      <h2>Elsewhere</h2>
+      <ul>
+        {SOCIALS.map((s) => (
+          <li><a href={s.href} rel="me noopener noreferrer" target="_blank">{s.label}<span class="visually-hidden"> (opens in a new tab)</span></a></li>
+        ))}
+      </ul>
+      <div class="doc-actions">
+        <a class="btn btn-ghost" href="/maya2c">Maya2C details</a>
+        <a class="btn btn-primary" href="/">Back to the home page</a>
+      </div>
+    </div>
+  </main>
+  <Footer />
+</Base>

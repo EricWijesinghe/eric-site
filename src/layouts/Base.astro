@@ -6,13 +6,33 @@ import '@fontsource/inter/latin-500.css';
 import '@fontsource/jetbrains-mono/latin-400.css';
 import '../styles/global.css';
 import '../styles/sections.css';
-import { MAYA2C_SITE, OG_IMAGE_ALT, SITE_DESCRIPTION, SITE_TITLE, SITE_URL, SOCIALS } from '../data/content';
+import manropeExtraBold from '@fontsource/manrope/files/manrope-latin-800-normal.woff2?url';
+import {
+  APACHE_2_LICENSE_URL,
+  FEATURED_PROJECT,
+  GITHUB_USERNAME,
+  MAYA2C_REPO,
+  MAYA2C_SITE,
+  OG_IMAGE_ALT,
+  SITE_DESCRIPTION,
+  SITE_TITLE,
+  SITE_URL,
+  SOCIALS,
+} from '../data/content';
 
-// noindex: the 404 page renders through this layout too and must stay out of search.
-const { noindex = false } = Astro.props as { noindex?: boolean };
+// noindex: the 404 page renders through this layout too and must stay out of search, so it carries no entity claims either.
+// profile: set only on the page whose subject is the person; it adds the ProfilePage node.
+const {
+  noindex = false,
+  profile = false,
+  title = SITE_TITLE,
+  description = SITE_DESCRIPTION,
+} = Astro.props as { noindex?: boolean; profile?: boolean; title?: string; description?: string };
 const canonical = new URL(Astro.url.pathname, SITE_URL).href;
 const PERSON_ID = `${SITE_URL}/#person`;
-// One @graph: the WebSite points at the Person through @id. "<" is escaped so no value can close the script tag.
+const WEBSITE_ID = `${SITE_URL}/#website`;
+const MAYA2C_ID = `${SITE_URL}/#maya2c`;
+// One @graph of stable @id nodes; every reference resolves inside it. "<" is escaped so no value can close the script tag.
 const jsonLd = JSON.stringify({
   '@context': 'https://schema.org',
   '@graph': [
@@ -20,19 +40,45 @@ const jsonLd = JSON.stringify({
       '@type': 'Person',
       '@id': PERSON_ID,
       name: 'Eric Wijesinghe',
+      alternateName: GITHUB_USERNAME,
+      description: SITE_DESCRIPTION,
       url: SITE_URL,
-      sameAs: [...SOCIALS.map((x) => x.href), MAYA2C_SITE],
+      // Profiles of the same person only. The Maya2C project is linked from its own node below.
+      sameAs: SOCIALS.map((x) => x.href),
       jobTitle: 'Rust-First Engineer',
       knowsAbout: ['Rust', 'Post-quantum cryptography', 'Security research', 'Blockchain'],
     },
     {
       '@type': 'WebSite',
-      '@id': `${SITE_URL}/#website`,
+      '@id': WEBSITE_ID,
       url: SITE_URL,
       name: 'Eric Wijesinghe',
       inLanguage: 'en',
       publisher: { '@id': PERSON_ID },
     },
+    {
+      '@type': 'SoftwareSourceCode',
+      '@id': MAYA2C_ID,
+      name: FEATURED_PROJECT.name,
+      description: FEATURED_PROJECT.description,
+      url: MAYA2C_SITE,
+      codeRepository: MAYA2C_REPO,
+      programmingLanguage: 'Rust',
+      license: APACHE_2_LICENSE_URL,
+      author: { '@id': PERSON_ID },
+    },
+    ...(profile
+      ? [
+          {
+            '@type': 'ProfilePage',
+            '@id': `${canonical}#profilepage`,
+            url: canonical,
+            name: title,
+            isPartOf: { '@id': WEBSITE_ID },
+            mainEntity: { '@id': PERSON_ID },
+          },
+        ]
+      : []),
   ],
 }).replace(/</g, '\\u003c');
 ---
@@ -42,9 +88,10 @@ const jsonLd = JSON.stringify({
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{SITE_TITLE}</title>
-    <meta name="description" content={SITE_DESCRIPTION} />
+    <title>{title}</title>
+    <meta name="description" content={description} />
     {!noindex && <link rel="canonical" href={canonical} />}
+    <link rel="preload" href={manropeExtraBold} as="font" type="font/woff2" crossorigin="anonymous" />
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -54,20 +101,23 @@ const jsonLd = JSON.stringify({
     <script is:inline src="/theme-init.js"></script>
     <meta name="robots" content={noindex ? 'noindex' : 'index,follow'} />
     <meta property="og:type" content="profile" />
+    <meta property="profile:first_name" content="Eric" />
+    <meta property="profile:last_name" content="Wijesinghe" />
     <meta property="og:site_name" content="Eric Wijesinghe" />
-    <meta property="og:title" content={SITE_TITLE} />
-    <meta property="og:description" content={SITE_DESCRIPTION} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
     {!noindex && <meta property="og:url" content={canonical} />}
     <meta property="og:image" content={`${SITE_URL}/og.png`} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content={OG_IMAGE_ALT} />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={SITE_TITLE} />
-    <meta name="twitter:description" content={SITE_DESCRIPTION} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={`${SITE_URL}/og.png`} />
     <meta name="twitter:image:alt" content={OG_IMAGE_ALT} />
-    <script type="application/ld+json" set:html={jsonLd} />
+    {!noindex && <script type="application/ld+json" set:html={jsonLd} />}
+    <slot name="head" />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
