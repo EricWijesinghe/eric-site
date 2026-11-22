@@ -37,7 +37,6 @@ export interface SingularityDebug {
   absorb: number; // 0..1, eased: what he has absorbed of the page's energy (m2c:absorb)
   glyphs: number; // glyph particles drawn this frame
   tier: string; p90: number; dpr: number; light: boolean;
-  shockInHead: number; shockArcs: number; // the page's shocks (energy-shock.ts): arc points ever on him (always 0), arcs spawned
 }
 // g: how much of the full flash it earns; a: what he had absorbed when it left (0..1), which lengthens and speeds it
 interface Pulse { t: number; k: number; g: number; a: number; applied: boolean; auto: boolean }
@@ -122,7 +121,7 @@ export async function mountSingularity(root: HTMLElement): Promise<void> {
     let activeN = bitsFor();
     const res: Res = createResources(gl, K, { fig: figImg, aux: auxImg, trace: trImg }, fig.halo, fig.aura, fig.vapour, CONFIG.particles, rng(SEED.disk));
     const net = new WorldNet(SEED.net);
-    const dbg: SingularityDebug = { frames: 0, fired: 0, anchorHaloMax: 0, headZoneHits: 0, zoneColumn: [], releaseGlyphs: 0, burstOffBody: 0, shockInZone: 0, lensInZone: 0, shockInHead: 0, shockArcs: 0, absorb: 0, glyphs: 0, tier: gov.tier, p90: 0, dpr: 1, light: false };
+    const dbg: SingularityDebug = { frames: 0, fired: 0, anchorHaloMax: 0, headZoneHits: 0, zoneColumn: [], releaseGlyphs: 0, burstOffBody: 0, shockInZone: 0, lensInZone: 0, absorb: 0, glyphs: 0, tier: gov.tier, p90: 0, dpr: 1, light: false };
     if (debugOn) (window as unknown as { __m2c: SingularityDebug }).__m2c = dbg;
     const makeQuantum = (): Quantum => new Quantum(SEED.quantum, QUANTUM_DENSITY[gov.tier]);
     let quantum = makeQuantum();

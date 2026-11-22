@@ -18,7 +18,7 @@ test.use({
 });
 test.describe.configure({ mode: 'serial', timeout: 120_000 });
 
-type Dbg = { frames: number; fired: number; anchorHaloMax: number; headZoneHits: number; zoneColumn?: number[]; releaseGlyphs: number; burstOffBody: number; shockInZone: number; shockInHead: number; shockArcs: number; absorb: number; glyphs: number; tier: string; p90: number; dpr: number; light: boolean };
+type Dbg = { frames: number; fired: number; anchorHaloMax: number; headZoneHits: number; zoneColumn?: number[]; releaseGlyphs: number; burstOffBody: number; shockInZone: number; absorb: number; glyphs: number; tier: string; p90: number; dpr: number; light: boolean };
 const dbg = (page: Page) => page.evaluate(() => (window as unknown as { __m2c?: Dbg }).__m2c ?? null);
 const frames = async (page: Page) => (await dbg(page))?.frames ?? 0;
 
@@ -108,22 +108,11 @@ test('a release bursts from his body as data, and no line ever leaves his head',
   expect(d.shockInZone, 'the release shock drew on his head or above it').toBe(0);
 });
 
-// Round 12b: the page's shocks now reach the outer nav links (energy-shock.ts, HEAD_PAD 1.25), but no arc point may
-// ever be drawn on his figure box or in the column above his head. Under ?debug every drawn point is checked.
-test('no shock arc is ever drawn on him or above his head', async ({ page }) => {
+// Eric 11-23: sparks belong on his name only; the page's objects never get shocks (energy-shock.ts was removed)
+test('no electric shocks anywhere but the name', async ({ page }) => {
   await open(page, '?debug');
   await expect.poll(() => frames(page), { timeout: 40_000 }).toBeGreaterThan(5);
-  const box = (await page.locator('.m2c-sing').boundingBox())!;
-  await page.mouse.move(box.x + box.width * 0.7, box.y + box.height * 0.6);
-  await page.mouse.down();
-  // software GL renders a few frames a second, so the charge climbs slowly: wait for the first arc rather than a fixed time
-  await expect.poll(async () => (await dbg(page))?.shockArcs ?? 0, { timeout: 60_000 }).toBeGreaterThan(0);
-  await page.waitForTimeout(2000);
-  await page.mouse.up();
-  await page.waitForTimeout(900);
-  const d = (await dbg(page))!;
-  expect(d.shockArcs, 'the charge and the release spawned arcs').toBeGreaterThan(0);
-  expect(d.shockInHead, 'an arc point was drawn on him or above his head').toBe(0);
+  await expect(page.locator('canvas.energy-shock')).toHaveCount(0);
 });
 
 // Eric round 10: he gets brighter with what he absorbed. The energy overlay reports it as m2c:absorb {k: 0..1}; the
