@@ -1,13 +1,17 @@
 // Single source for every fact and link on the site. Rewrite presentation, never these facts.
 
 export const SITE_URL = 'https://eric.maya2c.dev';
-export const SITE_TITLE = 'Eric Wijesinghe — Rust Dev & Security Researcher';
+// Head metadata only. Visible copy (hero, footer) is owner-approved and lives in the components.
+export const SITE_TITLE = 'Eric Wijesinghe — Rust Developer, Security Research, Maya2C';
 export const SITE_DESCRIPTION =
-  'Eric Wijesinghe — Rust developer, security researcher, and creator of Maya2C, a post-quantum Layer-1 blockchain.';
+  'Eric Wijesinghe — Rust developer, security researcher, and creator of Maya2C, a pre-mainnet post-quantum Layer-1 blockchain.';
 
 export const OG_IMAGE_ALT = 'Eric Wijesinghe, Rust developer and security researcher, creator of Maya2C';
 
 export const GITHUB_PROFILE = 'https://github.com/EricWijesinghe';
+// The public GitHub handle, used as Person.alternateName.
+export const GITHUB_USERNAME = 'EricWijesinghe';
+export const APACHE_2_LICENSE_URL = 'https://www.apache.org/licenses/LICENSE-2.0';
 export const MAYA2C_SITE = 'https://maya2c.dev';
 export const MAYA2C_REPO = 'https://github.com/EricWijesinghe/Maya2C';
 // Public, and the one written contact route: no email address is published here.
@@ -52,6 +56,7 @@ export const FEATURED_PROJECT = {
   disclosure:
     'Pre-audit: no external audit yet. Validators are run by one operator at launch. An external audit is planned after funding.',
   links: [
+    { label: 'Maya2C details', href: '/maya2c' },
     { label: 'Visit maya2c.dev', href: MAYA2C_SITE },
     { label: 'Source on GitHub', href: MAYA2C_REPO },
   ],

@@ -181,7 +181,7 @@ const showValue = (title: string, f: { label: string; value: string }) =>
           LAYERS.map((l, i) => {
             const n = i + 1;
             return (
-              <article
+              <div
                 class:list={['st-panel', { 'is-active': n === DEFAULT_LAYER }]}
                 role="tabpanel"
                 id={`st-panel-${n}`}
@@ -246,7 +246,7 @@ const showValue = (title: string, f: { label: string; value: string }) =>
                   </a>
                 )}
                 {l.note && <p class="st-note">{l.note}</p>}
-              </article>
+              </div>
             );
           })
         }

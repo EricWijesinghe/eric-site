@@ -13,6 +13,8 @@ import EnergyOverlay from '../components/EnergyOverlay.astro';
 ---
 
 <Base>
+  <!-- The hero figure is the LCP-adjacent image: start its fetch with the HTML, not after the idle hero boot. -->
+  <link slot="head" rel="preload" as="image" href="/eric/eric-v11-figure.webp" fetchpriority="high" />
   <Nav />
   <EnergyOverlay />
   <main id="main">

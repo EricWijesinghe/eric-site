@@ -1,0 +1,51 @@
+/* Secondary pages (/about, /maya2c): the home page's type and buttons, in one readable column. */
+.page-doc {
+  padding: clamp(104px, 16vh, 150px) 0 clamp(64px, 10vh, 120px);
+}
+
+.page-doc .wrap > * + * {
+  margin-top: clamp(14px, 2.2vh, 22px);
+}
+
+.page-doc p {
+  max-width: 62ch;
+  line-height: 1.6;
+}
+
+.page-doc h2 {
+  margin-top: clamp(36px, 6vh, 56px);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.25rem;
+  line-height: 1.25;
+}
+
+.page-doc dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 22px;
+  max-width: 62ch;
+}
+
+.page-doc dt {
+  font-family: var(--font-mono);
+  opacity: 0.75;
+}
+
+.page-doc dd {
+  margin: 0;
+}
+
+.page-doc ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.page-doc .doc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
